@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      check_ins: {
+        Row: {
+          checked_in_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          checked_in_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          checked_in_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          grade: string
+          high_school: string
+          id: string
+          last_name: string
+          parent_name: string
+          parent_phone: string
+          phone_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          grade: string
+          high_school: string
+          id?: string
+          last_name: string
+          parent_name: string
+          parent_phone: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          grade?: string
+          high_school?: string
+          id?: string
+          last_name?: string
+          parent_name?: string
+          parent_phone?: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
