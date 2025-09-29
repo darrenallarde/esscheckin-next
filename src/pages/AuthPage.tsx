@@ -279,16 +279,6 @@ const AuthPage = () => {
           ) : isSignUp ? (
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
-                {/* Debug input - not connected to form */}
-                <div>
-                  <label>Test Email Input (not connected to form):</label>
-                  <input 
-                    type="email" 
-                    placeholder="Test email input"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
-                    onChange={(e) => console.log("Test input:", e.target.value)}
-                  />
-                </div>
                 
                 <div className="space-y-2">
                   <label htmlFor="signup-email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
