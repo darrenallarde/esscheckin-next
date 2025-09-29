@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NewStudentForm from "./NewStudentForm";
-import CheckInSuccess from "./CheckInSuccess";
+import GameCheckInSuccess from "./GameCheckInSuccess";
 
 // Schema for phone search
 const phoneSearchSchema = z.object({
@@ -199,7 +199,7 @@ const CheckInForm = () => {
 
   // Success view
   if (viewState.type === 'success') {
-    return <CheckInSuccess student={viewState.student} onNewCheckIn={resetToSearch} />;
+    return <GameCheckInSuccess student={viewState.student} onNewCheckIn={resetToSearch} />;
   }
 
   // New student form
