@@ -63,9 +63,11 @@ const AnalyticsDashboard = () => {
   }, [user, userRole, navigate]);
 
   // Fetch analytics data
-  const { data: analyticsData, isLoading } = useQuery({
+  const { data: analyticsData, isLoading, error } = useQuery({
     queryKey: ['analytics-data'],
     queryFn: async () => {
+      console.log('Fetching analytics data...');
+      
       // Get all check-ins with student information
       const { data: checkIns, error } = await supabase
         .from('check_ins')
@@ -83,7 +85,12 @@ const AnalyticsDashboard = () => {
         `)
         .order('checked_in_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching check-ins:', error);
+        throw error;
+      }
+
+      console.log('Check-ins fetched:', checkIns?.length || 0);
 
       // Process data into daily aggregations
       const dailyMap = new Map<string, {
@@ -148,7 +155,12 @@ const AnalyticsDashboard = () => {
           created_at
         `);
 
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+        throw studentsError;
+      }
+
+      console.log('Students fetched:', students?.length || 0);
 
       // Calculate student stats
       const studentStats: StudentStats[] = students?.map(student => {
@@ -171,19 +183,22 @@ const AnalyticsDashboard = () => {
         };
       }).sort((a, b) => b.totalAttendance - a.totalAttendance) || [];
 
-      return {
+      const result = {
         dailyData,
         studentStats,
         totalStudents: students?.length || 0,
         totalCheckIns: checkIns?.length || 0,
         peakAttendance: Math.max(...dailyData.map(d => d.uniqueAttendees), 0)
       };
+
+      console.log('Analytics data processed:', result);
+      return result;
     },
     enabled: !!user && userRole === 'admin'
   });
 
   // Show loading while determining access
-  if (!user || !userRole || isLoading) {
+  if (!user || !userRole) {
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -196,12 +211,38 @@ const AnalyticsDashboard = () => {
     return null;
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">Error Loading Analytics</h2>
+          <p className="text-muted-foreground mb-4">{error.message}</p>
+          <Button onClick={() => navigate('/admin')}>Back to Admin Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!analyticsData) {
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">No Data Available</h2>
-          <p className="text-muted-foreground">No check-in data found.</p>
+          <p className="text-muted-foreground mb-4">No check-in data found.</p>
+          <Button onClick={() => navigate('/admin')}>Back to Admin Dashboard</Button>
         </div>
       </div>
     );
