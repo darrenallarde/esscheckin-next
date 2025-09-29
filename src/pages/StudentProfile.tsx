@@ -4,11 +4,31 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, LogOut, Calendar, Phone, Mail } from "lucide-react";
+import { User, LogOut, Calendar, Phone, Mail, Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const StudentProfile = () => {
   const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch student information
+  const { data: studentInfo, isLoading: isLoadingStudent } = useQuery({
+    queryKey: ['student-info', user?.email, user?.phone],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .or(`email.eq.${user.email},phone_number.eq.${user.phone}`)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
 
   // Redirect if not student
   React.useEffect(() => {
@@ -18,7 +38,7 @@ const StudentProfile = () => {
   }, [user, userRole, navigate]);
 
   // Show loading while determining access
-  if (!user || !userRole) {
+  if (!user || !userRole || isLoadingStudent) {
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -73,6 +93,32 @@ const StudentProfile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                {studentInfo && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">Name:</span>
+                      <span>{studentInfo.first_name} {studentInfo.last_name}</span>
+                    </div>
+                    
+                    {studentInfo.grade && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Grade:</span>
+                        <span>{studentInfo.grade}</span>
+                      </div>
+                    )}
+                    
+                    {studentInfo.high_school && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">School:</span>
+                        <span>{studentInfo.high_school}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium">Email:</span>
@@ -124,6 +170,66 @@ const StudentProfile = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Parent Information */}
+        {studentInfo && (studentInfo.mother_first_name || studentInfo.father_first_name) && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Parent Information
+              </CardTitle>
+              <CardDescription>
+                Emergency contact information for parents/guardians
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Mother Information */}
+                {studentInfo.mother_first_name && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Mother</h4>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Name:</span>
+                        <span>{studentInfo.mother_first_name} {studentInfo.mother_last_name}</span>
+                      </div>
+                      {studentInfo.mother_phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">Phone:</span>
+                          <span>{studentInfo.mother_phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Father Information */}
+                {studentInfo.father_first_name && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Father</h4>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">Name:</span>
+                        <span>{studentInfo.father_first_name} {studentInfo.father_last_name}</span>
+                      </div>
+                      {studentInfo.father_phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">Phone:</span>
+                          <span>{studentInfo.father_phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Additional Information */}
         <Card className="mt-6">

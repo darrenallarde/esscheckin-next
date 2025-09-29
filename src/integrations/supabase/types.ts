@@ -45,12 +45,18 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           email: string | null
+          father_first_name: string | null
+          father_last_name: string | null
+          father_phone: string | null
           first_name: string
           grade: string | null
           high_school: string | null
           id: string
           instagram_handle: string | null
           last_name: string | null
+          mother_first_name: string | null
+          mother_last_name: string | null
+          mother_phone: string | null
           parent_name: string | null
           parent_phone: string | null
           phone_number: string | null
@@ -61,12 +67,18 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          father_first_name?: string | null
+          father_last_name?: string | null
+          father_phone?: string | null
           first_name: string
           grade?: string | null
           high_school?: string | null
           id?: string
           instagram_handle?: string | null
           last_name?: string | null
+          mother_first_name?: string | null
+          mother_last_name?: string | null
+          mother_phone?: string | null
           parent_name?: string | null
           parent_phone?: string | null
           phone_number?: string | null
@@ -77,12 +89,18 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          father_first_name?: string | null
+          father_last_name?: string | null
+          father_phone?: string | null
           first_name?: string
           grade?: string | null
           high_school?: string | null
           id?: string
           instagram_handle?: string | null
           last_name?: string | null
+          mother_first_name?: string | null
+          mother_last_name?: string | null
+          mother_phone?: string | null
           parent_name?: string | null
           parent_phone?: string | null
           phone_number?: string | null
@@ -141,19 +159,39 @@ export type Database = {
         Returns: boolean
       }
       register_student_and_checkin: {
-        Args: {
-          p_date_of_birth?: string
-          p_email?: string
-          p_first_name: string
-          p_grade?: string
-          p_high_school?: string
-          p_instagram_handle?: string
-          p_last_name: string
-          p_parent_name?: string
-          p_parent_phone?: string
-          p_phone_number?: string
-          p_user_type?: string
-        }
+        Args:
+          | {
+              p_date_of_birth?: string
+              p_email?: string
+              p_father_first_name?: string
+              p_father_last_name?: string
+              p_father_phone?: string
+              p_first_name: string
+              p_grade?: string
+              p_high_school?: string
+              p_instagram_handle?: string
+              p_last_name: string
+              p_mother_first_name?: string
+              p_mother_last_name?: string
+              p_mother_phone?: string
+              p_parent_name?: string
+              p_parent_phone?: string
+              p_phone_number?: string
+              p_user_type?: string
+            }
+          | {
+              p_date_of_birth?: string
+              p_email?: string
+              p_first_name: string
+              p_grade?: string
+              p_high_school?: string
+              p_instagram_handle?: string
+              p_last_name: string
+              p_parent_name?: string
+              p_parent_phone?: string
+              p_phone_number?: string
+              p_user_type?: string
+            }
         Returns: {
           message: string
           student_id: string
