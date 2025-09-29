@@ -30,10 +30,11 @@ interface Student {
   last_name: string;
   phone_number: string | null;
   email: string | null;
-  grade: string;
-  high_school: string;
-  parent_name: string;
-  parent_phone: string;
+  grade: string | null;
+  high_school: string | null;
+  parent_name: string | null;
+  parent_phone: string | null;
+  user_type: string;
   created_at: string;
 }
 
@@ -139,9 +140,19 @@ const CheckInForm = () => {
         throw error;
       }
 
+      const getUserTypeDisplay = (userType: string, grade?: string | null) => {
+        if (userType === 'student_leader') return 'Student Leader';
+        if (grade) {
+          const gradeNum = parseInt(grade);
+          if (gradeNum >= 6 && gradeNum <= 8) return 'Middle School Student';
+          if (gradeNum >= 9 && gradeNum <= 12) return 'High School Student';
+        }
+        return 'Student';
+      };
+
       toast({
         title: "Check-in successful!",
-        description: `Welcome back ${student.first_name}!`,
+        description: `Welcome back ${student.first_name}! Checked in as ${getUserTypeDisplay(student.user_type, student.grade)}.`,
       });
       
       setViewState({ type: 'success', student });
@@ -194,7 +205,14 @@ const CheckInForm = () => {
             <h3 className="font-semibold text-lg">
               {student.first_name} {student.last_name}
             </h3>
-            <p className="text-muted-foreground">{student.grade} at {student.high_school}</p>
+            <p className="text-muted-foreground">
+              {student.user_type === 'student_leader' 
+                ? 'Student Leader' 
+                : student.grade && student.high_school 
+                  ? `${student.grade} at ${student.high_school}`
+                  : 'Student'
+              }
+            </p>
             {student.phone_number && (
               <p className="text-sm text-muted-foreground">Phone: {student.phone_number}</p>
             )}

@@ -8,6 +8,9 @@ interface Student {
   id: string;
   first_name: string;
   last_name: string;
+  user_type: string;
+  grade?: string | null;
+  high_school?: string | null;
   created_at: string;
 }
 
@@ -22,6 +25,27 @@ const CheckInSuccess = ({ student, onNewCheckIn }: CheckInSuccessProps) => {
     streakCount: 1,
     lastCheckIn: new Date().toLocaleDateString(),
   });
+
+  // Get user type display text
+  const getUserTypeDisplay = (userType: string, grade?: string | null, highSchool?: string | null) => {
+    if (userType === 'student_leader') {
+      return 'Student Leader';
+    }
+    
+    if (grade && highSchool) {
+      // Determine if middle school or high school based on grade
+      const gradeNum = parseInt(grade);
+      if (gradeNum >= 6 && gradeNum <= 8) {
+        return 'Middle School Student';
+      } else if (gradeNum >= 9 && gradeNum <= 12) {
+        return 'High School Student';
+      }
+    }
+    
+    return 'Student';
+  };
+
+  const userTypeDisplay = getUserTypeDisplay(student.user_type, student.grade, student.high_school);
 
   useEffect(() => {
     const fetchCheckInStats = async () => {
@@ -71,6 +95,8 @@ const CheckInSuccess = ({ student, onNewCheckIn }: CheckInSuccessProps) => {
         <CardTitle className="text-2xl text-green-600">Check-In Successful!</CardTitle>
         <CardDescription>
           Welcome to ministry, {student.first_name} {student.last_name}!
+          <br />
+          <span className="font-medium text-primary">Checked in as: {userTypeDisplay}</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
