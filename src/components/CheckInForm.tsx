@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NewStudentForm from "./NewStudentForm";
-import GameCheckInSuccess from "./GameCheckInSuccess";
+import GameCheckInSuccessDB from "./GameCheckInSuccessDB";
+import { processCheckinRewards } from "@/utils/gamificationDB";
 
 // Schema for phone search
 const phoneSearchSchema = z.object({
@@ -38,12 +39,12 @@ interface Student {
   created_at: string;
 }
 
-type ViewState = 
+type ViewState =
   | { type: 'phone-search' }
   | { type: 'name-search' }
   | { type: 'confirm-student', student: Student }
   | { type: 'new-student' }
-  | { type: 'success', student: Student };
+  | { type: 'success', student: Student, checkInId: string };
 
 const CheckInForm = () => {
   const [viewState, setViewState] = useState<ViewState>({ type: 'phone-search' });
@@ -174,8 +175,11 @@ const CheckInForm = () => {
           title: "Check-in successful!",
           description: `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
         });
-        
-        setViewState({ type: 'success', student });
+
+        // Get the check-in ID from the result
+        const checkInId = result[0].check_in_id;
+
+        setViewState({ type: 'success', student, checkInId });
       } else {
         throw new Error(result?.[0]?.message || 'Check-in failed');
       }
@@ -199,7 +203,11 @@ const CheckInForm = () => {
 
   // Success view
   if (viewState.type === 'success') {
-    return <GameCheckInSuccess student={viewState.student} onNewCheckIn={resetToSearch} />;
+    return <GameCheckInSuccessDB
+      student={viewState.student}
+      checkInId={viewState.checkInId}
+      onNewCheckIn={resetToSearch}
+    />;
   }
 
   // New student form
@@ -280,7 +288,8 @@ const CheckInForm = () => {
                         placeholder="📱 Enter your phone number"
                         {...field}
                         autoFocus
-                        className="h-20 text-3xl font-bold text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold"
+                        style={{ fontSize: '2rem', fontWeight: 'bold' }}
+                        className="h-20 text-3xl font-black text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold shadow-lg"
                       />
                     </FormControl>
                     <FormMessage />
@@ -332,7 +341,8 @@ const CheckInForm = () => {
                       placeholder="👤 Enter your name or email"
                       {...field}
                       autoFocus
-                      className="h-20 text-3xl font-bold text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold"
+                      style={{ fontSize: '2rem', fontWeight: 'bold' }}
+                      className="h-20 text-3xl font-black text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold shadow-lg"
                     />
                   </FormControl>
                   <FormMessage />
