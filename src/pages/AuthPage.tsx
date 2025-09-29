@@ -32,8 +32,19 @@ type SignUpData = z.infer<typeof signUpSchema>;
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, userRole } = useAuth();
   const navigate = useNavigate();
+
+  // Handle role-based redirect after successful authentication
+  React.useEffect(() => {
+    if (user && userRole) {
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/student');
+      }
+    }
+  }, [user, userRole, navigate]);
 
   const signInForm = useForm<SignInData>({
     resolver: zodResolver(signInSchema),
@@ -69,7 +80,7 @@ const AuthPage = () => {
           title: "Welcome back!",
           description: "You have been successfully signed in.",
         });
-        navigate("/");
+        // Navigation will be handled by the auth context based on user role
       }
     } catch (error) {
       console.error("Sign in error:", error);
