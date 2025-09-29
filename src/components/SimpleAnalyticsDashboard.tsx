@@ -51,7 +51,7 @@ interface StudentStats {
   category: string;
   wednesdayStreak: number;
   sundayStreak: number;
-  bothDaysStreak: number;
+  totalStreak: number;
 }
 
 const SimpleAnalyticsDashboard = () => {
@@ -191,9 +191,26 @@ const SimpleAnalyticsDashboard = () => {
       // Calculate student stats
       const studentStats: StudentStats[] = students?.map(student => {
         const studentCheckIns = checkIns?.filter(ci => ci.student_id === student.id) || [];
-        const uniqueDates = new Set(studentCheckIns.map(ci => 
+        const uniqueDates = new Set(studentCheckIns.map(ci =>
           new Date(ci.checked_in_at).toISOString().split('T')[0]
         ));
+
+        // Debug logging for Julian Allarde
+        const fullName = `${student.first_name} ${student.last_name || ''}`.trim();
+        const isJulian = fullName.toLowerCase().includes('julian') && fullName.toLowerCase().includes('allarde');
+        if (isJulian) {
+          console.log('=== Debugging Julian Allarde ===');
+          console.log('Student:', fullName);
+          console.log('Total check-ins:', studentCheckIns.length);
+          console.log('Check-in dates:', studentCheckIns.map(ci => {
+            const date = new Date(ci.checked_in_at);
+            return {
+              date: date.toDateString(),
+              dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()],
+              isoDate: date.toISOString()
+            };
+          }));
+        }
 
         // Calculate streaks
         const checkInsByDate = studentCheckIns
@@ -213,12 +230,18 @@ const SimpleAnalyticsDashboard = () => {
           currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Get Sunday of current week
           currentWeekStart.setHours(0, 0, 0, 0);
 
+          if (isJulian) {
+            console.log(`Calculating streak for days: ${targetDays} (${targetDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])})`);
+            console.log('Today is:', today.toDateString(), 'Day:', ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()]);
+          }
+
           // Check consecutive weeks going back
           for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
             const weekStart = new Date(currentWeekStart);
             weekStart.setDate(weekStart.getDate() - (weekOffset * 7));
 
             let foundThisWeek = false;
+            const weekCheckIns = [];
 
             // Check if there was attendance on any of the target days this week
             for (const targetDay of targetDays) {
@@ -229,13 +252,21 @@ const SimpleAnalyticsDashboard = () => {
               const hasCheckIn = checkInsByDate.some(ci => {
                 const checkInDateStr = ci.date.toDateString();
                 const targetDateStr = targetDate.toDateString();
-                return checkInDateStr === targetDateStr;
+                const matches = checkInDateStr === targetDateStr;
+                if (matches && isJulian) {
+                  weekCheckIns.push(targetDateStr);
+                }
+                return matches;
               });
 
               if (hasCheckIn) {
                 foundThisWeek = true;
                 break;
               }
+            }
+
+            if (isJulian && weekOffset < 10) {
+              console.log(`Week ${weekOffset} (starting ${weekStart.toDateString()}): found=${foundThisWeek}, checkIns=${weekCheckIns}`);
             }
 
             if (foundThisWeek) {
@@ -249,12 +280,21 @@ const SimpleAnalyticsDashboard = () => {
             }
           }
 
+          if (isJulian) {
+            console.log(`Final streak: ${streak}`);
+          }
+
           return streak;
         };
 
-        const calculateBothDaysStreak = () => {
+        const calculateTotalStreak = () => {
           let streak = 0;
           const today = new Date();
+
+          if (isJulian) {
+            console.log('Calculating TOTAL STREAK for Julian');
+            console.log('Today:', today.toDateString());
+          }
 
           // Start from the most recent week and work backwards
           let currentWeekStart = new Date(today);
@@ -265,44 +305,52 @@ const SimpleAnalyticsDashboard = () => {
           for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
             const weekStart = new Date(currentWeekStart);
             weekStart.setDate(weekStart.getDate() - (weekOffset * 7));
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
 
-            const sunday = new Date(weekStart);
-            sunday.setDate(sunday.getDate() + 0); // Sunday
+            // For this week, check if there are check-ins on Wednesday OR Sunday (any attendance counts)
+            const weekCheckIns = checkInsByDate.filter(ci => {
+              return ci.date >= weekStart && ci.date <= weekEnd;
+            });
 
-            const wednesday = new Date(weekStart);
-            wednesday.setDate(wednesday.getDate() + 3); // Wednesday
+            const hasWednesday = weekCheckIns.some(ci => ci.dayOfWeek === 3);
+            const hasSunday = weekCheckIns.some(ci => ci.dayOfWeek === 0);
+            const hasAnyAttendance = hasWednesday || hasSunday;
 
-            // Check if there was attendance on BOTH days
-            const hasWednesday = checkInsByDate.some(ci =>
-              ci.date.toDateString() === wednesday.toDateString()
-            );
-            const hasSunday = checkInsByDate.some(ci =>
-              ci.date.toDateString() === sunday.toDateString()
-            );
+            if (isJulian && weekOffset < 5) {
+              console.log(`Week ${weekOffset} (${weekStart.toDateString()} - ${weekEnd.toDateString()})`);
+              console.log(`  Check-ins:`, weekCheckIns.map(ci => ({
+                date: ci.date.toDateString(),
+                day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][ci.dayOfWeek]
+              })));
+              console.log(`  Has Wed: ${hasWednesday}, Has Sun: ${hasSunday}, Has Any: ${hasAnyAttendance}`);
+            }
 
-            // Only count the streak if BOTH days were attended
-            if (hasWednesday && hasSunday) {
+            // Count the streak if there was ANY attendance (Wed OR Sun) this week
+            if (hasAnyAttendance) {
               streak++;
-            } else if (weekOffset === 0 && (!hasWednesday || !hasSunday)) {
-              // If current week doesn't have both days yet, it's okay to continue checking
-              // Only continue if we're still in the current week and it's not complete yet
+            } else if (weekOffset === 0) {
+              // For the current week, check if it's still possible to have attendance
               const now = new Date();
-              const isCurrentWeek = now >= weekStart && now < new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+              const isCurrentWeek = now >= weekStart && now <= weekEnd;
 
-              if (isCurrentWeek && now.getDay() < 3) {
-                // It's before Wednesday in the current week, so we can't have both days yet
+              if (isCurrentWeek && !hasAnyAttendance) {
+                // Current week with no attendance yet - continue to check previous weeks
+                if (isJulian) {
+                  console.log('  Current week with no attendance yet');
+                }
                 continue;
-              } else if (!hasWednesday && !hasSunday && isCurrentWeek) {
-                // Neither day attended yet in current week, continue to check previous weeks
-                continue;
-              } else {
-                // Streak is broken
-                break;
               }
+              // Streak is broken
+              break;
             } else {
               // Streak broken
               break;
             }
+          }
+
+          if (isJulian) {
+            console.log(`Final TOTAL STREAK: ${streak}`);
           }
 
           return streak;
@@ -321,7 +369,7 @@ const SimpleAnalyticsDashboard = () => {
             'Other',
           wednesdayStreak: calculateStreak([3]), // Wednesday is day 3
           sundayStreak: calculateStreak([0]), // Sunday is day 0
-          bothDaysStreak: calculateBothDaysStreak()
+          totalStreak: calculateTotalStreak()
         };
       }).sort((a, b) => b.totalAttendance - a.totalAttendance) || [];
 
@@ -961,7 +1009,7 @@ const SimpleAnalyticsDashboard = () => {
                   <th className="border border-border p-3 text-center">Last Attended</th>
                   <th className="border border-border p-3 text-center">Wed Streak</th>
                   <th className="border border-border p-3 text-center">Sun Streak</th>
-                  <th className="border border-border p-3 text-center">Both Days</th>
+                  <th className="border border-border p-3 text-center">Total Streak</th>
                   <th className="border border-border p-3 text-left">Category</th>
                 </tr>
               </thead>
@@ -991,8 +1039,8 @@ const SimpleAnalyticsDashboard = () => {
                       </Badge>
                     </td>
                     <td className="border border-border p-3 text-center">
-                      <Badge variant={student.bothDaysStreak >= 1 ? 'destructive' : 'secondary'}>
-                        {student.bothDaysStreak}
+                      <Badge variant={student.totalStreak >= 2 ? 'destructive' : 'secondary'}>
+                        {student.totalStreak}
                       </Badge>
                     </td>
                     <td className="border border-border p-3">
