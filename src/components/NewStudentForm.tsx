@@ -68,47 +68,38 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   const onSubmit = async (data: NewStudentFormData) => {
     setIsSubmitting(true);
     try {
-      // Create new student record
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .insert({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone_number: data.phoneNumber,
-          email: data.email || null,
-          date_of_birth: data.dateOfBirth,
-          instagram_handle: data.instagramHandle || null,
-          user_type: data.isStudentLeader ? 'student_leader' : 'student',
-          grade: data.isStudentLeader ? null : data.grade,
-          high_school: data.isStudentLeader ? null : data.highSchool,
-          parent_name: data.isStudentLeader ? null : data.parentName,
-          parent_phone: data.isStudentLeader ? null : data.parentPhone,
-        })
-        .select()
-        .single();
-
-      if (studentError) {
-        throw studentError;
-      }
-
-      // Create check-in record
-      const { error: checkinError } = await supabase
-        .from('check_ins')
-        .insert({
-          student_id: student.id,
+      // Use the secure registration function
+      const { data: result, error } = await supabase
+        .rpc('register_student_and_checkin', {
+          p_first_name: data.firstName,
+          p_last_name: data.lastName,
+          p_phone_number: data.phoneNumber || null,
+          p_email: data.email || null,
+          p_date_of_birth: data.dateOfBirth,
+          p_instagram_handle: data.instagramHandle || null,
+          p_user_type: data.isStudentLeader ? 'student_leader' : 'student',
+          p_grade: data.isStudentLeader ? null : data.grade,
+          p_high_school: data.isStudentLeader ? null : data.highSchool,
+          p_parent_name: data.isStudentLeader ? null : data.parentName,
+          p_parent_phone: data.isStudentLeader ? null : data.parentPhone,
         });
 
-      if (checkinError) {
-        throw checkinError;
+      if (error) {
+        throw error;
       }
 
-      const userType = data.isStudentLeader ? "Student Leader" : "Student";
-      toast({
-        title: "Success!",
-        description: `Welcome ${data.firstName}! You've been successfully registered as a ${userType} and checked in.`,
-      });
+      if (result && result[0]?.success) {
 
-      onSuccess();
+        const userType = data.isStudentLeader ? "Student Leader" : "Student";
+        toast({
+          title: "Success!",
+          description: `Welcome ${data.firstName}! You've been successfully registered as a ${userType} and checked in.`,
+        });
+
+        onSuccess();
+      } else {
+        throw new Error(result?.[0]?.message || 'Registration failed');
+      }
     } catch (error) {
       console.error("Error creating student:", error);
       toast({

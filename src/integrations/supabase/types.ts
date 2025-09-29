@@ -120,6 +120,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      checkin_student: {
+        Args: { p_student_id: string }
+        Returns: {
+          first_name: string
+          message: string
+          success: boolean
+          user_type: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -130,6 +139,37 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      register_student_and_checkin: {
+        Args: {
+          p_date_of_birth?: string
+          p_email?: string
+          p_first_name: string
+          p_grade?: string
+          p_high_school?: string
+          p_instagram_handle?: string
+          p_last_name: string
+          p_parent_name?: string
+          p_parent_phone?: string
+          p_phone_number?: string
+          p_user_type?: string
+        }
+        Returns: {
+          message: string
+          student_id: string
+          success: boolean
+        }[]
+      }
+      search_student_for_checkin: {
+        Args: { search_term: string }
+        Returns: {
+          first_name: string
+          grade: string
+          high_school: string
+          last_name: string
+          student_id: string
+          user_type: string
+        }[]
       }
     }
     Enums: {

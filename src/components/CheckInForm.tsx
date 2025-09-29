@@ -62,18 +62,29 @@ const CheckInForm = () => {
   const searchByPhone = async (data: PhoneSearchData) => {
     setIsSearching(true);
     try {
-      const { data: students, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('phone_number', data.phoneNumber)
-        .maybeSingle();
+      const { data: results, error } = await supabase
+        .rpc('search_student_for_checkin', { search_term: data.phoneNumber });
 
       if (error) {
         throw error;
       }
 
-      if (students) {
-        setViewState({ type: 'confirm-student', student: students });
+      if (results && results.length > 0) {
+        // Convert the function result to match our Student interface
+        const student = {
+          id: results[0].student_id,
+          first_name: results[0].first_name,
+          last_name: results[0].last_name,
+          user_type: results[0].user_type,
+          grade: results[0].grade,
+          high_school: results[0].high_school,
+          phone_number: null, // Not returned by secure function
+          email: null, // Not returned by secure function
+          parent_name: null,
+          parent_phone: null,
+          created_at: '',
+        };
+        setViewState({ type: 'confirm-student', student });
       } else {
         toast({
           title: "Student not found",
@@ -96,18 +107,29 @@ const CheckInForm = () => {
   const searchByNameOrEmail = async (data: NameEmailSearchData) => {
     setIsSearching(true);
     try {
-      const { data: students, error } = await supabase
-        .from('students')
-        .select('*')
-        .or(`first_name.ilike.%${data.searchTerm}%,last_name.ilike.%${data.searchTerm}%,email.ilike.%${data.searchTerm}%`);
+      const { data: results, error } = await supabase
+        .rpc('search_student_for_checkin', { search_term: data.searchTerm });
 
       if (error) {
         throw error;
       }
 
-      if (students && students.length > 0) {
-        // For simplicity, take the first match. In a real app, you'd show a list to choose from
-        setViewState({ type: 'confirm-student', student: students[0] });
+      if (results && results.length > 0) {
+        // Convert the function result to match our Student interface
+        const student = {
+          id: results[0].student_id,
+          first_name: results[0].first_name,
+          last_name: results[0].last_name,
+          user_type: results[0].user_type,
+          grade: results[0].grade,
+          high_school: results[0].high_school,
+          phone_number: null, // Not returned by secure function
+          email: null, // Not returned by secure function
+          parent_name: null,
+          parent_phone: null,
+          created_at: '',
+        };
+        setViewState({ type: 'confirm-student', student });
       } else {
         toast({
           title: "Student not found",
@@ -130,32 +152,33 @@ const CheckInForm = () => {
   const confirmCheckIn = async (student: Student) => {
     setIsSearching(true);
     try {
-      const { error } = await supabase
-        .from('check_ins')
-        .insert({
-          student_id: student.id,
-        });
+      const { data: result, error } = await supabase
+        .rpc('checkin_student', { p_student_id: student.id });
 
       if (error) {
         throw error;
       }
 
-      const getUserTypeDisplay = (userType: string, grade?: string | null) => {
-        if (userType === 'student_leader') return 'Student Leader';
-        if (grade) {
-          const gradeNum = parseInt(grade);
-          if (gradeNum >= 6 && gradeNum <= 8) return 'Middle School Student';
-          if (gradeNum >= 9 && gradeNum <= 12) return 'High School Student';
-        }
-        return 'Student';
-      };
+      if (result && result[0]?.success) {
+        const getUserTypeDisplay = (userType: string, grade?: string | null) => {
+          if (userType === 'student_leader') return 'Student Leader';
+          if (grade) {
+            const gradeNum = parseInt(grade);
+            if (gradeNum >= 6 && gradeNum <= 8) return 'Middle School Student';
+            if (gradeNum >= 9 && gradeNum <= 12) return 'High School Student';
+          }
+          return 'Student';
+        };
 
-      toast({
-        title: "Check-in successful!",
-        description: `Welcome back ${student.first_name}! Checked in as ${getUserTypeDisplay(student.user_type, student.grade)}.`,
-      });
-      
-      setViewState({ type: 'success', student });
+        toast({
+          title: "Check-in successful!",
+          description: `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
+        });
+        
+        setViewState({ type: 'success', student });
+      } else {
+        throw new Error(result?.[0]?.message || 'Check-in failed');
+      }
     } catch (error) {
       console.error("Error checking in:", error);
       toast({
