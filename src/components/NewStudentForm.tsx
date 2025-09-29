@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -14,10 +15,25 @@ const newStudentSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
   phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits").max(15, "Phone number must be less than 15 digits"),
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
-  grade: z.string().trim().min(1, "Grade is required").max(20, "Grade must be less than 20 characters"),
-  highSchool: z.string().trim().min(1, "High school is required").max(100, "High school must be less than 100 characters"),
-  parentName: z.string().trim().min(1, "Parent name is required").max(100, "Parent name must be less than 100 characters"),
-  parentPhone: z.string().trim().min(10, "Parent phone must be at least 10 digits").max(15, "Parent phone must be less than 15 digits"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  instagramHandle: z.string().trim().optional().or(z.literal("")),
+  isStudentLeader: z.boolean().default(false),
+  grade: z.string().trim().optional().or(z.literal("")),
+  highSchool: z.string().trim().optional().or(z.literal("")),
+  parentName: z.string().trim().optional().or(z.literal("")),
+  parentPhone: z.string().trim().optional().or(z.literal("")),
+}).refine((data) => {
+  // If not a student leader, these fields are required
+  if (!data.isStudentLeader) {
+    return data.grade && data.grade.length > 0 && 
+           data.highSchool && data.highSchool.length > 0 && 
+           data.parentName && data.parentName.length > 0 && 
+           data.parentPhone && data.parentPhone.length >= 10;
+  }
+  return true;
+}, {
+  message: "Grade, high school, and parent information are required for students",
+  path: ["grade"], // This will show the error on the grade field
 });
 
 type NewStudentFormData = z.infer<typeof newStudentSchema>;
@@ -37,12 +53,17 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       lastName: "",
       phoneNumber: "",
       email: "",
+      dateOfBirth: "",
+      instagramHandle: "",
+      isStudentLeader: false,
       grade: "",
       highSchool: "",
       parentName: "",
       parentPhone: "",
     },
   });
+
+  const isStudentLeader = form.watch("isStudentLeader");
 
   const onSubmit = async (data: NewStudentFormData) => {
     setIsSubmitting(true);
@@ -55,10 +76,13 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
           last_name: data.lastName,
           phone_number: data.phoneNumber,
           email: data.email || null,
-          grade: data.grade,
-          high_school: data.highSchool,
-          parent_name: data.parentName,
-          parent_phone: data.parentPhone,
+          date_of_birth: data.dateOfBirth,
+          instagram_handle: data.instagramHandle || null,
+          user_type: data.isStudentLeader ? 'student_leader' : 'student',
+          grade: data.isStudentLeader ? null : data.grade,
+          high_school: data.isStudentLeader ? null : data.highSchool,
+          parent_name: data.isStudentLeader ? null : data.parentName,
+          parent_phone: data.isStudentLeader ? null : data.parentPhone,
         })
         .select()
         .single();
@@ -78,9 +102,10 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
         throw checkinError;
       }
 
+      const userType = data.isStudentLeader ? "Student Leader" : "Student";
       toast({
         title: "Success!",
-        description: `Welcome ${data.firstName}! You've been successfully registered and checked in.`,
+        description: `Welcome ${data.firstName}! You've been successfully registered as a ${userType} and checked in.`,
       });
 
       onSuccess();
@@ -88,7 +113,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       console.error("Error creating student:", error);
       toast({
         title: "Error",
-        description: "Failed to register student. Please try again.",
+        description: "Failed to register. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -99,7 +124,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>New Student Registration</CardTitle>
+        <CardTitle>New Registration</CardTitle>
         <CardDescription>
           Let's get you registered and checked in for today's ministry.
         </CardDescription>
@@ -107,6 +132,28 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* User Type Toggle */}
+            <FormField
+              control={form.control}
+              name="isStudentLeader"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Student Leader</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Check this if you're a student leader or volunteer
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -170,12 +217,12 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="grade"
+                name="dateOfBirth"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Grade</FormLabel>
+                    <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter grade" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -184,12 +231,12 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
 
               <FormField
                 control={form.control}
-                name="highSchool"
+                name="instagramHandle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>High School</FormLabel>
+                    <FormLabel>Instagram Handle (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter high school" {...field} />
+                      <Input placeholder="@username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,35 +244,70 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="parentName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Parent/Guardian Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter parent name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Student-specific fields - only show if not a student leader */}
+            {!isStudentLeader && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="grade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Grade</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter grade" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="parentPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Parent/Guardian Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter parent phone" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="highSchool"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>High School</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter high school" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="parentName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent/Guardian Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter parent name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="parentPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent/Guardian Phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter parent phone" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex gap-4 pt-4">
               <Button
@@ -241,7 +323,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                 disabled={isSubmitting}
                 className="flex-1"
               >
-                {isSubmitting ? "Registering..." : "Register & Check In"}
+                {isSubmitting ? "Registering..." : `Register & Check In${isStudentLeader ? ' as Leader' : ''}`}
               </Button>
             </div>
           </form>

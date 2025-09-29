@@ -43,42 +43,51 @@ export type Database = {
       students: {
         Row: {
           created_at: string
+          date_of_birth: string | null
           email: string | null
           first_name: string
-          grade: string
-          high_school: string
+          grade: string | null
+          high_school: string | null
           id: string
+          instagram_handle: string | null
           last_name: string
-          parent_name: string
-          parent_phone: string
+          parent_name: string | null
+          parent_phone: string | null
           phone_number: string | null
           updated_at: string
+          user_type: string
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name: string
-          grade: string
-          high_school: string
+          grade?: string | null
+          high_school?: string | null
           id?: string
+          instagram_handle?: string | null
           last_name: string
-          parent_name: string
-          parent_phone: string
+          parent_name?: string | null
+          parent_phone?: string | null
           phone_number?: string | null
           updated_at?: string
+          user_type?: string
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name?: string
-          grade?: string
-          high_school?: string
+          grade?: string | null
+          high_school?: string | null
           id?: string
+          instagram_handle?: string | null
           last_name?: string
-          parent_name?: string
-          parent_phone?: string
+          parent_name?: string | null
+          parent_phone?: string | null
           phone_number?: string | null
           updated_at?: string
+          user_type?: string
         }
         Relationships: []
       }
