@@ -214,7 +214,12 @@ const SimpleAnalyticsDashboard = () => {
         studentStats,
         totalStudents: students?.length || 0,
         totalCheckIns: checkIns?.length || 0,
-        peakAttendance: Math.max(...dailyData.map(d => d.uniqueAttendees), 0)
+        peakAttendance: Math.max(...dailyData.map(d => d.uniqueAttendees), 0),
+        // Calculate months span for avg visits per month
+        monthsSpan: dailyData.length > 0 ? Math.max(1, Math.ceil(
+          (new Date(dailyData[dailyData.length - 1].date).getTime() - new Date(dailyData[0].date).getTime()) 
+          / (1000 * 60 * 60 * 24 * 30)
+        )) : 1
       };
 
       console.log('Analytics data processed:', result);
@@ -267,7 +272,7 @@ const SimpleAnalyticsDashboard = () => {
       component: (
         <div className="space-y-6">
           <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+            <BarChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="dayLabel"
@@ -276,11 +281,35 @@ const SimpleAnalyticsDashboard = () => {
                 height={80}
               />
               <YAxis label={{ value: 'Unique Students', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value, name) => [value, name === 'uniqueAttendees' ? 'Unique Students' : 'Total Check-ins']} />
-              <Legend />
+              <Tooltip 
+                formatter={(value) => [value, 'Unique Students']} 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-primary">
+                          Unique Students: {payload[0].value}
+                        </p>
+                        {data.studentNames && data.studentNames.length > 0 && (
+                          <div className="mt-2">
+                            <p className="font-medium text-sm">Students who attended:</p>
+                            <div className="max-h-32 overflow-y-auto">
+                              {data.studentNames.map((name, index) => (
+                                <p key={index} className="text-xs text-muted-foreground">• {name}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Bar dataKey="uniqueAttendees" fill="#10B981" name="Unique Students" />
-              <Line type="monotone" dataKey="totalAttendees" stroke="#EF4444" strokeWidth={3} name="Total Check-ins" />
-            </ComposedChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       )
@@ -612,12 +641,9 @@ const SimpleAnalyticsDashboard = () => {
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {analyticsData.totalStudents > 0 ? 
-                  (analyticsData.totalCheckIns / analyticsData.totalStudents).toFixed(1) : 
-                  '0'
-                }
+                {(analyticsData.totalCheckIns / analyticsData.monthsSpan).toFixed(1)}
               </div>
-              <div className="text-muted-foreground">Avg Visits Per Student</div>
+              <div className="text-muted-foreground">Avg Visits Per Month</div>
             </CardContent>
           </Card>
         </div>
