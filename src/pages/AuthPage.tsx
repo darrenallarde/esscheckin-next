@@ -432,7 +432,7 @@ const AuthPage = () => {
               onClick={async () => {
                 setLoading(true);
                 try {
-                  const { error } = await signIn("admin@echo.church", "admin");
+                  const { error } = await signIn("dallarde@echo.church", "admin");
                   if (error) {
                     toast({
                       title: "Admin Login Failed",
@@ -456,7 +456,7 @@ const AuthPage = () => {
               {loading ? "Logging in..." : "Quick Admin Login (Testing)"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              For testing: admin@echo.church / admin
+              For testing: dallarde@echo.church / admin
             </p>
           </div>
 
