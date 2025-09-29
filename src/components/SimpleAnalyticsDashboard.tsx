@@ -203,73 +203,108 @@ const SimpleAnalyticsDashboard = () => {
           }))
           .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-        // Calculate current streaks
+        // Calculate current streaks - counts consecutive weeks with attendance
         const calculateStreak = (targetDays: number[]) => {
           let streak = 0;
           const today = new Date();
-          const oneWeek = 7 * 24 * 60 * 60 * 1000;
-          
-          // Start from this week and work backwards
+
+          // Start from the most recent week and work backwards
+          let currentWeekStart = new Date(today);
+          currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Get Sunday of current week
+          currentWeekStart.setHours(0, 0, 0, 0);
+
+          // Check consecutive weeks going back
           for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
-            const weekStart = new Date(today.getTime() - (weekOffset * oneWeek));
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Get Sunday of that week
-            
+            const weekStart = new Date(currentWeekStart);
+            weekStart.setDate(weekStart.getDate() - (weekOffset * 7));
+
             let foundThisWeek = false;
-            
+
+            // Check if there was attendance on any of the target days this week
             for (const targetDay of targetDays) {
               const targetDate = new Date(weekStart);
-              targetDate.setDate(weekStart.getDate() + targetDay);
-              
+              targetDate.setDate(targetDate.getDate() + targetDay);
+
+              // Check if we have a check-in on this exact date
               const hasCheckIn = checkInsByDate.some(ci => {
-                const checkInDate = ci.date.toDateString();
-                return checkInDate === targetDate.toDateString();
+                const checkInDateStr = ci.date.toDateString();
+                const targetDateStr = targetDate.toDateString();
+                return checkInDateStr === targetDateStr;
               });
-              
+
               if (hasCheckIn) {
                 foundThisWeek = true;
                 break;
               }
             }
-            
+
             if (foundThisWeek) {
               streak++;
+            } else if (weekOffset === 0 && !foundThisWeek) {
+              // If current week has no attendance yet, check previous week
+              continue;
             } else {
+              // Streak broken
               break;
             }
           }
-          
+
           return streak;
         };
 
         const calculateBothDaysStreak = () => {
           let streak = 0;
           const today = new Date();
-          const oneWeek = 7 * 24 * 60 * 60 * 1000;
-          
+
+          // Start from the most recent week and work backwards
+          let currentWeekStart = new Date(today);
+          currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Get Sunday of current week
+          currentWeekStart.setHours(0, 0, 0, 0);
+
+          // Check consecutive weeks going back
           for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
-            const weekStart = new Date(today.getTime() - (weekOffset * oneWeek));
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            
-            const wednesday = new Date(weekStart);
-            wednesday.setDate(weekStart.getDate() + 3);
-            
+            const weekStart = new Date(currentWeekStart);
+            weekStart.setDate(weekStart.getDate() - (weekOffset * 7));
+
             const sunday = new Date(weekStart);
-            sunday.setDate(weekStart.getDate() + 0);
-            
-            const hasWednesday = checkInsByDate.some(ci => 
+            sunday.setDate(sunday.getDate() + 0); // Sunday
+
+            const wednesday = new Date(weekStart);
+            wednesday.setDate(wednesday.getDate() + 3); // Wednesday
+
+            // Check if there was attendance on BOTH days
+            const hasWednesday = checkInsByDate.some(ci =>
               ci.date.toDateString() === wednesday.toDateString()
             );
-            const hasSunday = checkInsByDate.some(ci => 
+            const hasSunday = checkInsByDate.some(ci =>
               ci.date.toDateString() === sunday.toDateString()
             );
-            
+
+            // Only count the streak if BOTH days were attended
             if (hasWednesday && hasSunday) {
               streak++;
+            } else if (weekOffset === 0 && (!hasWednesday || !hasSunday)) {
+              // If current week doesn't have both days yet, it's okay to continue checking
+              // Only continue if we're still in the current week and it's not complete yet
+              const now = new Date();
+              const isCurrentWeek = now >= weekStart && now < new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+              if (isCurrentWeek && now.getDay() < 3) {
+                // It's before Wednesday in the current week, so we can't have both days yet
+                continue;
+              } else if (!hasWednesday && !hasSunday && isCurrentWeek) {
+                // Neither day attended yet in current week, continue to check previous weeks
+                continue;
+              } else {
+                // Streak is broken
+                break;
+              }
             } else {
+              // Streak broken
               break;
             }
           }
-          
+
           return streak;
         };
 
