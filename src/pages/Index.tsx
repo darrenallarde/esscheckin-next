@@ -1,33 +1,11 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import CheckInForm from "@/components/CheckInForm";
 
 const Index = () => {
-  const { user, userRole, loading, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will redirect to auth
-  }
+  const { user, userRole, loading } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -35,13 +13,31 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">Youth Ministry Check-In</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              Welcome, {user.email}
-              {userRole && <span className="ml-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">{userRole}</span>}
-            </span>
-            <Button variant="outline" onClick={signOut}>
-              Sign Out
-            </Button>
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {user.email}
+                  {userRole && <span className="ml-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">{userRole}</span>}
+                </span>
+                <Button asChild variant="outline">
+                  <Link to="/account">My Account</Link>
+                </Button>
+                {userRole === 'admin' && (
+                  <Button asChild>
+                    <Link to="/admin">Admin Panel</Link>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <Button asChild variant="outline">
+                  <Link to="/auth">Sign In</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/account">My Account</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -52,22 +48,20 @@ const Index = () => {
             Welcome to Ministry!
           </h2>
           <p className="text-xl text-muted-foreground">
-            {userRole === 'admin' 
-              ? "Use the form below to check students in, or manage the system from your admin panel."
-              : "Let's get you checked in for today's ministry."
-            }
+            Quick check-in - just enter your info and you're all set!
           </p>
         </div>
         
-        {userRole === 'admin' && (
-          <div className="text-center mb-6">
-            <Button onClick={() => navigate("/admin")} size="lg">
-              Admin Dashboard
-            </Button>
-          </div>
-        )}
-        
         <CheckInForm />
+        
+        <div className="text-center mt-8">
+          <p className="text-sm text-muted-foreground mb-4">
+            Need to update your information or manage your account?
+          </p>
+          <Button asChild variant="link">
+            <Link to="/auth">Sign in to your account →</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
