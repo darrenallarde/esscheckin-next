@@ -7,10 +7,7 @@ interface AuthContextType {
   session: Session | null;
   userRole: string | null;
   loading: boolean;
-  signUp: (email: string, password: string, phone?: string) => Promise<{ error: any }>;
-  signIn: (emailOrPhone: string, password: string) => Promise<{ error: any }>;
   signInWithOtp: (email: string) => Promise<{ error: any }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -88,65 +85,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const signUp = React.useCallback(async (email: string, password: string, phone?: string) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        phone,
-        options: {
-          emailRedirectTo: redirectUrl
-        }
-      });
-      
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  }, []);
-
-  const signIn = React.useCallback(async (emailOrPhone: string, password: string) => {
-    try {
-      // Determine if input is email or phone
-      const isEmail = emailOrPhone.includes('@');
-      
-      const credentials = isEmail 
-        ? { email: emailOrPhone, password }
-        : { phone: emailOrPhone, password };
-      
-      const { error } = await supabase.auth.signInWithPassword(credentials);
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  }, []);
 
   const signInWithOtp = React.useCallback(async (email: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/dashboard`;
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false,
+          shouldCreateUser: true,
           emailRedirectTo: redirectUrl,
           data: {}
         }
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  }, []);
-
-  const verifyOtp = React.useCallback(async (email: string, token: string) => {
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email'
       });
       return { error };
     } catch (error) {
@@ -167,12 +117,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     userRole,
     loading,
-    signUp,
-    signIn,
     signInWithOtp,
-    verifyOtp,
     signOut,
-  }), [user, session, userRole, loading, signUp, signIn, signInWithOtp, verifyOtp, signOut]);
+  }), [user, session, userRole, loading, signInWithOtp, signOut]);
 
   return (
     <AuthContext.Provider value={value}>
