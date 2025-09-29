@@ -282,12 +282,13 @@ const SimpleAnalyticsDashboard = () => {
               />
               <YAxis label={{ value: 'Unique Students', angle: -90, position: 'insideLeft' }} />
               <Tooltip 
-                formatter={(value) => [value, 'Unique Students']} 
+                formatter={(value) => [value, 'Unique Students']}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                           style={{ pointerEvents: 'auto' }}>
                         <p className="font-medium">{label}</p>
                         <p className="text-primary">
                           Unique Students: {payload[0].value}
@@ -295,10 +296,19 @@ const SimpleAnalyticsDashboard = () => {
                         {data.studentNames && (data.studentNames?.length || 0) > 0 && (
                           <div className="mt-2">
                             <p className="font-medium text-sm">Students who attended:</p>
-                            <div className="max-h-32 overflow-y-auto">
-                              {data.studentNames?.map((name, index) => (
-                                <p key={index} className="text-xs text-muted-foreground">• {name}</p>
-                              ))}
+                            <div className="max-h-32 overflow-y-auto pr-2" 
+                                 style={{ scrollbarWidth: 'thin' }}
+                                 onWheel={(e) => e.stopPropagation()}>
+                              {data.studentNames?.map((name, index) => {
+                                const student = analyticsData?.studentStats?.find(s => 
+                                  `${s.name}` === name
+                                );
+                                return (
+                                  <p key={index} className="text-xs text-muted-foreground">
+                                    • {name} {student?.grade && `(${student.grade})`}
+                                  </p>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -371,7 +381,8 @@ const SimpleAnalyticsDashboard = () => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs">
+                          <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                               style={{ pointerEvents: 'auto' }}>
                             <p className="font-medium mb-2">Week of {label}</p>
                             {payload.map((entry, index) => (
                               <div key={index} className="mb-2">
@@ -381,20 +392,38 @@ const SimpleAnalyticsDashboard = () => {
                                 {entry.dataKey === 'wednesday' && data.wednesdayStudents?.length > 0 && (
                                   <div className="mt-1">
                                     <p className="font-medium text-xs">Wed Students:</p>
-                                    <div className="max-h-20 overflow-y-auto">
-                                      {data.wednesdayStudents.map((name, i) => (
-                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
-                                      ))}
+                                    <div className="max-h-20 overflow-y-auto pr-2" 
+                                         style={{ scrollbarWidth: 'thin' }}
+                                         onWheel={(e) => e.stopPropagation()}>
+                                      {data.wednesdayStudents.map((name, i) => {
+                                        const student = analyticsData?.studentStats?.find(s => 
+                                          `${s.name}` === name
+                                        );
+                                        return (
+                                          <p key={i} className="text-xs text-muted-foreground">
+                                            • {name} {student?.grade && `(${student.grade})`}
+                                          </p>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
                                 {entry.dataKey === 'sunday' && data.sundayStudents?.length > 0 && (
                                   <div className="mt-1">
                                     <p className="font-medium text-xs">Sun Students:</p>
-                                    <div className="max-h-20 overflow-y-auto">
-                                      {data.sundayStudents.map((name, i) => (
-                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
-                                      ))}
+                                    <div className="max-h-20 overflow-y-auto pr-2" 
+                                         style={{ scrollbarWidth: 'thin' }}
+                                         onWheel={(e) => e.stopPropagation()}>
+                                      {data.sundayStudents.map((name, i) => {
+                                        const student = analyticsData?.studentStats?.find(s => 
+                                          `${s.name}` === name
+                                        );
+                                        return (
+                                          <p key={i} className="text-xs text-muted-foreground">
+                                            • {name} {student?.grade && `(${student.grade})`}
+                                          </p>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
@@ -457,7 +486,8 @@ const SimpleAnalyticsDashboard = () => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                           style={{ pointerEvents: 'auto' }}>
                         <p className="font-medium">{label}</p>
                         <p className="text-primary">
                           New Students: {payload[0].value}
@@ -465,10 +495,19 @@ const SimpleAnalyticsDashboard = () => {
                         {data.studentNames && (data.studentNames?.length || 0) > 0 && (
                           <div className="mt-2">
                             <p className="font-medium text-sm">Students who attended:</p>
-                            <div className="max-h-32 overflow-y-auto">
-                              {data.studentNames?.map((name, index) => (
-                                <p key={index} className="text-xs text-muted-foreground">• {name}</p>
-                              ))}
+                            <div className="max-h-32 overflow-y-auto pr-2" 
+                                 style={{ scrollbarWidth: 'thin' }}
+                                 onWheel={(e) => e.stopPropagation()}>
+                              {data.studentNames?.map((name, index) => {
+                                const student = analyticsData?.studentStats?.find(s => 
+                                  `${s.name}` === name
+                                );
+                                return (
+                                  <p key={index} className="text-xs text-muted-foreground">
+                                    • {name} {student?.grade && `(${student.grade})`}
+                                  </p>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -662,9 +701,6 @@ const SimpleAnalyticsDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
       <div className="container mx-auto px-4 py-8">
-        {/* User Header */}
-        <UserHeader />
-        
         {/* User Header */}
         <UserHeader />
         
