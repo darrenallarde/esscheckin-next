@@ -9,6 +9,8 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, phone?: string) => Promise<{ error: any }>;
   signIn: (emailOrPhone: string, password: string) => Promise<{ error: any }>;
+  signInWithOtp: (email: string) => Promise<{ error: any }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -121,6 +123,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const signInWithOtp = React.useCallback(async (email: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+        }
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  }, []);
+
+  const verifyOtp = React.useCallback(async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  }, []);
+
   const signOut = React.useCallback(async () => {
     try {
       await supabase.auth.signOut();
@@ -136,8 +165,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     signUp,
     signIn,
+    signInWithOtp,
+    verifyOtp,
     signOut,
-  }), [user, session, userRole, loading, signUp, signIn, signOut]);
+  }), [user, session, userRole, loading, signUp, signIn, signInWithOtp, verifyOtp, signOut]);
 
   return (
     <AuthContext.Provider value={value}>
