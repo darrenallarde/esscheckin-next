@@ -49,6 +49,9 @@ interface StudentStats {
   weeksAttended: number;
   lastAttended: string;
   category: string;
+  wednesdayStreak: number;
+  sundayStreak: number;
+  bothDaysStreak: number;
 }
 
 const SimpleAnalyticsDashboard = () => {
@@ -192,6 +195,84 @@ const SimpleAnalyticsDashboard = () => {
           new Date(ci.checked_in_at).toISOString().split('T')[0]
         ));
 
+        // Calculate streaks
+        const checkInsByDate = studentCheckIns
+          .map(ci => ({
+            date: new Date(ci.checked_in_at),
+            dayOfWeek: new Date(ci.checked_in_at).getDay()
+          }))
+          .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+        // Calculate current streaks
+        const calculateStreak = (targetDays: number[]) => {
+          let streak = 0;
+          const today = new Date();
+          const oneWeek = 7 * 24 * 60 * 60 * 1000;
+          
+          // Start from this week and work backwards
+          for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
+            const weekStart = new Date(today.getTime() - (weekOffset * oneWeek));
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Get Sunday of that week
+            
+            let foundThisWeek = false;
+            
+            for (const targetDay of targetDays) {
+              const targetDate = new Date(weekStart);
+              targetDate.setDate(weekStart.getDate() + targetDay);
+              
+              const hasCheckIn = checkInsByDate.some(ci => {
+                const checkInDate = ci.date.toDateString();
+                return checkInDate === targetDate.toDateString();
+              });
+              
+              if (hasCheckIn) {
+                foundThisWeek = true;
+                break;
+              }
+            }
+            
+            if (foundThisWeek) {
+              streak++;
+            } else {
+              break;
+            }
+          }
+          
+          return streak;
+        };
+
+        const calculateBothDaysStreak = () => {
+          let streak = 0;
+          const today = new Date();
+          const oneWeek = 7 * 24 * 60 * 60 * 1000;
+          
+          for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
+            const weekStart = new Date(today.getTime() - (weekOffset * oneWeek));
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            const wednesday = new Date(weekStart);
+            wednesday.setDate(weekStart.getDate() + 3);
+            
+            const sunday = new Date(weekStart);
+            sunday.setDate(weekStart.getDate() + 0);
+            
+            const hasWednesday = checkInsByDate.some(ci => 
+              ci.date.toDateString() === wednesday.toDateString()
+            );
+            const hasSunday = checkInsByDate.some(ci => 
+              ci.date.toDateString() === sunday.toDateString()
+            );
+            
+            if (hasWednesday && hasSunday) {
+              streak++;
+            } else {
+              break;
+            }
+          }
+          
+          return streak;
+        };
+
         return {
           name: `${student.first_name} ${student.last_name || ''}`.trim(),
           grade: student.grade || 'Unknown',
@@ -202,7 +283,10 @@ const SimpleAnalyticsDashboard = () => {
               .toLocaleDateString() : 'Never',
           category: student.grade ? 
             (parseInt(student.grade) >= 9 ? 'High School' : 'Middle School') : 
-            'Other'
+            'Other',
+          wednesdayStreak: calculateStreak([3]), // Wednesday is day 3
+          sundayStreak: calculateStreak([0]), // Sunday is day 0
+          bothDaysStreak: calculateBothDaysStreak()
         };
       }).sort((a, b) => b.totalAttendance - a.totalAttendance) || [];
 
@@ -228,12 +312,32 @@ const SimpleAnalyticsDashboard = () => {
       const wednesdayData = dailyData.filter(day => day.meetingDay === 'Wednesday');
       const sundayData = dailyData.filter(day => day.meetingDay === 'Sunday');
 
+      // Calculate grade breakdown data
+      const gradeBreakdown = students?.reduce((acc, student) => {
+        const grade = student.grade || 'Unknown';
+        if (!acc[grade]) {
+          acc[grade] = 0;
+        }
+        acc[grade]++;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const gradeData = Object.entries(gradeBreakdown).map(([grade, count]) => ({
+        grade,
+        count
+      })).sort((a, b) => {
+        if (a.grade === 'Unknown') return 1;
+        if (b.grade === 'Unknown') return -1;
+        return parseInt(a.grade) - parseInt(b.grade);
+      });
+
       const result = {
         dailyData: dailyData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
         cumulativeData,
         wednesdayData,
         sundayData,
         studentStats,
+        gradeData,
         totalStudents: students?.length || 0,
         totalCheckIns: checkIns?.length || 0,
         peakAttendance: Math.max(...dailyData.map(d => d.uniqueAttendees), 0),
@@ -753,8 +857,60 @@ const SimpleAnalyticsDashboard = () => {
         </div>
       )
     },
+    'grade-breakdown': {
+      title: 'Student Breakdown by Grade',
+      subtitle: 'Distribution of students across grade levels',
+      component: (
+        <div className="space-y-6">
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={analyticsData.gradeData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="grade"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                label={{ value: 'Grade Level', position: 'insideBottom', offset: -5 }}
+              />
+              <YAxis label={{ value: 'Number of Students', angle: -90, position: 'insideLeft' }} />
+              <Tooltip 
+                formatter={(value) => [value, 'Students']}
+                labelFormatter={(label) => `Grade ${label}`}
+              />
+              <Bar dataKey="count" fill="#8B5CF6" name="Students" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {analyticsData.gradeData?.reduce((sum, grade) => sum + grade.count, 0) || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Students</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {analyticsData.gradeData?.length || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Grade Levels</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {analyticsData.gradeData?.find(g => g.count === Math.max(...(analyticsData.gradeData?.map(g => g.count) || [0])))?.grade || 'N/A'}
+                </div>
+                <div className="text-sm text-muted-foreground">Most Common Grade</div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )
+    },
     'student-table': {
-      title: 'Student Attendance Analytics',
+      title: 'Student Attendance Table',
       subtitle: 'Individual Student Performance and Engagement Patterns',
       component: (
         <div className="space-y-6">
@@ -768,6 +924,9 @@ const SimpleAnalyticsDashboard = () => {
                   <th className="border border-border p-3 text-center">Total Times</th>
                   <th className="border border-border p-3 text-center">Days Attended</th>
                   <th className="border border-border p-3 text-center">Last Attended</th>
+                  <th className="border border-border p-3 text-center">Wed Streak</th>
+                  <th className="border border-border p-3 text-center">Sun Streak</th>
+                  <th className="border border-border p-3 text-center">Both Days</th>
                   <th className="border border-border p-3 text-left">Category</th>
                 </tr>
               </thead>
@@ -786,6 +945,21 @@ const SimpleAnalyticsDashboard = () => {
                     </td>
                     <td className="border border-border p-3 text-center">{student.weeksAttended}</td>
                     <td className="border border-border p-3 text-center text-sm">{student.lastAttended}</td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant={student.wednesdayStreak >= 2 ? 'default' : 'secondary'}>
+                        {student.wednesdayStreak}
+                      </Badge>
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant={student.sundayStreak >= 2 ? 'default' : 'secondary'}>
+                        {student.sundayStreak}
+                      </Badge>
+                    </td>
+                    <td className="border border-border p-3 text-center">
+                      <Badge variant={student.bothDaysStreak >= 1 ? 'destructive' : 'secondary'}>
+                        {student.bothDaysStreak}
+                      </Badge>
+                    </td>
                     <td className="border border-border p-3">
                       <Badge variant={
                         student.category === 'High School' ? 'destructive' :
