@@ -341,7 +341,7 @@ const SimpleAnalyticsDashboard = () => {
                 </ResponsiveContainer>
                 <div className="mt-4 text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analyticsData.wednesdayData.reduce((sum, day) => sum + day.uniqueAttendees, 0)}
+                    {analyticsData.wednesdayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Wednesday Attendance</div>
                 </div>
@@ -369,7 +369,7 @@ const SimpleAnalyticsDashboard = () => {
                 </ResponsiveContainer>
                 <div className="mt-4 text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {analyticsData.sundayData.reduce((sum, day) => sum + day.uniqueAttendees, 0)}
+                    {analyticsData.sundayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Sunday Attendance</div>
                 </div>
@@ -404,7 +404,7 @@ const SimpleAnalyticsDashboard = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {currentData.reduce((sum, day) => sum + day.newStudents, 0)}
+                  {currentData?.reduce((sum, day) => sum + day.newStudents, 0) || 0}
                 </div>
                 <div className="text-sm text-muted-foreground">Total New Students</div>
               </CardContent>
@@ -412,7 +412,7 @@ const SimpleAnalyticsDashboard = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.max(...currentData.map(d => d.newStudents), 0)}
+                  {Math.max(...(currentData?.map(d => d.newStudents) || [0]), 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Best New Student Day</div>
               </CardContent>
@@ -420,7 +420,7 @@ const SimpleAnalyticsDashboard = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {(currentData.reduce((sum, day) => sum + day.newStudents, 0) / Math.max(currentData.length, 1)).toFixed(1)}
+                  {((currentData?.reduce((sum, day) => sum + day.newStudents, 0) || 0) / Math.max(currentData?.length || 1, 1)).toFixed(1)}
                 </div>
                 <div className="text-sm text-muted-foreground">Avg New Students/Day</div>
               </CardContent>
