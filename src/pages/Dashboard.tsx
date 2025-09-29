@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
+import SimpleAnalyticsDashboard from "@/components/SimpleAnalyticsDashboard";
 
 const Dashboard = () => {
   const [password, setPassword] = useState("");
@@ -52,7 +52,7 @@ const Dashboard = () => {
     );
   }
 
-  return <AnalyticsDashboard />;
+  return <SimpleAnalyticsDashboard />;
 };
 
 export default Dashboard;
