@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ const Index = () => {
   const { user, userRole, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }

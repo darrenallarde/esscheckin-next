@@ -1,4 +1,4 @@
-import { useState } from "react";
+import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,8 +30,8 @@ type SignInData = z.infer<typeof signInSchema>;
 type SignUpData = z.infer<typeof signUpSchema>;
 
 const AuthPage = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
