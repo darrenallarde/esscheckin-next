@@ -195,22 +195,6 @@ const SimpleAnalyticsDashboard = () => {
           new Date(ci.checked_in_at).toISOString().split('T')[0]
         ));
 
-        // Debug logging for Julian Allarde
-        const fullName = `${student.first_name} ${student.last_name || ''}`.trim();
-        const isJulian = fullName.toLowerCase().includes('julian') && fullName.toLowerCase().includes('allarde');
-        if (isJulian) {
-          console.log('=== Debugging Julian Allarde ===');
-          console.log('Student:', fullName);
-          console.log('Total check-ins:', studentCheckIns.length);
-          console.log('Check-in dates:', studentCheckIns.map(ci => {
-            const date = new Date(ci.checked_in_at);
-            return {
-              date: date.toDateString(),
-              dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()],
-              isoDate: date.toISOString()
-            };
-          }));
-        }
 
         // Calculate streaks
         const checkInsByDate = studentCheckIns
@@ -230,10 +214,6 @@ const SimpleAnalyticsDashboard = () => {
           currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Get Sunday of current week
           currentWeekStart.setHours(0, 0, 0, 0);
 
-          if (isJulian) {
-            console.log(`Calculating streak for days: ${targetDays} (${targetDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])})`);
-            console.log('Today is:', today.toDateString(), 'Day:', ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()]);
-          }
 
           // Check consecutive weeks going back
           for (let weekOffset = 0; weekOffset < 52; weekOffset++) {
@@ -265,9 +245,6 @@ const SimpleAnalyticsDashboard = () => {
               }
             }
 
-            if (isJulian && weekOffset < 10) {
-              console.log(`Week ${weekOffset} (starting ${weekStart.toDateString()}): found=${foundThisWeek}, checkIns=${weekCheckIns}`);
-            }
 
             if (foundThisWeek) {
               streak++;
@@ -280,9 +257,6 @@ const SimpleAnalyticsDashboard = () => {
             }
           }
 
-          if (isJulian) {
-            console.log(`Final streak: ${streak}`);
-          }
 
           return streak;
         };
@@ -291,10 +265,6 @@ const SimpleAnalyticsDashboard = () => {
           let streak = 0;
           const today = new Date();
 
-          if (isJulian) {
-            console.log('Calculating TOTAL STREAK for Julian');
-            console.log('Today:', today.toDateString());
-          }
 
           // Start from the most recent week and work backwards
           let currentWeekStart = new Date(today);
@@ -317,14 +287,6 @@ const SimpleAnalyticsDashboard = () => {
             const hasSunday = weekCheckIns.some(ci => ci.dayOfWeek === 0);
             const hasAnyAttendance = hasWednesday || hasSunday;
 
-            if (isJulian && weekOffset < 5) {
-              console.log(`Week ${weekOffset} (${weekStart.toDateString()} - ${weekEnd.toDateString()})`);
-              console.log(`  Check-ins:`, weekCheckIns.map(ci => ({
-                date: ci.date.toDateString(),
-                day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][ci.dayOfWeek]
-              })));
-              console.log(`  Has Wed: ${hasWednesday}, Has Sun: ${hasSunday}, Has Any: ${hasAnyAttendance}`);
-            }
 
             // Count the streak if there was ANY attendance (Wed OR Sun) this week
             if (hasAnyAttendance) {
@@ -336,9 +298,6 @@ const SimpleAnalyticsDashboard = () => {
 
               if (isCurrentWeek && !hasAnyAttendance) {
                 // Current week with no attendance yet - continue to check previous weeks
-                if (isJulian) {
-                  console.log('  Current week with no attendance yet');
-                }
                 continue;
               }
               // Streak is broken
@@ -349,9 +308,6 @@ const SimpleAnalyticsDashboard = () => {
             }
           }
 
-          if (isJulian) {
-            console.log(`Final TOTAL STREAK: ${streak}`);
-          }
 
           return streak;
         };
