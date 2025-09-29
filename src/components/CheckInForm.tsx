@@ -276,11 +276,11 @@ const CheckInForm = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input 
-                        placeholder="📱 Enter your phone number" 
-                        {...field} 
+                      <Input
+                        placeholder="📱 Enter your phone number"
+                        {...field}
                         autoFocus
-                        className="h-14 text-lg text-center border-2 border-purple-200 focus:border-purple-400 rounded-2xl bg-white/50"
+                        className="h-20 text-3xl font-bold text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold"
                       />
                     </FormControl>
                     <FormMessage />
@@ -328,11 +328,11 @@ const CheckInForm = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input 
-                      placeholder="👤 Enter your name or email" 
-                      {...field} 
+                    <Input
+                      placeholder="👤 Enter your name or email"
+                      {...field}
                       autoFocus
-                      className="h-14 text-lg text-center border-2 border-purple-200 focus:border-purple-400 rounded-2xl bg-white/50"
+                      className="h-20 text-3xl font-bold text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold"
                     />
                   </FormControl>
                   <FormMessage />

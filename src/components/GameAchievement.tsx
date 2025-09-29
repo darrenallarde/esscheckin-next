@@ -25,7 +25,7 @@ const GameAchievement = ({ achievement, isNew = false, className = "" }: GameAch
 
   return (
     <Card className={`p-4 transition-all duration-300 ${rarityColors[achievement.rarity]} ${
-      isNew ? "animate-pulse shadow-lg scale-105" : ""
+      isNew ? "shadow-lg" : ""
     } ${className}`}>
       <div className="flex items-center space-x-3">
         <div className="text-2xl">{achievement.emoji}</div>
@@ -40,7 +40,7 @@ const GameAchievement = ({ achievement, isNew = false, className = "" }: GameAch
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs font-medium">+{achievement.points} pts</span>
             {isNew && (
-              <Badge variant="destructive" className="text-xs animate-bounce">
+              <Badge variant="destructive" className="text-xs">
                 NEW!
               </Badge>
             )}

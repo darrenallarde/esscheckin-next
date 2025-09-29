@@ -14,6 +14,7 @@ import {
   type GameReward,
   type Achievement,
 } from "@/utils/gamification";
+import { getRandomVerse, type BibleVerse } from "@/utils/bibleVerses";
 
 interface Student {
   id: string;
@@ -36,6 +37,7 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
   const [previousPoints, setPreviousPoints] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [bibleVerse, setBibleVerse] = useState<BibleVerse | null>(null);
 
   // Get user type display text
   const getUserTypeDisplay = (userType: string, grade?: string | null, highSchool?: string | null) => {
@@ -162,6 +164,7 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
         setGameStats(stats);
         setGameReward(reward);
         setPreviousPoints(estimatedPreviousPoints);
+        setBibleVerse(getRandomVerse());
 
         // Trigger celebration animation with staggered effects
         setTimeout(() => setShowCelebration(true), 300);
@@ -216,12 +219,7 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
         <CardHeader className="text-center relative z-10">
           <div className="flex justify-center mb-4">
             {showCelebration ? (
-              <div className="relative">
-                <Sparkles className="h-16 w-16 text-yellow-500 animate-bounce" />
-                <div className="absolute -top-2 -right-2">
-                  <Trophy className="h-8 w-8 text-yellow-600 animate-pulse" />
-                </div>
-              </div>
+              <Trophy className="h-20 w-20 text-yellow-500" />
             ) : (
               <CheckCircle className="h-16 w-16 text-green-500" />
             )}
@@ -250,6 +248,15 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
                   +{gameReward.points}
                 </div>
                 <div className="text-sm text-purple-600 font-medium">Points Earned</div>
+              </div>
+
+              <div className="h-12 w-px bg-purple-300" />
+
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">
+                  {previousPoints + gameReward.points}
+                </div>
+                <div className="text-sm text-blue-600 font-medium">Total Points</div>
               </div>
 
               <div className="h-12 w-px bg-purple-300" />
@@ -320,6 +327,18 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
               <div className="text-sm text-orange-600 font-medium">Sun Streak</div>
             </div>
           </div>
+
+          {/* Bible Verse */}
+          {bibleVerse && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 text-center">
+              <div className="text-lg font-medium text-blue-800 mb-2 italic">
+                "{bibleVerse.text}"
+              </div>
+              <div className="text-sm font-bold text-blue-600">
+                — {bibleVerse.reference}
+              </div>
+            </div>
+          )}
 
           {/* Action Button */}
           <div className="text-center pt-4">
