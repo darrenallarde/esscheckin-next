@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -31,21 +31,14 @@ const otpEmailSchema = z.object({
   email: z.string().trim().email("Invalid email address"),
 });
 
-const otpVerifySchema = z.object({
-  otp: z.string().min(6, "OTP must be 6 digits").max(6, "OTP must be 6 digits"),
-});
-
 type SignInData = z.infer<typeof signInSchema>;
 type SignUpData = z.infer<typeof signUpSchema>;
 type OtpEmailData = z.infer<typeof otpEmailSchema>;
-type OtpVerifyData = z.infer<typeof otpVerifySchema>;
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = React.useState(false);
-  const [showOtp, setShowOtp] = React.useState(false);
-  const [otpEmail, setOtpEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const { signIn, signUp, signInWithOtp, verifyOtp, user, userRole } = useAuth();
+  const { signIn, signUp, signInWithOtp, user, userRole } = useAuth();
   const navigate = useNavigate();
 
   // Handle role-based redirect after successful authentication
@@ -77,17 +70,10 @@ const AuthPage = () => {
     },
   });
 
-  const otpEmailForm = useForm<OtpEmailData>({
+  const magicLinkForm = useForm<OtpEmailData>({
     resolver: zodResolver(otpEmailSchema),
     defaultValues: {
       email: "",
-    },
-  });
-
-  const otpVerifyForm = useForm<OtpVerifyData>({
-    resolver: zodResolver(otpVerifySchema),
-    defaultValues: {
-      otp: "",
     },
   });
 
@@ -152,27 +138,26 @@ const AuthPage = () => {
     }
   };
 
-  const handleSendOtp = async (data: OtpEmailData) => {
+  const handleSendMagicLink = async (data: OtpEmailData) => {
     setLoading(true);
     try {
       const { error } = await signInWithOtp(data.email);
       
       if (error) {
         toast({
-          title: "Failed to Send Code",
+          title: "Failed to Send Magic Link",
           description: error.message,
           variant: "destructive",
         });
       } else {
-        setOtpEmail(data.email);
-        setShowOtp(true);
         toast({
-          title: "Code Sent!",
-          description: "Check your email for the verification code.",
+          title: "Magic Link Sent!",
+          description: "Check your email and click the link to sign in.",
         });
+        magicLinkForm.reset();
       }
     } catch (error) {
-      console.error("Send OTP error:", error);
+      console.error("Send magic link error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -183,35 +168,6 @@ const AuthPage = () => {
     }
   };
 
-  const handleVerifyOtp = async (data: OtpVerifyData) => {
-    setLoading(true);
-    try {
-      const { error } = await verifyOtp(otpEmail, data.otp);
-      
-      if (error) {
-        toast({
-          title: "Invalid Code",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Welcome!",
-          description: "You have been successfully signed in.",
-        });
-        // Navigation will be handled by the auth context based on user role
-      }
-    } catch (error) {
-      console.error("Verify OTP error:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
@@ -228,55 +184,7 @@ const AuthPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {showOtp ? (
-            <Form {...otpVerifyForm}>
-              <form onSubmit={otpVerifyForm.handleSubmit(handleVerifyOtp)} className="space-y-4">
-                <div className="text-center text-sm text-muted-foreground mb-4">
-                  Enter the 6-digit code sent to {otpEmail}
-                </div>
-                
-                <FormField
-                  control={otpVerifyForm.control}
-                  name="otp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Verification Code</FormLabel>
-                      <FormControl>
-                        <InputOTP maxLength={6} {...field}>
-                          <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                          </InputOTPGroup>
-                        </InputOTP>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Verifying..." : "Verify Code"}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setShowOtp(false);
-                    setOtpEmail("");
-                    otpVerifyForm.reset();
-                  }}
-                >
-                  Back to Sign In
-                </Button>
-              </form>
-            </Form>
-          ) : isSignUp ? (
+          {isSignUp ? (
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
                 
@@ -400,14 +308,14 @@ const AuthPage = () => {
           <Separator className="my-6" />
 
           <div className="text-center space-y-4">
-            <Form {...otpEmailForm}>
-              <form onSubmit={otpEmailForm.handleSubmit(handleSendOtp)} className="space-y-4">
+            <Form {...magicLinkForm}>
+              <form onSubmit={magicLinkForm.handleSubmit(handleSendMagicLink)} className="space-y-4">
                 <FormField
-                  control={otpEmailForm.control}
+                  control={magicLinkForm.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email for Verification Code</FormLabel>
+                      <FormLabel>Sign in with Magic Link</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter your email" type="email" {...field} />
                       </FormControl>
@@ -417,7 +325,7 @@ const AuthPage = () => {
                 />
 
                 <Button type="submit" className="w-full" variant="outline" disabled={loading}>
-                  {loading ? "Sending Code..." : "Send Verification Code"}
+                  {loading ? "Sending Magic Link..." : "Send Magic Link"}
                 </Button>
               </form>
             </Form>
@@ -463,22 +371,20 @@ const AuthPage = () => {
           <Separator className="my-6" />
 
           <div className="text-center space-y-2">
-            {!showOtp && (
-              <Button
-                variant="link"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  signInForm.reset();
-                  signUpForm.reset();
-                  otpEmailForm.reset();
-                }}
-                className="text-sm"
+            <Button
+              variant="link"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                signInForm.reset();
+                signUpForm.reset();
+                magicLinkForm.reset();
+              }}
+              className="text-sm"
               >
                 {isSignUp
                   ? "Already have an account? Sign in"
                   : "Don't have an account? Sign up"}
               </Button>
-            )}
           </div>
         </CardContent>
       </Card>
