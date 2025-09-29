@@ -290,29 +290,27 @@ const AuthPage = () => {
                   />
                 </div>
                 
-                <FormField
-                  control={signUpForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter your email" 
-                          type="email" 
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            console.log("Email input change:", e.target.value);
-                            field.onChange(e.target.value);
-                          }}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-2">
+                  <label htmlFor="signup-email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Email
+                  </label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={signUpForm.watch("email") || ""}
+                    onChange={(e) => {
+                      console.log("New email input change:", e.target.value);
+                      signUpForm.setValue("email", e.target.value);
+                    }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                  />
+                  {signUpForm.formState.errors.email && (
+                    <p className="text-sm font-medium text-destructive">
+                      {signUpForm.formState.errors.email.message}
+                    </p>
                   )}
-                />
+                </div>
 
                 <FormField
                   control={signUpForm.control}
