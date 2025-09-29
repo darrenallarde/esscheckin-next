@@ -300,11 +300,13 @@ const AuthPage = () => {
                         <Input 
                           placeholder="Enter your email" 
                           type="email" 
-                          {...field}
+                          value={field.value || ""}
                           onChange={(e) => {
                             console.log("Email input change:", e.target.value);
-                            field.onChange(e);
+                            field.onChange(e.target.value);
                           }}
+                          onBlur={field.onBlur}
+                          name={field.name}
                         />
                       </FormControl>
                       <FormMessage />
