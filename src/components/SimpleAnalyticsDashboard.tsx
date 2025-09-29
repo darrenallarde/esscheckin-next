@@ -296,7 +296,7 @@ const SimpleAnalyticsDashboard = () => {
                           <div className="mt-2">
                             <p className="font-medium text-sm">Students who attended:</p>
                             <div className="max-h-32 overflow-y-auto">
-                              {data.studentNames.map((name, index) => (
+                              {data.studentNames?.map((name, index) => (
                                 <p key={index} className="text-xs text-muted-foreground">• {name}</p>
                               ))}
                             </div>
@@ -459,7 +459,7 @@ const SimpleAnalyticsDashboard = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-3xl font-bold text-purple-600">
-                  {Math.max(...analyticsData.cumulativeData.map(d => d.cumulativeReach), 0)}
+                  {Math.max(...(analyticsData.cumulativeData?.map(d => d.cumulativeReach) || [0]), 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Total Students Ever Reached</div>
               </CardContent>
@@ -520,7 +520,7 @@ const SimpleAnalyticsDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {analyticsData.studentStats.slice(0, 20).map((student, index) => (
+                {analyticsData.studentStats?.slice(0, 20).map((student, index) => (
                   <tr key={index} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
                     <td className="border border-border p-3 font-bold text-muted-foreground">#{index + 1}</td>
                     <td className="border border-border p-3 font-medium">{student.name}</td>
