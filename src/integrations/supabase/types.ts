@@ -50,7 +50,7 @@ export type Database = {
           high_school: string | null
           id: string
           instagram_handle: string | null
-          last_name: string
+          last_name: string | null
           parent_name: string | null
           parent_phone: string | null
           phone_number: string | null
@@ -66,7 +66,7 @@ export type Database = {
           high_school?: string | null
           id?: string
           instagram_handle?: string | null
-          last_name: string
+          last_name?: string | null
           parent_name?: string | null
           parent_phone?: string | null
           phone_number?: string | null
@@ -82,7 +82,7 @@ export type Database = {
           high_school?: string | null
           id?: string
           instagram_handle?: string | null
-          last_name?: string
+          last_name?: string | null
           parent_name?: string | null
           parent_phone?: string | null
           phone_number?: string | null
