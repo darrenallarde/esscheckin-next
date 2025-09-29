@@ -36,8 +36,10 @@ interface CheckInData {
   totalAttendees: number;
   uniqueAttendees: number;
   newStudents: number;
+  studentLeaders: number;
   studentNames: string[];
   newStudentNames: string[];
+  studentLeaderNames: string[];
 }
 
 interface StudentStats {
@@ -70,6 +72,7 @@ const SimpleAnalyticsDashboard = () => {
             first_name,
             last_name,
             grade,
+            user_type,
             created_at
           )
         `)
@@ -90,8 +93,10 @@ const SimpleAnalyticsDashboard = () => {
         totalCheckIns: number;
         uniqueStudents: Set<string>;
         newStudents: Set<string>;
+        studentLeaders: Set<string>;
         studentNames: string[];
         newStudentNames: string[];
+        studentLeaderNames: string[];
       }>();
 
       // Track all students we've seen before each date to identify new students
@@ -114,8 +119,10 @@ const SimpleAnalyticsDashboard = () => {
             totalCheckIns: 0,
             uniqueStudents: new Set(),
             newStudents: new Set(),
+            studentLeaders: new Set(),
             studentNames: [],
-            newStudentNames: []
+            newStudentNames: [],
+            studentLeaderNames: []
           });
         }
 
@@ -127,6 +134,14 @@ const SimpleAnalyticsDashboard = () => {
           const fullName = `${checkIn.students.first_name} ${checkIn.students.last_name || ''}`.trim();
           if (!dayData.studentNames.includes(fullName)) {
             dayData.studentNames.push(fullName);
+          }
+          
+          // Check if this is a student leader
+          if (checkIn.students.user_type === 'student_leader') {
+            dayData.studentLeaders.add(checkIn.student_id);
+            if (!dayData.studentLeaderNames.includes(fullName)) {
+              dayData.studentLeaderNames.push(fullName);
+            }
           }
           
           // Check if this is a new student (first time we've seen them)
@@ -146,8 +161,10 @@ const SimpleAnalyticsDashboard = () => {
         totalAttendees: day.totalCheckIns,
         uniqueAttendees: day.uniqueStudents.size,
         newStudents: day.newStudents.size,
+        studentLeaders: day.studentLeaders.size,
         studentNames: day.studentNames,
-        newStudentNames: day.newStudentNames
+        newStudentNames: day.newStudentNames,
+        studentLeaderNames: day.studentLeaderNames
       }));
 
       // Get student statistics
@@ -548,6 +565,90 @@ const SimpleAnalyticsDashboard = () => {
                   {((currentData?.reduce((sum, day) => sum + day.newStudents, 0) || 0) / Math.max(currentData?.length || 1, 1)).toFixed(1)}
                 </div>
                 <div className="text-sm text-muted-foreground">Avg New Students/Day</div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )
+    },
+    'student-leaders': {
+      title: 'Student Leaders Checked In',
+      subtitle: 'Tracking student leader attendance',
+      component: (
+        <div className="space-y-6">
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="dayLabel"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis label={{ value: 'Student Leaders', angle: -90, position: 'insideLeft' }} />
+              <Tooltip 
+                formatter={(value) => [value, 'Student Leaders']}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                           style={{ pointerEvents: 'auto' }}>
+                        <p className="font-medium">{label}</p>
+                        <p className="text-primary">
+                          Student Leaders: {payload[0].value}
+                        </p>
+                        {data.studentLeaderNames && (data.studentLeaderNames?.length || 0) > 0 && (
+                          <div className="mt-2">
+                            <p className="font-medium text-sm">Student leaders who attended:</p>
+                            <div className="max-h-32 overflow-y-auto pr-2" 
+                                 style={{ scrollbarWidth: 'thin' }}
+                                 onWheel={(e) => e.stopPropagation()}>
+                              {data.studentLeaderNames?.map((name, index) => {
+                                const student = analyticsData?.studentStats?.find(s => 
+                                  `${s.name}` === name
+                                );
+                                return (
+                                  <p key={index} className="text-xs text-muted-foreground">
+                                    • {name} {student?.grade && `(${student.grade})`}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar dataKey="studentLeaders" fill="#DC2626" name="Student Leaders" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {currentData?.reduce((sum, day) => sum + day.studentLeaders, 0) || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Student Leader Attendance</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {Math.max(...(currentData?.map(d => d.studentLeaders) || [0]), 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Best Student Leader Day</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {((currentData?.reduce((sum, day) => sum + day.studentLeaders, 0) || 0) / Math.max(currentData?.length || 1, 1)).toFixed(1)}
+                </div>
+                <div className="text-sm text-muted-foreground">Avg Student Leaders/Day</div>
               </CardContent>
             </Card>
           </div>
