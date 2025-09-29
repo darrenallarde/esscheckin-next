@@ -129,6 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email,
         options: {
           shouldCreateUser: false,
+          data: {}
         }
       });
       return { error };
