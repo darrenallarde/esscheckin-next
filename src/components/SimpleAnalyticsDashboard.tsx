@@ -232,11 +232,7 @@ const SimpleAnalyticsDashboard = () => {
               const hasCheckIn = checkInsByDate.some(ci => {
                 const checkInDateStr = ci.date.toDateString();
                 const targetDateStr = targetDate.toDateString();
-                const matches = checkInDateStr === targetDateStr;
-                if (matches && isJulian) {
-                  weekCheckIns.push(targetDateStr);
-                }
-                return matches;
+                return checkInDateStr === targetDateStr;
               });
 
               if (hasCheckIn) {
