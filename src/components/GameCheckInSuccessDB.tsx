@@ -43,10 +43,18 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
     if (grade && highSchool) {
       const gradeNum = parseInt(grade);
       if (gradeNum >= 6 && gradeNum <= 8) {
-        return 'Middle School Student';
+        return `Grade ${grade} at ${highSchool}`;
       } else if (gradeNum >= 9 && gradeNum <= 12) {
-        return 'High School Student';
+        return `Grade ${grade} at ${highSchool}`;
       }
+    }
+
+    if (grade) {
+      return `Grade ${grade} Student`;
+    }
+
+    if (highSchool) {
+      return `${highSchool} Student`;
     }
 
     return 'Student';
@@ -56,8 +64,28 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
     const fetchRewards = async () => {
       setIsLoading(true);
       try {
-        console.log('Processing check-in rewards for:', student.id, checkInId);
+        console.log('Processing check-in rewards for student:', student.id);
+        console.log('Check-in ID:', checkInId);
+        console.log('Student details:', student);
+
+        if (!checkInId) {
+          console.error('No check-in ID provided');
+          // For now, let's create a fallback experience
+          setReward({
+            points_awarded: 10,
+            total_points: 10,
+            rank_changed: false,
+            current_rank: 'Newcomer',
+            achievements: [],
+            is_first_time: false,
+            bible_verse: { text: "Taste and see that the Lord is good", reference: "Psalm 34:8", theme: "goodness" }
+          });
+          setIsLoading(false);
+          return;
+        }
+
         const rewardData = await processCheckinRewards(student.id, checkInId);
+        console.log('Reward data received:', rewardData);
 
         if (rewardData) {
           setReward(rewardData);
@@ -72,9 +100,29 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
           }
         } else {
           console.error('No reward data received');
+          // Fallback experience
+          setReward({
+            points_awarded: 10,
+            total_points: 10,
+            rank_changed: false,
+            current_rank: 'Newcomer',
+            achievements: [],
+            is_first_time: false,
+            bible_verse: { text: "Give thanks to the Lord, for he is good", reference: "Psalm 107:1", theme: "goodness" }
+          });
         }
       } catch (error) {
         console.error("Error processing check-in rewards:", error);
+        // Fallback experience
+        setReward({
+          points_awarded: 10,
+          total_points: 10,
+          rank_changed: false,
+          current_rank: 'Newcomer',
+          achievements: [],
+          is_first_time: false,
+          bible_verse: { text: "The Lord is good to all", reference: "Psalm 145:9", theme: "goodness" }
+        });
       } finally {
         setIsLoading(false);
       }

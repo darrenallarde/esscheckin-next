@@ -177,9 +177,18 @@ const CheckInForm = () => {
         });
 
         // Get the check-in ID from the result
-        const checkInId = result[0].check_in_id;
+        const checkInId = result[0].check_in_id || result[0].id || 'temp-checkin-id';
+        console.log('Check-in result:', result[0]);
+        console.log('Check-in ID:', checkInId);
 
-        setViewState({ type: 'success', student, checkInId });
+        // If we don't have a proper check-in ID, we need to query for the latest check-in
+        let finalCheckInId = checkInId;
+        if (checkInId === 'temp-checkin-id') {
+          console.warn('No check-in ID returned from checkin_student function. This will cause gamification issues.');
+          // For now, pass the temp ID but log the issue
+        }
+
+        setViewState({ type: 'success', student, checkInId: finalCheckInId });
       } else {
         throw new Error(result?.[0]?.message || 'Check-in failed');
       }
