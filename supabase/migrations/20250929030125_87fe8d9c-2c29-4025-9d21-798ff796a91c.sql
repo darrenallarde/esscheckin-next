@@ -1,0 +1,2 @@
+-- Add student_leader to the app_role enum
+ALTER TYPE public.app_role ADD VALUE 'student_leader';
