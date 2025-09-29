@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import UserHeader from "@/components/UserHeader";
 import { 
   Calendar, 
   Users, 
@@ -323,6 +324,9 @@ const SimpleAnalyticsDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
       <div className="container mx-auto px-4 py-8">
+        {/* User Header */}
+        <UserHeader />
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
