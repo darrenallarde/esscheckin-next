@@ -92,7 +92,13 @@ const SimpleAnalyticsDashboard = () => {
         studentNames: string[];
       }>();
 
-      checkIns?.forEach(checkIn => {
+      // Track all students we've seen before each date to identify new students
+      const allStudentsSeenBefore = new Set<string>();
+      const sortedCheckIns = checkIns?.sort((a, b) => 
+        new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime()
+      ) || [];
+
+      sortedCheckIns.forEach(checkIn => {
         const date = new Date(checkIn.checked_in_at);
         const dateKey = date.toISOString().split('T')[0];
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -114,6 +120,12 @@ const SimpleAnalyticsDashboard = () => {
         dayData.totalCheckIns++;
         dayData.uniqueStudents.add(checkIn.student_id);
         
+        // Check if this is a new student (first time we've seen them)
+        if (!allStudentsSeenBefore.has(checkIn.student_id)) {
+          dayData.newStudents.add(checkIn.student_id);
+          allStudentsSeenBefore.add(checkIn.student_id);
+        }
+        
         if (checkIn.students) {
           const fullName = `${checkIn.students.first_name} ${checkIn.students.last_name || ''}`.trim();
           if (!dayData.studentNames.includes(fullName)) {
@@ -122,14 +134,14 @@ const SimpleAnalyticsDashboard = () => {
         }
       });
 
-      // Convert to array and calculate unique attendees
+      // Convert to array and calculate metrics
       const dailyData: CheckInData[] = Array.from(dailyMap.values()).map(day => ({
         date: day.date,
         dayLabel: day.dayLabel,
         meetingDay: day.meetingDay,
         totalAttendees: day.totalCheckIns,
         uniqueAttendees: day.uniqueStudents.size,
-        newStudents: 0, // Will be calculated separately
+        newStudents: day.newStudents.size,
         studentNames: day.studentNames
       }));
 
@@ -172,8 +184,33 @@ const SimpleAnalyticsDashboard = () => {
         };
       }).sort((a, b) => b.totalAttendance - a.totalAttendance) || [];
 
+      // Calculate cumulative reach over time
+      const cumulativeData = dailyData.map((day, index) => {
+        const cumulativeStudents = new Set<string>();
+        
+        // Add all students from this day and all previous days
+        for (let i = 0; i <= index; i++) {
+          const dayData = Array.from(dailyMap.values())[i];
+          if (dayData) {
+            dayData.uniqueStudents.forEach(studentId => cumulativeStudents.add(studentId));
+          }
+        }
+        
+        return {
+          ...day,
+          cumulativeReach: cumulativeStudents.size
+        };
+      });
+
+      // Separate data by day type for Wed vs Sunday analysis
+      const wednesdayData = dailyData.filter(day => day.meetingDay === 'Wednesday');
+      const sundayData = dailyData.filter(day => day.meetingDay === 'Sunday');
+
       const result = {
-        dailyData,
+        dailyData: dailyData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        cumulativeData,
+        wednesdayData,
+        sundayData,
         studentStats,
         totalStudents: students?.length || 0,
         totalCheckIns: checkIns?.length || 0,
@@ -245,6 +282,171 @@ const SimpleAnalyticsDashboard = () => {
               <Line type="monotone" dataKey="totalAttendees" stroke="#EF4444" strokeWidth={3} name="Total Check-ins" />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+      )
+    },
+    'wed-vs-sunday': {
+      title: 'Wednesday vs Sunday Attendance',
+      subtitle: 'Comparing attendance patterns between service days',
+      component: (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Wednesday Services</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={analyticsData.wednesdayData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="dayLabel"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="uniqueAttendees" fill="#3B82F6" name="Unique Students" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-primary">
+                    {analyticsData.wednesdayData.reduce((sum, day) => sum + day.uniqueAttendees, 0)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Wednesday Attendance</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Sunday Services</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={analyticsData.sundayData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="dayLabel"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="uniqueAttendees" fill="#10B981" name="Unique Students" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="mt-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {analyticsData.sundayData.reduce((sum, day) => sum + day.uniqueAttendees, 0)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Sunday Attendance</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )
+    },
+    'new-students': {
+      title: 'New Student Acquisition',
+      subtitle: 'Tracking first-time attendees over time',
+      component: (
+        <div className="space-y-6">
+          <ResponsiveContainer width="100%" height={400}>
+            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="dayLabel"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis label={{ value: 'New Students', angle: -90, position: 'insideLeft' }} />
+              <Tooltip formatter={(value, name) => [value, name === 'newStudents' ? 'New Students' : 'Unique Students']} />
+              <Legend />
+              <Bar dataKey="newStudents" fill="#F59E0B" name="New Students" />
+              <Line type="monotone" dataKey="uniqueAttendees" stroke="#6366F1" strokeWidth={2} name="Total Unique" />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {currentData.reduce((sum, day) => sum + day.newStudents, 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total New Students</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {Math.max(...currentData.map(d => d.newStudents), 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Best New Student Day</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {(currentData.reduce((sum, day) => sum + day.newStudents, 0) / Math.max(currentData.length, 1)).toFixed(1)}
+                </div>
+                <div className="text-sm text-muted-foreground">Avg New Students/Day</div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )
+    },
+    'cumulative-reach': {
+      title: 'Cumulative Reach Over Time',
+      subtitle: 'Total unique students reached since program began',
+      component: (
+        <div className="space-y-6">
+          <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={analyticsData.cumulativeData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="dayLabel"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis label={{ value: 'Cumulative Students', angle: -90, position: 'insideLeft' }} />
+              <Tooltip formatter={(value) => [value, 'Total Students Reached']} />
+              <Area 
+                type="monotone" 
+                dataKey="cumulativeReach" 
+                stroke="#8B5CF6" 
+                fill="#8B5CF6" 
+                fillOpacity={0.3}
+                name="Cumulative Students"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-purple-600">
+                  {Math.max(...analyticsData.cumulativeData.map(d => d.cumulativeReach), 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Students Ever Reached</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-green-600">
+                  {analyticsData.cumulativeData.length > 1 ? 
+                    (analyticsData.cumulativeData[analyticsData.cumulativeData.length - 1].cumulativeReach / analyticsData.cumulativeData.length).toFixed(1) : 
+                    '0'
+                  }
+                </div>
+                <div className="text-sm text-muted-foreground">Growth Rate Per Event</div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )
     },
