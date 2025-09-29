@@ -316,63 +316,120 @@ const SimpleAnalyticsDashboard = () => {
     },
     'wed-vs-sunday': {
       title: 'Wednesday vs Sunday Attendance',
-      subtitle: 'Comparing attendance patterns between service days',
+      subtitle: 'Comparing attendance patterns between service days by week',
       component: (
         <div className="space-y-6">
+          {/* Create combined data grouped by week */}
+          {(() => {
+            // Group data by week
+            const weekMap = new Map();
+            
+            [...(analyticsData.wednesdayData || []), ...(analyticsData.sundayData || [])]
+              .forEach(day => {
+                const date = new Date(day.date);
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay()); // Get Sunday of that week
+                const weekKey = weekStart.toISOString().split('T')[0];
+                
+                if (!weekMap.has(weekKey)) {
+                  weekMap.set(weekKey, {
+                    week: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    wednesday: 0,
+                    sunday: 0,
+                    wednesdayStudents: [],
+                    sundayStudents: []
+                  });
+                }
+                
+                const weekData = weekMap.get(weekKey);
+                if (day.meetingDay === 'Wednesday') {
+                  weekData.wednesday = day.uniqueAttendees;
+                  weekData.wednesdayStudents = day.studentNames || [];
+                } else if (day.meetingDay === 'Sunday') {
+                  weekData.sunday = day.uniqueAttendees;
+                  weekData.sundayStudents = day.studentNames || [];
+                }
+              });
+            
+            const combinedData = Array.from(weekMap.values()).sort((a, b) => 
+              new Date(a.week).getTime() - new Date(b.week).getTime()
+            );
+
+            return (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={combinedData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="week"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis label={{ value: 'Unique Students', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs">
+                            <p className="font-medium mb-2">Week of {label}</p>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="mb-2">
+                                <p style={{ color: entry.color }}>
+                                  {entry.dataKey === 'wednesday' ? 'Wednesday' : 'Sunday'}: {entry.value}
+                                </p>
+                                {entry.dataKey === 'wednesday' && data.wednesdayStudents?.length > 0 && (
+                                  <div className="mt-1">
+                                    <p className="font-medium text-xs">Wed Students:</p>
+                                    <div className="max-h-20 overflow-y-auto">
+                                      {data.wednesdayStudents.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {entry.dataKey === 'sunday' && data.sundayStudents?.length > 0 && (
+                                  <div className="mt-1">
+                                    <p className="font-medium text-xs">Sun Students:</p>
+                                    <div className="max-h-20 overflow-y-auto">
+                                      {data.sundayStudents.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="wednesday" fill="#3B82F6" name="Wednesday" />
+                  <Bar dataKey="sunday" fill="#10B981" name="Sunday" />
+                </BarChart>
+              </ResponsiveContainer>
+            );
+          })()}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Wednesday Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={analyticsData.wednesdayData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="dayLabel"
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="uniqueAttendees" fill="#3B82F6" name="Unique Students" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {analyticsData.wednesdayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Total Wednesday Attendance</div>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {analyticsData.wednesdayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
                 </div>
+                <div className="text-sm text-muted-foreground">Total Wednesday Attendance</div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Sunday Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={analyticsData.sundayData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="dayLabel"
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="uniqueAttendees" fill="#10B981" name="Unique Students" />
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="mt-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {analyticsData.sundayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Total Sunday Attendance</div>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {analyticsData.sundayData?.reduce((sum, day) => sum + day.uniqueAttendees, 0) || 0}
                 </div>
+                <div className="text-sm text-muted-foreground">Total Sunday Attendance</div>
               </CardContent>
             </Card>
           </div>
@@ -385,7 +442,7 @@ const SimpleAnalyticsDashboard = () => {
       component: (
         <div className="space-y-6">
           <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+            <BarChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="dayLabel"
@@ -394,11 +451,35 @@ const SimpleAnalyticsDashboard = () => {
                 height={80}
               />
               <YAxis label={{ value: 'New Students', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value, name) => [value, name === 'newStudents' ? 'New Students' : 'Unique Students']} />
-              <Legend />
+              <Tooltip 
+                formatter={(value) => [value, 'New Students']}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-primary">
+                          New Students: {payload[0].value}
+                        </p>
+                        {data.studentNames && (data.studentNames?.length || 0) > 0 && (
+                          <div className="mt-2">
+                            <p className="font-medium text-sm">Students who attended:</p>
+                            <div className="max-h-32 overflow-y-auto">
+                              {data.studentNames?.map((name, index) => (
+                                <p key={index} className="text-xs text-muted-foreground">• {name}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Bar dataKey="newStudents" fill="#F59E0B" name="New Students" />
-              <Line type="monotone" dataKey="uniqueAttendees" stroke="#6366F1" strokeWidth={2} name="Total Unique" />
-            </ComposedChart>
+            </BarChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
@@ -494,7 +575,33 @@ const SimpleAnalyticsDashboard = () => {
                 height={80}
               />
               <YAxis label={{ value: 'Total Check-ins', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value) => [value, 'Total Check-ins']} />
+              <Tooltip 
+                formatter={(value) => [value, 'Total Check-ins']}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-primary">
+                          Total Check-ins: {payload[0].value}
+                        </p>
+                        {data.studentNames && (data.studentNames?.length || 0) > 0 && (
+                          <div className="mt-2">
+                            <p className="font-medium text-sm">Students who attended:</p>
+                            <div className="max-h-32 overflow-y-auto">
+                              {data.studentNames?.map((name, index) => (
+                                <p key={index} className="text-xs text-muted-foreground">• {name}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Bar dataKey="totalAttendees" fill="#3B82F6" name="Total Check-ins" />
             </BarChart>
           </ResponsiveContainer>
@@ -641,9 +748,16 @@ const SimpleAnalyticsDashboard = () => {
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {(analyticsData.totalCheckIns / analyticsData.monthsSpan).toFixed(1)}
+                {(() => {
+                  // Calculate average visits per student per month
+                  const totalUniqueStudents = analyticsData.totalStudents;
+                  const totalVisits = analyticsData.totalCheckIns;
+                  const avgVisitsPerStudent = totalUniqueStudents > 0 ? totalVisits / totalUniqueStudents : 0;
+                  const avgVisitsPerStudentPerMonth = avgVisitsPerStudent / Math.max(analyticsData.monthsSpan, 1);
+                  return avgVisitsPerStudentPerMonth.toFixed(1);
+                })()}
               </div>
-              <div className="text-muted-foreground">Avg Visits Per Month</div>
+              <div className="text-muted-foreground">Avg Visits Per Student/Month</div>
             </CardContent>
           </Card>
         </div>
