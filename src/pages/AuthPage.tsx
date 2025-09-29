@@ -100,47 +100,6 @@ const AuthPage = () => {
             </form>
           </Form>
 
-          <Separator className="my-6" />
-
-          {/* Quick Admin Login - Testing Only */}
-          <div className="text-center space-y-2">
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  const { error } = await signInWithOtp("dallarde@echo.church");
-                  if (error) {
-                    toast({
-                      title: "Failed to Send Magic Link",
-                      description: error.message,
-                      variant: "destructive",
-                    });
-                  } else {
-                    toast({
-                      title: "Magic Link Sent!",
-                      description: "Check your email for the admin magic link.",
-                    });
-                  }
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to send admin magic link.",
-                    variant: "destructive",
-                  });
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? "Sending..." : "Quick Admin Magic Link (Testing)"}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Sends magic link to: dallarde@echo.church
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
