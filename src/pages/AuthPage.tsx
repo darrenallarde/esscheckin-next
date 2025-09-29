@@ -425,6 +425,43 @@ const AuthPage = () => {
 
           <Separator className="my-6" />
 
+          {/* Quick Admin Login - Testing Only */}
+          <div className="text-center space-y-2">
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const { error } = await signIn("admin@echo.church", "admin");
+                  if (error) {
+                    toast({
+                      title: "Admin Login Failed",
+                      description: "Admin account not found. Please create it first using Sign Up.",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to login as admin.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? "Logging in..." : "Quick Admin Login (Testing)"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              For testing: admin@echo.church / admin
+            </p>
+          </div>
+
+          <Separator className="my-6" />
+
           <div className="text-center space-y-2">
             {!showOtp && (
               <Button
