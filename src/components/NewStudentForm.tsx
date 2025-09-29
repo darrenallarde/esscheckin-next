@@ -20,19 +20,32 @@ const newStudentSchema = z.object({
   isStudentLeader: z.boolean().default(false),
   grade: z.string().trim().optional().or(z.literal("")),
   highSchool: z.string().trim().optional().or(z.literal("")),
-  parentName: z.string().trim().optional().or(z.literal("")),
-  parentPhone: z.string().trim().optional().or(z.literal("")),
+  // Father information
+  fatherFirstName: z.string().trim().optional().or(z.literal("")),
+  fatherLastName: z.string().trim().optional().or(z.literal("")),
+  fatherPhone: z.string().trim().optional().or(z.literal("")),
+  // Mother information
+  motherFirstName: z.string().trim().optional().or(z.literal("")),
+  motherLastName: z.string().trim().optional().or(z.literal("")),
+  motherPhone: z.string().trim().optional().or(z.literal("")),
 }).refine((data) => {
   // If not a student leader, these fields are required
   if (!data.isStudentLeader) {
     return data.grade && data.grade.length > 0 && 
            data.highSchool && data.highSchool.length > 0 && 
-           data.parentName && data.parentName.length > 0 && 
-           data.parentPhone && data.parentPhone.length >= 10;
+           (
+             // At least one parent must be provided with full information
+             (data.fatherFirstName && data.fatherFirstName.length > 0 && 
+              data.fatherLastName && data.fatherLastName.length > 0 && 
+              data.fatherPhone && data.fatherPhone.length >= 10) ||
+             (data.motherFirstName && data.motherFirstName.length > 0 && 
+              data.motherLastName && data.motherLastName.length > 0 && 
+              data.motherPhone && data.motherPhone.length >= 10)
+           );
   }
   return true;
 }, {
-  message: "Grade, high school, and parent information are required for students",
+  message: "Grade, high school, and at least one parent's complete information are required for students",
   path: ["grade"], // This will show the error on the grade field
 });
 
@@ -58,8 +71,12 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       isStudentLeader: false,
       grade: "",
       highSchool: "",
-      parentName: "",
-      parentPhone: "",
+      fatherFirstName: "",
+      fatherLastName: "",
+      fatherPhone: "",
+      motherFirstName: "",
+      motherLastName: "",
+      motherPhone: "",
     },
   });
 
@@ -80,8 +97,12 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
           p_user_type: data.isStudentLeader ? 'student_leader' : 'student',
           p_grade: data.isStudentLeader ? null : data.grade,
           p_high_school: data.isStudentLeader ? null : data.highSchool,
-          p_parent_name: data.isStudentLeader ? null : data.parentName,
-          p_parent_phone: data.isStudentLeader ? null : data.parentPhone,
+          p_father_first_name: data.isStudentLeader ? null : data.fatherFirstName || null,
+          p_father_last_name: data.isStudentLeader ? null : data.fatherLastName || null,
+          p_father_phone: data.isStudentLeader ? null : data.fatherPhone || null,
+          p_mother_first_name: data.isStudentLeader ? null : data.motherFirstName || null,
+          p_mother_last_name: data.isStudentLeader ? null : data.motherLastName || null,
+          p_mother_phone: data.isStudentLeader ? null : data.motherPhone || null,
         });
 
       if (error) {
@@ -268,34 +289,100 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="parentName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Parent/Guardian Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter parent name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Father Information */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-foreground">Father Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fatherFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Father First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="First name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="parentPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Parent/Guardian Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter parent phone" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="fatherLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Father Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fatherPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Father Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Mother Information */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-foreground">Mother Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="motherFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mother First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="First name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="motherLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mother Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="motherPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mother Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </>
             )}
