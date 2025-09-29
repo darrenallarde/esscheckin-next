@@ -193,48 +193,46 @@ const CheckInForm = () => {
   if (viewState.type === 'confirm-student') {
     const { student } = viewState;
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Confirm Check-In</CardTitle>
-          <CardDescription>
-            Is this you?
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-primary/5 rounded-lg">
-            <h3 className="font-semibold text-lg">
+      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        <CardContent className="p-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Is this you?</h3>
+          </div>
+          
+          <div className="p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl mb-6 text-center">
+            <h4 className="text-xl font-bold text-gray-800 mb-1">
               {student.first_name} {student.last_name}
-            </h3>
-            <p className="text-muted-foreground">
+            </h4>
+            <p className="text-gray-600">
               {student.user_type === 'student_leader' 
-                ? 'Student Leader' 
+                ? '🌟 Student Leader' 
                 : student.grade && student.high_school 
                   ? `${student.grade} at ${student.high_school}`
                   : 'Student'
               }
             </p>
             {student.phone_number && (
-              <p className="text-sm text-muted-foreground">Phone: {student.phone_number}</p>
+              <p className="text-sm text-gray-500 mt-1">📱 {student.phone_number}</p>
             )}
             {student.email && (
-              <p className="text-sm text-muted-foreground">Email: {student.email}</p>
+              <p className="text-sm text-gray-500">📧 {student.email}</p>
             )}
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={() => setViewState({ type: 'phone-search' })}
-              className="flex-1"
+              className="flex-1 h-12 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl"
             >
-              No, search again
+              ❌ Not me
             </Button>
             <Button
               onClick={() => confirmCheckIn(student)}
               disabled={isSearching}
-              className="flex-1"
+              className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl transform hover:scale-105 transition-all duration-200"
             >
-              {isSearching ? "Checking in..." : "Yes, that's me!"}
+              {isSearching ? "✨ Checking in..." : "✅ That's me!"}
             </Button>
           </div>
         </CardContent>
@@ -245,27 +243,21 @@ const CheckInForm = () => {
   // Phone search view
   if (viewState.type === 'phone-search') {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Youth Ministry Check-In</CardTitle>
-          <CardDescription>
-            Enter your phone number to check in quickly
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        <CardContent className="p-8">
           <Form {...phoneForm}>
-            <form onSubmit={phoneForm.handleSubmit(searchByPhone)} className="space-y-4">
+            <form onSubmit={phoneForm.handleSubmit(searchByPhone)} className="space-y-6">
               <FormField
                 control={phoneForm.control}
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Enter your phone number" 
+                        placeholder="📱 Enter your phone number" 
                         {...field} 
                         autoFocus
+                        className="h-14 text-lg text-center border-2 border-purple-200 focus:border-purple-400 rounded-2xl bg-white/50"
                       />
                     </FormControl>
                     <FormMessage />
@@ -275,10 +267,10 @@ const CheckInForm = () => {
 
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-200"
                 disabled={isSearching}
               >
-                {isSearching ? "Searching..." : "Find Me"}
+                {isSearching ? "✨ Finding you..." : "🚀 Find Me"}
               </Button>
 
               <div className="text-center">
@@ -286,7 +278,7 @@ const CheckInForm = () => {
                   type="button"
                   variant="link"
                   onClick={() => setViewState({ type: 'name-search' })}
-                  className="text-sm"
+                  className="text-purple-600 hover:text-purple-800 font-medium"
                 >
                   Search by name or email instead
                 </Button>
@@ -300,27 +292,24 @@ const CheckInForm = () => {
 
   // Name/email search view
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Search by Name or Email</CardTitle>
-        <CardDescription>
-          Enter your first name, last name, or email address
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+      <CardContent className="p-8">
+        <div className="text-center mb-6">
+          <h3 className="text-xl font-semibold text-gray-800">Search by name or email</h3>
+        </div>
         <Form {...nameForm}>
-          <form onSubmit={nameForm.handleSubmit(searchByNameOrEmail)} className="space-y-4">
+          <form onSubmit={nameForm.handleSubmit(searchByNameOrEmail)} className="space-y-6">
             <FormField
               control={nameForm.control}
               name="searchTerm"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name or Email</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter your name or email" 
+                      placeholder="👤 Enter your name or email" 
                       {...field} 
                       autoFocus
+                      className="h-14 text-lg text-center border-2 border-purple-200 focus:border-purple-400 rounded-2xl bg-white/50"
                     />
                   </FormControl>
                   <FormMessage />
@@ -328,21 +317,21 @@ const CheckInForm = () => {
               )}
             />
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setViewState({ type: 'phone-search' })}
-                className="flex-1"
+                className="flex-1 h-12 border-2 border-purple-200 text-purple-600 hover:bg-purple-50 rounded-xl"
               >
-                Back to Phone Search
+                ← Back
               </Button>
               <Button 
                 type="submit" 
-                className="flex-1"
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl transform hover:scale-105 transition-all duration-200"
                 disabled={isSearching}
               >
-                {isSearching ? "Searching..." : "Find Me"}
+                {isSearching ? "✨ Searching..." : "🚀 Find Me"}
               </Button>
             </div>
 
@@ -351,9 +340,9 @@ const CheckInForm = () => {
                 type="button"
                 variant="link"
                 onClick={() => setViewState({ type: 'new-student' })}
-                className="text-sm"
+                className="text-purple-600 hover:text-purple-800 font-medium"
               >
-                I'm a new student
+                I'm new here!
               </Button>
             </div>
           </form>
