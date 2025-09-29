@@ -279,6 +279,17 @@ const AuthPage = () => {
           ) : isSignUp ? (
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+                {/* Debug input - not connected to form */}
+                <div>
+                  <label>Test Email Input (not connected to form):</label>
+                  <input 
+                    type="email" 
+                    placeholder="Test email input"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+                    onChange={(e) => console.log("Test input:", e.target.value)}
+                  />
+                </div>
+                
                 <FormField
                   control={signUpForm.control}
                   name="email"
@@ -308,7 +319,17 @@ const AuthPage = () => {
                     <FormItem>
                       <FormLabel>Phone Number (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your phone number" {...field} />
+                        <Input 
+                          placeholder="Enter your phone number" 
+                          {...field}
+                          onChange={(e) => {
+                            console.log("Phone input change:", e.target.value);
+                            field.onChange(e);
+                          }}
+                          onKeyDown={(e) => {
+                            console.log("Phone key down:", e.key);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
