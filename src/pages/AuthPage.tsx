@@ -286,7 +286,15 @@ const AuthPage = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your email" type="email" {...field} />
+                        <Input 
+                          placeholder="Enter your email" 
+                          type="email" 
+                          {...field}
+                          onChange={(e) => {
+                            console.log("Email input change:", e.target.value);
+                            field.onChange(e);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
