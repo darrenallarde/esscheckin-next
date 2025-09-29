@@ -96,24 +96,58 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Analytics Dashboard Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Analytics Dashboard</CardTitle>
-            <CardDescription>
-              Student attendance analytics and insights
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Analytics Coming Soon</h3>
-              <p className="text-muted-foreground">
-                Charts and analytics will be implemented in the next phase
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Analytics Dashboard
+              </CardTitle>
+              <CardDescription>
+                View detailed student attendance analytics and insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => navigate('/admin/analytics')} 
+                className="w-full"
+              >
+                View Analytics Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Student Management
+              </CardTitle>
+              <CardDescription>
+                Import students and manage check-in data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => navigate('/admin/import')} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  Import Students
+                </Button>
+                <Button 
+                  onClick={() => navigate('/')} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  Student Check-In
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

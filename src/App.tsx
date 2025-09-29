@@ -11,6 +11,7 @@ import AccountPage from "./pages/AccountPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentProfile from "./pages/StudentProfile";
 import ImportStudents from "./pages/ImportStudents";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App: React.FC = () => {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/import" element={<ImportStudents />} />
+              <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
               <Route path="/student" element={<StudentProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
