@@ -292,7 +292,7 @@ const SimpleAnalyticsDashboard = () => {
                         <p className="text-primary">
                           Unique Students: {payload[0].value}
                         </p>
-                        {data.studentNames && data.studentNames.length > 0 && (
+                        {data.studentNames && (data.studentNames?.length || 0) > 0 && (
                           <div className="mt-2">
                             <p className="font-medium text-sm">Students who attended:</p>
                             <div className="max-h-32 overflow-y-auto">
@@ -467,8 +467,8 @@ const SimpleAnalyticsDashboard = () => {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-3xl font-bold text-green-600">
-                  {analyticsData.cumulativeData.length > 1 ? 
-                    (analyticsData.cumulativeData[analyticsData.cumulativeData.length - 1].cumulativeReach / analyticsData.cumulativeData.length).toFixed(1) : 
+                  {(analyticsData.cumulativeData?.length || 0) > 1 ? 
+                    ((analyticsData.cumulativeData?.[analyticsData.cumulativeData.length - 1]?.cumulativeReach || 0) / (analyticsData.cumulativeData?.length || 1)).toFixed(1) : 
                     '0'
                   }
                 </div>
