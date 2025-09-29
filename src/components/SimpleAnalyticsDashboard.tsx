@@ -37,6 +37,7 @@ interface CheckInData {
   uniqueAttendees: number;
   newStudents: number;
   studentNames: string[];
+  newStudentNames: string[];
 }
 
 interface StudentStats {
@@ -90,6 +91,7 @@ const SimpleAnalyticsDashboard = () => {
         uniqueStudents: Set<string>;
         newStudents: Set<string>;
         studentNames: string[];
+        newStudentNames: string[];
       }>();
 
       // Track all students we've seen before each date to identify new students
@@ -112,7 +114,8 @@ const SimpleAnalyticsDashboard = () => {
             totalCheckIns: 0,
             uniqueStudents: new Set(),
             newStudents: new Set(),
-            studentNames: []
+            studentNames: [],
+            newStudentNames: []
           });
         }
 
@@ -120,16 +123,17 @@ const SimpleAnalyticsDashboard = () => {
         dayData.totalCheckIns++;
         dayData.uniqueStudents.add(checkIn.student_id);
         
-        // Check if this is a new student (first time we've seen them)
-        if (!allStudentsSeenBefore.has(checkIn.student_id)) {
-          dayData.newStudents.add(checkIn.student_id);
-          allStudentsSeenBefore.add(checkIn.student_id);
-        }
-        
         if (checkIn.students) {
           const fullName = `${checkIn.students.first_name} ${checkIn.students.last_name || ''}`.trim();
           if (!dayData.studentNames.includes(fullName)) {
             dayData.studentNames.push(fullName);
+          }
+          
+          // Check if this is a new student (first time we've seen them)
+          if (!allStudentsSeenBefore.has(checkIn.student_id)) {
+            dayData.newStudents.add(checkIn.student_id);
+            dayData.newStudentNames.push(fullName);
+            allStudentsSeenBefore.add(checkIn.student_id);
           }
         }
       });
@@ -142,7 +146,8 @@ const SimpleAnalyticsDashboard = () => {
         totalAttendees: day.totalCheckIns,
         uniqueAttendees: day.uniqueStudents.size,
         newStudents: day.newStudents.size,
-        studentNames: day.studentNames
+        studentNames: day.studentNames,
+        newStudentNames: day.newStudentNames
       }));
 
       // Get student statistics
@@ -492,13 +497,13 @@ const SimpleAnalyticsDashboard = () => {
                         <p className="text-primary">
                           New Students: {payload[0].value}
                         </p>
-                        {data.studentNames && (data.studentNames?.length || 0) > 0 && (
+                        {data.newStudentNames && (data.newStudentNames?.length || 0) > 0 && (
                           <div className="mt-2">
-                            <p className="font-medium text-sm">Students who attended:</p>
+                            <p className="font-medium text-sm">New students:</p>
                             <div className="max-h-32 overflow-y-auto pr-2" 
                                  style={{ scrollbarWidth: 'thin' }}
                                  onWheel={(e) => e.stopPropagation()}>
-                              {data.studentNames?.map((name, index) => {
+                              {data.newStudentNames?.map((name, index) => {
                                 const student = analyticsData?.studentStats?.find(s => 
                                   `${s.name}` === name
                                 );
