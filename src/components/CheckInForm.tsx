@@ -294,7 +294,7 @@ const CheckInForm = () => {
                   <FormItem>
                     <FormControl>
                       <Input
-                        placeholder="📱 Enter your phone number"
+                        placeholder="Phone Number"
                         {...field}
                         autoFocus
                         style={{ fontSize: '2rem', fontWeight: 'bold' }}
@@ -347,7 +347,7 @@ const CheckInForm = () => {
                 <FormItem>
                   <FormControl>
                     <Input
-                      placeholder="👤 Enter your name or email"
+                      placeholder="Name or Email"
                       {...field}
                       autoFocus
                       style={{ fontSize: '2rem', fontWeight: 'bold' }}
