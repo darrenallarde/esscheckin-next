@@ -14,207 +14,16 @@ export type Database = {
   }
   public: {
     Tables: {
-      check_ins: {
-        Row: {
-          checked_in_at: string
-          id: string
-          student_id: string
-        }
-        Insert: {
-          checked_in_at?: string
-          id?: string
-          student_id: string
-        }
-        Update: {
-          checked_in_at?: string
-          id?: string
-          student_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "check_ins_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      students: {
-        Row: {
-          created_at: string
-          date_of_birth: string | null
-          email: string | null
-          father_first_name: string | null
-          father_last_name: string | null
-          father_phone: string | null
-          first_name: string
-          grade: string | null
-          high_school: string | null
-          id: string
-          instagram_handle: string | null
-          last_name: string | null
-          mother_first_name: string | null
-          mother_last_name: string | null
-          mother_phone: string | null
-          parent_name: string | null
-          parent_phone: string | null
-          phone_number: string | null
-          updated_at: string
-          user_id: string | null
-          user_type: string
-        }
-        Insert: {
-          created_at?: string
-          date_of_birth?: string | null
-          email?: string | null
-          father_first_name?: string | null
-          father_last_name?: string | null
-          father_phone?: string | null
-          first_name: string
-          grade?: string | null
-          high_school?: string | null
-          id?: string
-          instagram_handle?: string | null
-          last_name?: string | null
-          mother_first_name?: string | null
-          mother_last_name?: string | null
-          mother_phone?: string | null
-          parent_name?: string | null
-          parent_phone?: string | null
-          phone_number?: string | null
-          updated_at?: string
-          user_id?: string | null
-          user_type?: string
-        }
-        Update: {
-          created_at?: string
-          date_of_birth?: string | null
-          email?: string | null
-          father_first_name?: string | null
-          father_last_name?: string | null
-          father_phone?: string | null
-          first_name?: string
-          grade?: string | null
-          high_school?: string | null
-          id?: string
-          instagram_handle?: string | null
-          last_name?: string | null
-          mother_first_name?: string | null
-          mother_last_name?: string | null
-          mother_phone?: string | null
-          parent_name?: string | null
-          parent_phone?: string | null
-          phone_number?: string | null
-          updated_at?: string
-          user_id?: string | null
-          user_type?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      checkin_student: {
-        Args: { p_student_id: string }
-        Returns: {
-          first_name: string
-          message: string
-          success: boolean
-          user_type: string
-        }[]
-      }
-      get_user_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      register_student_and_checkin: {
-        Args:
-          | {
-              p_date_of_birth?: string
-              p_email?: string
-              p_father_first_name?: string
-              p_father_last_name?: string
-              p_father_phone?: string
-              p_first_name: string
-              p_grade?: string
-              p_high_school?: string
-              p_instagram_handle?: string
-              p_last_name: string
-              p_mother_first_name?: string
-              p_mother_last_name?: string
-              p_mother_phone?: string
-              p_parent_name?: string
-              p_parent_phone?: string
-              p_phone_number?: string
-              p_user_type?: string
-            }
-          | {
-              p_date_of_birth?: string
-              p_email?: string
-              p_first_name: string
-              p_grade?: string
-              p_high_school?: string
-              p_instagram_handle?: string
-              p_last_name: string
-              p_parent_name?: string
-              p_parent_phone?: string
-              p_phone_number?: string
-              p_user_type?: string
-            }
-        Returns: {
-          message: string
-          student_id: string
-          success: boolean
-        }[]
-      }
-      search_student_for_checkin: {
-        Args: { search_term: string }
-        Returns: {
-          first_name: string
-          grade: string
-          high_school: string
-          last_name: string
-          student_id: string
-          user_type: string
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "student" | "student_leader"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -341,8 +150,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "student", "student_leader"],
-    },
+    Enums: {},
   },
 } as const
