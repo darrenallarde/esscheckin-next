@@ -275,12 +275,20 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="text-center pt-4">
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <Button
+              onClick={() => window.location.href = `/profile/${student.id}`}
+              size="lg"
+              variant="outline"
+              className="flex-1 border-2 border-purple-300 text-purple-600 hover:bg-purple-50 font-semibold px-8 py-3 rounded-2xl"
+            >
+              View My Profile
+            </Button>
             <Button
               onClick={onNewCheckIn}
               size="lg"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-2xl transform hover:scale-105 transition-all duration-200"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-2xl transform hover:scale-105 transition-all duration-200"
             >
               Check In Another Student
             </Button>

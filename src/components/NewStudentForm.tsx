@@ -13,7 +13,8 @@ import { toast } from "@/hooks/use-toast";
 const newStudentSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
   lastName: z.string().trim().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
-  phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits").max(15, "Phone number must be less than 15 digits"),
+  phoneNumber: z.string().trim().optional().or(z.literal("")),
+  noPhoneNumber: z.boolean().default(false),
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
@@ -29,24 +30,28 @@ const newStudentSchema = z.object({
   motherLastName: z.string().trim().optional().or(z.literal("")),
   motherPhone: z.string().trim().optional().or(z.literal("")),
 }).refine((data) => {
+  // If they don't have a phone number toggle, phone number is required
+  if (!data.noPhoneNumber && (!data.phoneNumber || data.phoneNumber.length < 10)) {
+    return false;
+  }
   // If not a student leader, these fields are required
   if (!data.isStudentLeader) {
-    return data.grade && data.grade.length > 0 && 
-           data.highSchool && data.highSchool.length > 0 && 
+    return data.grade && data.grade.length > 0 &&
+           data.highSchool && data.highSchool.length > 0 &&
            (
              // At least one parent must be provided with full information
-             (data.fatherFirstName && data.fatherFirstName.length > 0 && 
-              data.fatherLastName && data.fatherLastName.length > 0 && 
+             (data.fatherFirstName && data.fatherFirstName.length > 0 &&
+              data.fatherLastName && data.fatherLastName.length > 0 &&
               data.fatherPhone && data.fatherPhone.length >= 10) ||
-             (data.motherFirstName && data.motherFirstName.length > 0 && 
-              data.motherLastName && data.motherLastName.length > 0 && 
+             (data.motherFirstName && data.motherFirstName.length > 0 &&
+              data.motherLastName && data.motherLastName.length > 0 &&
               data.motherPhone && data.motherPhone.length >= 10)
            );
   }
   return true;
 }, {
-  message: "Grade, high school, and at least one parent's complete information are required for students",
-  path: ["grade"], // This will show the error on the grade field
+  message: "Phone number (10+ digits), grade, high school, and at least one parent's complete information are required for students",
+  path: ["phoneNumber"], // This will show the error on the phone number field
 });
 
 type NewStudentFormData = z.infer<typeof newStudentSchema>;
@@ -65,6 +70,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       firstName: "",
       lastName: "",
       phoneNumber: "",
+      noPhoneNumber: false,
       email: "",
       dateOfBirth: "",
       instagramHandle: "",
@@ -81,6 +87,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   });
 
   const isStudentLeader = form.watch("isStudentLeader");
+  const noPhoneNumber = form.watch("noPhoneNumber");
 
   const onSubmit = async (data: NewStudentFormData) => {
     setIsSubmitting(true);
@@ -202,9 +209,31 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>{noPhoneNumber ? "Phone Number (Optional)" : "Phone Number"}</FormLabel>
+                      <FormField
+                        control={form.control}
+                        name="noPhoneNumber"
+                        render={({ field: toggleField }) => (
+                          <FormItem className="flex flex-row items-center gap-2">
+                            <FormLabel className="text-xs text-muted-foreground font-normal">No phone</FormLabel>
+                            <FormControl>
+                              <Switch
+                                checked={toggleField.value}
+                                onCheckedChange={toggleField.onChange}
+                                className="scale-75"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormControl>
-                      <Input placeholder="Enter phone number" {...field} />
+                      <Input
+                        placeholder="Enter phone number"
+                        {...field}
+                        disabled={noPhoneNumber}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

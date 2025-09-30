@@ -10,6 +10,7 @@ import AuthPage from "./pages/AuthPage";
 import AccountPage from "./pages/AccountPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentProfile from "./pages/StudentProfile";
+import PublicProfile from "./pages/PublicProfile";
 import ImportStudents from "./pages/ImportStudents";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import Dashboard from "./pages/Dashboard";
@@ -34,6 +35,7 @@ const App: React.FC = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
               <Route path="/student" element={<StudentProfile />} />
+              <Route path="/profile/:studentId" element={<PublicProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
