@@ -26,10 +26,11 @@ interface Student {
 interface GameCheckInSuccessDBProps {
   student: Student;
   checkInId: string;
+  profilePin?: string;
   onNewCheckIn: () => void;
 }
 
-const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInSuccessDBProps) => {
+const GameCheckInSuccessDB = ({ student, checkInId, profilePin, onNewCheckIn }: GameCheckInSuccessDBProps) => {
   const [reward, setReward] = useState<CheckinReward | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -133,12 +134,31 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
 
   if (isLoading || !reward) {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p>Calculating your rewards...</p>
-        </CardContent>
-      </Card>
+      <div className="w-full max-w-4xl mx-auto space-y-6">
+        {/* Show PIN even during loading */}
+        {profilePin && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200">
+            <div className="text-center">
+              <div className="text-sm font-medium text-green-700 mb-2">
+                Your Profile PIN (save this!)
+              </div>
+              <div className="text-5xl font-bold text-green-600 tracking-widest mb-2 font-mono">
+                {profilePin}
+              </div>
+              <div className="text-xs text-green-600">
+                You'll need this PIN to view and edit your profile
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p>Calculating your rewards...</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -267,6 +287,23 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
               </div>
               <div className="text-sm font-bold text-blue-600">
                 — {reward.bible_verse.reference}
+              </div>
+            </div>
+          )}
+
+          {/* Profile PIN Display */}
+          {profilePin && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200">
+              <div className="text-center">
+                <div className="text-sm font-medium text-green-700 mb-2">
+                  Your Profile PIN (save this!)
+                </div>
+                <div className="text-5xl font-bold text-green-600 tracking-widest mb-2 font-mono">
+                  {profilePin}
+                </div>
+                <div className="text-xs text-green-600">
+                  You'll need this PIN to view and edit your profile
+                </div>
               </div>
             </div>
           )}

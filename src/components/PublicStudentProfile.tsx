@@ -44,13 +44,53 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
   const [gameProfile, setGameProfile] = useState<StudentGameProfile | null>(null);
   const [studentData, setStudentData] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
   });
 
+  // Check if PIN is already stored in localStorage
+  useEffect(() => {
+    const storedPin = localStorage.getItem(`profile_pin_${studentId}`);
+    if (storedPin) {
+      setIsUnlocked(true);
+      setPinInput(storedPin);
+    }
+  }, [studentId]);
+
+  const verifyPin = async () => {
+    setIsLoading(true);
+    setPinError("");
+    try {
+      const { data, error } = await supabase
+        .rpc('verify_profile_pin', {
+          p_student_id: studentId,
+          p_pin: pinInput
+        });
+
+      if (error) throw error;
+
+      if (data && data.valid) {
+        setIsUnlocked(true);
+        // Store PIN in localStorage so user doesn't need to enter it again
+        localStorage.setItem(`profile_pin_${studentId}`, pinInput);
+      } else {
+        setPinError(data?.message || 'Incorrect PIN');
+      }
+    } catch (error) {
+      console.error('PIN verification error:', error);
+      setPinError('Failed to verify PIN. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Load data on mount and when refreshTrigger changes
   useEffect(() => {
+    if (!isUnlocked) return; // Don't load data until unlocked
     const fetchData = async () => {
       setIsLoading(true);
       try {
@@ -110,7 +150,7 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
     };
 
     fetchData();
-  }, [studentId, refreshTrigger]);
+  }, [studentId, refreshTrigger, isUnlocked]);
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
@@ -154,6 +194,60 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
       setIsLoading(false);
     }
   };
+
+  // Show PIN entry screen if not unlocked
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Enter Your Profile PIN</CardTitle>
+            <CardDescription>
+              You received this PIN when you checked in
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                placeholder="Enter 4-digit PIN"
+                value={pinInput}
+                onChange={(e) => {
+                  setPinInput(e.target.value.replace(/\D/g, ''));
+                  setPinError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && pinInput.length === 4) {
+                    verifyPin();
+                  }
+                }}
+                className="text-center text-3xl tracking-widest font-mono h-16"
+                autoFocus
+              />
+              {pinError && (
+                <p className="text-sm text-red-600 mt-2 text-center">{pinError}</p>
+              )}
+            </div>
+            <Button
+              onClick={verifyPin}
+              disabled={pinInput.length !== 4 || isLoading}
+              className="w-full h-12"
+              size="lg"
+            >
+              {isLoading ? "Verifying..." : "Unlock Profile"}
+            </Button>
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Don't have your PIN?</p>
+              <p>Check in again to get a new one!</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading && !studentData) {
     return (

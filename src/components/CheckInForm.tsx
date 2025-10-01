@@ -12,9 +12,9 @@ import NewStudentForm from "./NewStudentForm";
 import GameCheckInSuccessDB from "./GameCheckInSuccessDB";
 import { processCheckinRewards } from "@/utils/gamificationDB";
 
-// Schema for phone search
+// Schema for universal search (phone, name, or email)
 const phoneSearchSchema = z.object({
-  phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits").max(15, "Phone number must be less than 15 digits"),
+  phoneNumber: z.string().trim().min(2, "Enter at least 2 characters").max(50, "Entry is too long"),
 });
 
 // Schema for name/email search
@@ -24,6 +24,10 @@ const nameEmailSearchSchema = z.object({
 
 type PhoneSearchData = z.infer<typeof phoneSearchSchema>;
 type NameEmailSearchData = z.infer<typeof nameEmailSearchSchema>;
+
+interface CheckInFormProps {
+  onCheckInComplete?: () => void;
+}
 
 interface Student {
   id: string;
@@ -45,9 +49,9 @@ type ViewState =
   | { type: 'confirm-student', student: Student }
   | { type: 'select-student', students: Student[] }
   | { type: 'new-student' }
-  | { type: 'success', student: Student, checkInId: string };
+  | { type: 'success', student: Student, checkInId: string, profilePin?: string };
 
-const CheckInForm = () => {
+const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const [viewState, setViewState] = useState<ViewState>({ type: 'phone-search' });
   const [isSearching, setIsSearching] = useState(false);
 
@@ -64,35 +68,51 @@ const CheckInForm = () => {
   const searchByPhone = async (data: PhoneSearchData) => {
     setIsSearching(true);
     try {
+      // Clean phone number: remove spaces, dashes, dots, parentheses, and +1 country code
+      let cleanedSearch = data.phoneNumber.trim();
+
+      // If it looks like a phone number (contains mostly digits), clean it
+      if (/\d/.test(cleanedSearch)) {
+        cleanedSearch = cleanedSearch
+          .replace(/[\s\-\.\(\)]/g, '') // Remove spaces, dashes, dots, parentheses
+          .replace(/^\+?1/, ''); // Remove +1 or 1 country code from start
+      }
+
       const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin', { search_term: data.phoneNumber });
+        .rpc('search_student_for_checkin', { search_term: cleanedSearch });
 
       if (error) {
         throw error;
       }
 
       if (results && results.length > 0) {
-        // Convert the function result to match our Student interface
-        const student = {
-          id: results[0].student_id,
-          first_name: results[0].first_name,
-          last_name: results[0].last_name,
-          user_type: results[0].user_type,
-          grade: results[0].grade,
-          high_school: results[0].high_school,
+        // Convert the function results to match our Student interface
+        const students = results.map(r => ({
+          id: r.student_id,
+          first_name: r.first_name,
+          last_name: r.last_name,
+          user_type: r.user_type,
+          grade: r.grade,
+          high_school: r.high_school,
           phone_number: null, // Not returned by secure function
           email: null, // Not returned by secure function
           parent_name: null,
           parent_phone: null,
           created_at: '',
-        };
-        setViewState({ type: 'confirm-student', student });
+        }));
+
+        // If only one result, go straight to confirmation
+        if (students.length === 1) {
+          setViewState({ type: 'confirm-student', student: students[0] });
+        } else {
+          // Multiple results, show selection screen
+          setViewState({ type: 'select-student', students });
+        }
       } else {
         toast({
           title: "Student not found",
-          description: "No student found with that phone number. Try searching by name or register as a new student.",
+          description: "No student found. Please try again or register as a new student.",
         });
-        setViewState({ type: 'name-search' });
       }
     } catch (error) {
       console.error("Error searching by phone:", error);
@@ -179,15 +199,21 @@ const CheckInForm = () => {
           return 'Student';
         };
 
+        const isAlreadyCheckedIn = result[0].message === 'Already checked in today';
+
         toast({
-          title: "Check-in successful!",
-          description: `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
+          title: isAlreadyCheckedIn ? "Already checked in!" : "Check-in successful!",
+          description: isAlreadyCheckedIn
+            ? `${result[0].first_name}, you already checked in today! Here's your PIN to access your profile.`
+            : `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
         });
 
-        // Get the check-in ID from the result
+        // Get the check-in ID and PIN from the result
         const checkInId = result[0].check_in_id || result[0].id || 'temp-checkin-id';
+        const profilePin = result[0].profile_pin;
         console.log('Check-in result:', result[0]);
         console.log('Check-in ID:', checkInId);
+        console.log('Profile PIN:', profilePin);
 
         // If we don't have a proper check-in ID, we need to query for the latest check-in
         let finalCheckInId = checkInId;
@@ -196,7 +222,7 @@ const CheckInForm = () => {
           // For now, pass the temp ID but log the issue
         }
 
-        setViewState({ type: 'success', student, checkInId: finalCheckInId });
+        setViewState({ type: 'success', student, checkInId: finalCheckInId, profilePin });
       } else {
         throw new Error(result?.[0]?.message || 'Check-in failed');
       }
@@ -216,6 +242,8 @@ const CheckInForm = () => {
     setViewState({ type: 'phone-search' });
     phoneForm.reset();
     nameForm.reset();
+    // Call the callback to change Bible verse
+    onCheckInComplete?.();
   };
 
   // Success view
@@ -223,6 +251,7 @@ const CheckInForm = () => {
     return <GameCheckInSuccessDB
       student={viewState.student}
       checkInId={viewState.checkInId}
+      profilePin={viewState.profilePin}
       onNewCheckIn={resetToSearch}
     />;
   }
@@ -288,58 +317,53 @@ const CheckInForm = () => {
   if (viewState.type === 'confirm-student') {
     const { student } = viewState;
     return (
-      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-        <CardContent className="p-8">
+      <div className="w-full max-w-lg mx-auto">
+        <div className="jrpg-textbox jrpg-corners">
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">Is this you?</h3>
+            <h3 className="jrpg-font text-sm text-gray-700 mb-4">CONFIRM IDENTITY</h3>
           </div>
-          
-          <div className="p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl mb-6 text-center">
-            <h4 className="text-xl font-bold text-gray-800 mb-1">
-              {student.first_name} {student.last_name}
-            </h4>
-            <p className="text-gray-600">
-              {student.user_type === 'student_leader' 
-                ? '🌟 Student Leader' 
-                : student.grade && student.high_school 
-                  ? `${student.grade} at ${student.high_school}`
-                  : 'Student'
+
+          <div className="bg-green-100/50 border-2 border-green-600/50 p-6 mb-6">
+            <div className="jrpg-selector">
+              <h4 className="jrpg-font text-base text-gray-800 mb-2">
+                {student.first_name} {student.last_name}
+              </h4>
+            </div>
+            <p className="jrpg-font text-xs text-gray-700 ml-8">
+              {student.user_type === 'student_leader'
+                ? '⭐ LEADER'
+                : student.grade && student.high_school
+                  ? `LV ${student.grade} • ${student.high_school}`
+                  : 'ADVENTURER'
               }
             </p>
-            {student.phone_number && (
-              <p className="text-sm text-gray-500 mt-1">📱 {student.phone_number}</p>
-            )}
-            {student.email && (
-              <p className="text-sm text-gray-500">📧 {student.email}</p>
-            )}
           </div>
-          
+
           <div className="flex gap-3">
             <Button
-              variant="outline"
               onClick={() => setViewState({ type: 'phone-search' })}
-              className="flex-1 h-12 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl"
+              className="jrpg-button flex-1"
             >
-              ❌ Not me
+              ✕ CANCEL
             </Button>
             <Button
               onClick={() => confirmCheckIn(student)}
               disabled={isSearching}
-              className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl transform hover:scale-105 transition-all duration-200"
+              className="jrpg-button flex-1"
             >
-              {isSearching ? "✨ Checking in..." : "✅ That's me!"}
+              {isSearching ? "LOADING..." : "✓ CONFIRM"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   // Phone search view
   if (viewState.type === 'phone-search') {
     return (
-      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-        <CardContent className="p-8">
+      <div className="w-full max-w-lg mx-auto">
+        <div className="jrpg-textbox jrpg-corners">
           <Form {...phoneForm}>
             <form onSubmit={phoneForm.handleSubmit(searchByPhone)} className="space-y-6">
               <FormField
@@ -349,49 +373,47 @@ const CheckInForm = () => {
                   <FormItem>
                     <FormControl>
                       <Input
-                        placeholder="Phone Number"
+                        placeholder="PHONE OR NAME"
                         {...field}
                         autoFocus
-                        style={{ fontSize: '2rem', fontWeight: 'bold' }}
-                        className="h-20 text-3xl font-black text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold shadow-lg"
+                        className="jrpg-input h-20 text-2xl text-center"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400 text-xs mt-2 jrpg-font" />
                   </FormItem>
                 )}
               />
 
-              <Button 
-                type="submit" 
-                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-200"
+              <Button
+                type="submit"
+                className="jrpg-button w-full"
                 disabled={isSearching}
               >
-                {isSearching ? "✨ Finding you..." : "🚀 Find Me"}
+                {isSearching ? "SEARCHING..." : "▶ SEARCH"}
               </Button>
 
-              <div className="text-center">
-                <Button
+              <div className="text-center pt-4">
+                <button
                   type="button"
-                  variant="link"
-                  onClick={() => setViewState({ type: 'name-search' })}
-                  className="text-purple-600 hover:text-purple-800 font-medium"
+                  onClick={() => setViewState({ type: 'new-student' })}
+                  className="jrpg-font text-xs text-green-700 hover:text-green-900 underline"
                 >
-                  Search by name or email instead
-                </Button>
+                  NEW STUDENT?
+                </button>
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   // Name/email search view
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-      <CardContent className="p-8">
+    <div className="w-full max-w-lg mx-auto">
+      <div className="jrpg-textbox jrpg-corners">
         <div className="text-center mb-6">
-          <h3 className="text-xl font-semibold text-gray-800">Search by name or email</h3>
+          <h3 className="jrpg-font text-sm text-gray-700">SEARCH BY NAME</h3>
         </div>
         <Form {...nameForm}>
           <form onSubmit={nameForm.handleSubmit(searchByNameOrEmail)} className="space-y-6">
@@ -402,14 +424,13 @@ const CheckInForm = () => {
                 <FormItem>
                   <FormControl>
                     <Input
-                      placeholder="Name or Email"
+                      placeholder="ENTER NAME"
                       {...field}
                       autoFocus
-                      style={{ fontSize: '2rem', fontWeight: 'bold' }}
-                      className="h-20 text-3xl font-black text-center border-4 border-purple-300 focus:border-purple-500 rounded-2xl bg-white/80 placeholder:text-gray-400 placeholder:font-semibold shadow-lg"
+                      className="jrpg-input h-20 text-2xl text-center"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-400 text-xs mt-2 jrpg-font" />
                 </FormItem>
               )}
             />
@@ -417,35 +438,33 @@ const CheckInForm = () => {
             <div className="flex gap-3">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => setViewState({ type: 'phone-search' })}
-                className="flex-1 h-12 border-2 border-purple-200 text-purple-600 hover:bg-purple-50 rounded-xl"
+                className="jrpg-button flex-1"
               >
-                ← Back
+                ← BACK
               </Button>
-              <Button 
-                type="submit" 
-                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl transform hover:scale-105 transition-all duration-200"
+              <Button
+                type="submit"
+                className="jrpg-button flex-1"
                 disabled={isSearching}
               >
-                {isSearching ? "✨ Searching..." : "🚀 Find Me"}
+                {isSearching ? "SEARCHING..." : "▶ SEARCH"}
               </Button>
             </div>
 
-            <div className="text-center">
-              <Button
+            <div className="text-center pt-4">
+              <button
                 type="button"
-                variant="link"
                 onClick={() => setViewState({ type: 'new-student' })}
-                className="text-purple-600 hover:text-purple-800 font-medium"
+                className="jrpg-font text-xs text-green-700 hover:text-green-900 underline"
               >
-                I'm new here!
-              </Button>
+                NEW STUDENT?
+              </button>
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

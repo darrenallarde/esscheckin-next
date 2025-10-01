@@ -1,0 +1,232 @@
+/* JRPG Fantasy Theme for Check-in Page */
+
+/* Pixel font class */
+.jrpg-font {
+  font-family: 'Press Start 2P', cursive;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+}
+
+/* Fantasy background with animated particles */
+.jrpg-background {
+  background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 50%, #90EE90 100%);
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Nature particles - leaves and sparkles */
+.jrpg-stars {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.jrpg-star {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: float-sparkle 4s infinite ease-in-out;
+}
+
+@keyframes float-sparkle {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1.2);
+  }
+}
+
+/* JRPG text box style */
+.jrpg-textbox {
+  background: linear-gradient(to bottom, #f5f5dc 0%, #e8dcc4 100%);
+  border: 4px solid #8B6914;
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 2px #228B22,
+    0 8px 0 #2F4F2F,
+    0 8px 16px rgba(0,0,0,0.3);
+  position: relative;
+  padding: 24px;
+}
+
+.jrpg-textbox::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  background: linear-gradient(45deg, #4A4A4A 25%, transparent 25%, transparent 75%, #4A4A4A 75%, #4A4A4A),
+              linear-gradient(45deg, #4A4A4A 25%, transparent 25%, transparent 75%, #4A4A4A 75%, #4A4A4A);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* JRPG button style */
+.jrpg-button {
+  background: linear-gradient(to bottom, #228B22 0%, #006400 100%);
+  border: 3px solid #FFD700;
+  border-radius: 0;
+  color: #FFFACD;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  padding: 16px 32px;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 4px 0 #2F4F2F,
+    0 6px 12px rgba(0,0,0,0.3);
+  transition: all 0.1s;
+  position: relative;
+}
+
+.jrpg-button:hover {
+  background: linear-gradient(to bottom, #32CD32 0%, #228B22 100%);
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    0 2px 0 #2F4F2F,
+    0 4px 8px rgba(0,0,0,0.3);
+}
+
+.jrpg-button:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 0 rgba(0, 0, 0, 0.2),
+    0 0 0 #2F4F2F;
+}
+
+/* JRPG input field */
+.jrpg-input {
+  background: #FAFAF0;
+  border: 3px solid #8B6914;
+  border-radius: 0;
+  color: #2F4F2F;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 16px;
+  padding: 16px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.jrpg-input:focus {
+  border-color: #228B22;
+  outline: none;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.2),
+    0 0 0 2px rgba(34, 139, 34, 0.3);
+}
+
+/* HP/MP style bars */
+.jrpg-stat-bar {
+  background: #1a1a2a;
+  border: 2px solid #4A4A6A;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.jrpg-stat-fill {
+  background: linear-gradient(to bottom, #4CAF50 0%, #2E7D32 100%);
+  height: 100%;
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.jrpg-stat-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 100%);
+}
+
+/* Pixelated corners */
+.jrpg-corners {
+  position: relative;
+}
+
+.jrpg-corners::before,
+.jrpg-corners::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #D4AF37;
+}
+
+.jrpg-corners::before {
+  top: -6px;
+  left: -6px;
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 50% 50%, 50% 100%, 0 100%);
+}
+
+.jrpg-corners::after {
+  bottom: -6px;
+  right: -6px;
+  clip-path: polygon(50% 0, 100% 0, 100% 100%, 0 100%, 0 50%, 50% 50%);
+}
+
+/* Blinking cursor for text */
+.jrpg-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: #FFE4B5;
+  animation: blink 1s steps(2) infinite;
+  margin-left: 4px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Gold text effect */
+.jrpg-gold-text {
+  color: #FFD700;
+  text-shadow:
+    2px 2px 0 #8B6914,
+    -1px -1px 0 #FFF8DC;
+}
+
+/* Floating animation for special elements */
+.jrpg-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Menu selection indicator */
+.jrpg-selector {
+  position: relative;
+  padding-left: 32px;
+}
+
+.jrpg-selector::before {
+  content: '▶';
+  position: absolute;
+  left: 8px;
+  color: #FFD700;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: translateX(0); }
+  50% { opacity: 0.7; transform: translateX(-4px); }
+}
