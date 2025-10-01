@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PublicStudentProfile from "@/components/PublicStudentProfile";
 

@@ -54,19 +54,25 @@ export function getNextRank(currentPoints: number): RankInfo | null {
 
 export async function getStudentGameProfile(studentId: string): Promise<StudentGameProfile | null> {
   try {
+    console.log('Calling get_student_game_profile RPC with studentId:', studentId);
     const { data, error } = await supabase
       .rpc('get_student_game_profile', { p_student_id: studentId });
 
+    console.log('RPC response - data:', data, 'error:', error);
+
     if (error) {
       console.error('Error fetching student game profile:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return null;
     }
 
     if (!data || data.length === 0) {
+      console.warn('No game profile data returned for student:', studentId);
       return null;
     }
 
     const profile = data[0];
+    console.log('Profile data:', profile);
 
     // Calculate streaks (we'll implement this separately for now)
     const streaks = await calculateStudentStreaks(studentId);

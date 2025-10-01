@@ -43,6 +43,7 @@ type ViewState =
   | { type: 'phone-search' }
   | { type: 'name-search' }
   | { type: 'confirm-student', student: Student }
+  | { type: 'select-student', students: Student[] }
   | { type: 'new-student' }
   | { type: 'success', student: Student, checkInId: string };
 
@@ -116,21 +117,28 @@ const CheckInForm = () => {
       }
 
       if (results && results.length > 0) {
-        // Convert the function result to match our Student interface
-        const student = {
-          id: results[0].student_id,
-          first_name: results[0].first_name,
-          last_name: results[0].last_name,
-          user_type: results[0].user_type,
-          grade: results[0].grade,
-          high_school: results[0].high_school,
-          phone_number: null, // Not returned by secure function
-          email: null, // Not returned by secure function
+        // Convert the function results to match our Student interface
+        const students = results.map(r => ({
+          id: r.student_id,
+          first_name: r.first_name,
+          last_name: r.last_name,
+          user_type: r.user_type,
+          grade: r.grade,
+          high_school: r.high_school,
+          phone_number: null,
+          email: null,
           parent_name: null,
           parent_phone: null,
           created_at: '',
-        };
-        setViewState({ type: 'confirm-student', student });
+        }));
+
+        // If only one result, go straight to confirmation
+        if (students.length === 1) {
+          setViewState({ type: 'confirm-student', student: students[0] });
+        } else {
+          // Multiple results, show selection screen
+          setViewState({ type: 'select-student', students });
+        }
       } else {
         toast({
           title: "Student not found",
@@ -141,7 +149,7 @@ const CheckInForm = () => {
     } catch (error) {
       console.error("Error searching by name/email:", error);
       toast({
-        title: "Search Error", 
+        title: "Search Error",
         description: "Failed to search for student. Please try again.",
         variant: "destructive",
       });
@@ -226,6 +234,53 @@ const CheckInForm = () => {
         onSuccess={() => setViewState({ type: 'phone-search' })}
         onBack={() => setViewState({ type: 'name-search' })}
       />
+    );
+  }
+
+  // Multiple student selection view
+  if (viewState.type === 'select-student') {
+    const { students } = viewState;
+    return (
+      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        <CardContent className="p-8">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Which one is you?</h3>
+            <p className="text-gray-600">We found multiple people with that name</p>
+          </div>
+
+          <div className="space-y-3">
+            {students.map((student) => (
+              <button
+                key={student.id}
+                onClick={() => setViewState({ type: 'confirm-student', student })}
+                className="w-full p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl hover:from-purple-200 hover:to-pink-200 transition-all text-left"
+              >
+                <div className="font-bold text-gray-800">
+                  {student.first_name} {student.last_name}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {student.user_type === 'student_leader'
+                    ? '🌟 Student Leader'
+                    : student.grade && student.high_school
+                      ? `Grade ${student.grade} at ${student.high_school}`
+                      : 'Student'
+                  }
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setViewState({ type: 'name-search' })}
+              className="w-full"
+            >
+              ← Back to Search
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

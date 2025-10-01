@@ -205,32 +205,28 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
         <CardContent className="space-y-6 relative z-10">
           {/* Points and Rank Display */}
           <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200">
-            <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4">
               <div className="text-center">
                 <div className="text-4xl font-bold text-purple-600 flex items-center justify-center gap-2">
                   <Zap className="h-8 w-8 text-yellow-500" />
                   +{reward.points_awarded}
                 </div>
-                <div className="text-sm text-purple-600 font-medium">Points Earned</div>
+                <div className="text-sm text-purple-600 font-medium mt-1">Points Earned</div>
               </div>
 
-              <div className="h-12 w-px bg-purple-300" />
-
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-4xl font-bold text-blue-600">
                   {reward.total_points}
                 </div>
-                <div className="text-sm text-blue-600 font-medium">Total Points</div>
+                <div className="text-sm text-blue-600 font-medium mt-1">Total Points</div>
               </div>
 
-              <div className="h-12 w-px bg-purple-300" />
-
               <div className="text-center">
-                <div className="text-2xl font-bold flex items-center justify-center gap-2">
-                  <span className="text-2xl">{currentRank.emoji}</span>
-                  <span style={{ color: currentRank.color }}>{currentRank.title}</span>
+                <div className="text-3xl font-bold flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <span className="text-3xl">{currentRank.emoji}</span>
+                  <span style={{ color: currentRank.color }} className="text-xl sm:text-2xl">{currentRank.title}</span>
                 </div>
-                <div className="text-sm text-gray-600">Your Rank</div>
+                <div className="text-sm text-gray-600 mt-1">Your Rank</div>
               </div>
             </div>
 

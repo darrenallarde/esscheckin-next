@@ -22,6 +22,13 @@ const profileSchema = z.object({
   instagramHandle: z.string().trim().optional().or(z.literal("")),
   grade: z.string().trim().optional().or(z.literal("")),
   highSchool: z.string().trim().optional().or(z.literal("")),
+  dateOfBirth: z.string().optional().or(z.literal("")),
+  motherFirstName: z.string().trim().optional().or(z.literal("")),
+  motherLastName: z.string().trim().optional().or(z.literal("")),
+  motherPhone: z.string().trim().optional().or(z.literal("")),
+  fatherFirstName: z.string().trim().optional().or(z.literal("")),
+  fatherLastName: z.string().trim().optional().or(z.literal("")),
+  fatherPhone: z.string().trim().optional().or(z.literal("")),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -36,72 +43,96 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [gameProfile, setGameProfile] = useState<StudentGameProfile | null>(null);
   const [studentData, setStudentData] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
   });
 
-  // Fetch student data and game profile
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch student info
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', studentId)
-        .single();
-
-      if (studentError) throw studentError;
-
-      setStudentData(student);
-
-      // Populate form
-      form.reset({
-        firstName: student.first_name || '',
-        lastName: student.last_name || '',
-        phoneNumber: student.phone_number || '',
-        email: student.email || '',
-        instagramHandle: student.instagram_handle || '',
-        grade: student.grade || '',
-        highSchool: student.high_school || '',
-      });
-
-      // Fetch game profile
-      const profile = await getStudentGameProfile(studentId);
-      setGameProfile(profile);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load profile data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Load data on mount
+  // Load data on mount and when refreshTrigger changes
   useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        console.log('Fetching data for student:', studentId);
+
+        // Fetch student info using RPC to bypass RLS
+        const { data: studentResult, error: studentError } = await supabase
+          .rpc('get_student_by_id', { p_student_id: studentId });
+
+        if (studentError) {
+          console.error('Student fetch error:', studentError);
+          console.error('Error details:', JSON.stringify(studentError, null, 2));
+          throw studentError;
+        }
+
+        if (!studentResult || studentResult.length === 0) {
+          throw new Error('Student not found');
+        }
+
+        const student = studentResult[0];
+        console.log('Student data:', student);
+        setStudentData(student);
+
+        // Populate form
+        form.reset({
+          firstName: student.first_name || '',
+          lastName: student.last_name || '',
+          phoneNumber: student.phone_number || '',
+          email: student.email || '',
+          instagramHandle: student.instagram_handle || '',
+          grade: student.grade || '',
+          highSchool: student.high_school || '',
+          dateOfBirth: student.date_of_birth || '',
+          motherFirstName: student.mother_first_name || '',
+          motherLastName: student.mother_last_name || '',
+          motherPhone: student.mother_phone || '',
+          fatherFirstName: student.father_first_name || '',
+          fatherLastName: student.father_last_name || '',
+          fatherPhone: student.father_phone || '',
+        });
+
+        // Fetch game profile
+        console.log('Fetching game profile for:', studentId);
+        const profile = await getStudentGameProfile(studentId);
+        console.log('Game profile received:', profile);
+        setGameProfile(profile);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchData();
-  }, [studentId]);
+  }, [studentId, refreshTrigger]);
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('students')
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone_number: data.phoneNumber || null,
-          email: data.email || null,
-          instagram_handle: data.instagramHandle || null,
-          grade: data.grade || null,
-          high_school: data.highSchool || null,
-        })
-        .eq('id', studentId);
+      const { data: result, error } = await supabase
+        .rpc('update_student_profile', {
+          p_student_id: studentId,
+          p_first_name: data.firstName,
+          p_last_name: data.lastName,
+          p_phone_number: data.phoneNumber || null,
+          p_email: data.email || null,
+          p_instagram_handle: data.instagramHandle || null,
+          p_grade: data.grade || null,
+          p_high_school: data.highSchool || null,
+          p_date_of_birth: data.dateOfBirth || null,
+          p_mother_first_name: data.motherFirstName || null,
+          p_mother_last_name: data.motherLastName || null,
+          p_mother_phone: data.motherPhone || null,
+          p_father_first_name: data.fatherFirstName || null,
+          p_father_last_name: data.fatherLastName || null,
+          p_father_phone: data.fatherPhone || null,
+        });
 
       if (error) throw error;
 
@@ -111,7 +142,7 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
       });
 
       setIsEditing(false);
-      fetchData(); // Refresh data
+      setRefreshTrigger(prev => prev + 1); // Trigger data refresh
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -316,21 +347,37 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="instagramHandle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Instagram Handle</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="@username" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="instagramHandle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Instagram Handle</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="@username" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Birth</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   {studentData?.user_type !== 'student_leader' && (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -350,7 +397,7 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
                         name="highSchool"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>High School</FormLabel>
+                            <FormLabel>School Name</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -359,6 +406,99 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
                         )}
                       />
                     </div>
+
+                    {/* Mother Information */}
+                    <div className="space-y-2 mt-4">
+                      <h4 className="text-sm font-medium text-foreground">Mother Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="motherFirstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mother First Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="First name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="motherLastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mother Last Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Last name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="motherPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mother Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Phone number" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Father Information */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-foreground">Father Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="fatherFirstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Father First Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="First name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="fatherLastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Father Last Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Last name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="fatherPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Father Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Phone number" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    </>
                   )}
                 </form>
               </Form>
@@ -392,6 +532,29 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
                   <div className="flex items-center gap-3">
                     <School className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">{studentData.high_school}</span>
+                  </div>
+                )}
+                {studentData?.date_of_birth && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Born: {new Date(studentData.date_of_birth).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {studentData?.user_type !== 'student_leader' && (studentData?.mother_first_name || studentData?.father_first_name) && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">Parent/Guardian Info</h4>
+                    {studentData?.mother_first_name && (
+                      <div className="text-sm mb-1">
+                        <span className="font-medium">Mother:</span> {studentData.mother_first_name} {studentData.mother_last_name}
+                        {studentData.mother_phone && ` • ${studentData.mother_phone}`}
+                      </div>
+                    )}
+                    {studentData?.father_first_name && (
+                      <div className="text-sm">
+                        <span className="font-medium">Father:</span> {studentData.father_first_name} {studentData.father_last_name}
+                        {studentData.father_phone && ` • ${studentData.father_phone}`}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

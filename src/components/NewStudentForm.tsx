@@ -29,29 +29,45 @@ const newStudentSchema = z.object({
   motherFirstName: z.string().trim().optional().or(z.literal("")),
   motherLastName: z.string().trim().optional().or(z.literal("")),
   motherPhone: z.string().trim().optional().or(z.literal("")),
-}).refine((data) => {
-  // If they don't have a phone number toggle, phone number is required
+}).superRefine((data, ctx) => {
+  // Phone number validation
   if (!data.noPhoneNumber && (!data.phoneNumber || data.phoneNumber.length < 10)) {
-    return false;
+    ctx.addIssue({
+      code: "custom",
+      path: ["phoneNumber"],
+      message: "Phone number must be at least 10 digits (or check 'No phone')",
+    });
   }
-  // If not a student leader, these fields are required
+
+  // Student-specific validations
   if (!data.isStudentLeader) {
-    return data.grade && data.grade.length > 0 &&
-           data.highSchool && data.highSchool.length > 0 &&
-           (
-             // At least one parent must be provided with full information
-             (data.fatherFirstName && data.fatherFirstName.length > 0 &&
-              data.fatherLastName && data.fatherLastName.length > 0 &&
-              data.fatherPhone && data.fatherPhone.length >= 10) ||
-             (data.motherFirstName && data.motherFirstName.length > 0 &&
-              data.motherLastName && data.motherLastName.length > 0 &&
-              data.motherPhone && data.motherPhone.length >= 10)
-           );
+    if (!data.grade || data.grade.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["grade"],
+        message: "Grade is required for students",
+      });
+    }
+    if (!data.highSchool || data.highSchool.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["highSchool"],
+        message: "High school is required for students",
+      });
+    }
+
+    // Check if at least one parent is provided
+    const hasFather = data.fatherFirstName && data.fatherLastName && data.fatherPhone && data.fatherPhone.length >= 10;
+    const hasMother = data.motherFirstName && data.motherLastName && data.motherPhone && data.motherPhone.length >= 10;
+
+    if (!hasFather && !hasMother) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fatherFirstName"],
+        message: "At least one parent's complete information is required",
+      });
+    }
   }
-  return true;
-}, {
-  message: "Phone number (10+ digits), grade, high school, and at least one parent's complete information are required for students",
-  path: ["phoneNumber"], // This will show the error on the phone number field
 });
 
 type NewStudentFormData = z.infer<typeof newStudentSchema>;
