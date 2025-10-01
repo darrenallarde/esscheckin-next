@@ -13,6 +13,7 @@ import StudentProfile from "./pages/StudentProfile";
 import PublicProfile from "./pages/PublicProfile";
 import ImportStudents from "./pages/ImportStudents";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import StudentInfo from "./pages/StudentInfo";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -32,8 +33,9 @@ const App: React.FC = () => {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/import" element={<ImportStudents />} />
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+              <Route path="/admin/students" element={<StudentInfo />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/student" element={<StudentProfile />} />
               <Route path="/profile/:studentId" element={<PublicProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

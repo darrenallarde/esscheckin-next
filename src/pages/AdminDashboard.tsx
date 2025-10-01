@@ -130,15 +130,21 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button 
-                  onClick={() => navigate('/admin/import')} 
+                <Button
+                  onClick={() => navigate('/admin/students')}
+                  className="w-full"
+                >
+                  View Student Info
+                </Button>
+                <Button
+                  onClick={() => navigate('/admin/import')}
                   variant="outline"
                   className="w-full"
                 >
                   Import Students
                 </Button>
-                <Button 
-                  onClick={() => navigate('/')} 
+                <Button
+                  onClick={() => navigate('/')}
                   variant="outline"
                   className="w-full"
                 >
