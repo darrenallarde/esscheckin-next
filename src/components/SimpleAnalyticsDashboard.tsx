@@ -74,9 +74,9 @@ const SimpleAnalyticsDashboard = () => {
 
       const { data, error } = await supabase
         .from('students')
-        .select('id, first_name, last_name, phone_number, email, grade, high_school')
+        .select('*')
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-        .limit(10);
+        .limit(50);
 
       if (error) throw error;
       return data || [];
@@ -994,65 +994,119 @@ const SimpleAnalyticsDashboard = () => {
       subtitle: 'Search and view detailed student profiles',
       component: (
         <div className="space-y-6">
-          {!selectedStudentId && (
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search students by name, phone, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {isSearching && (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                </div>
-              )}
-
-              {searchResults && searchResults.length > 0 && (
-                <div className="space-y-2">
-                  {searchResults.map((student) => (
-                    <div
-                      key={student.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedStudentId(student.id);
-                        setSearchTerm('');
-                      }}
-                    >
-                      <div>
-                        <div className="font-medium">
-                          {student.first_name} {student.last_name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {student.phone_number && <span>{student.phone_number}</span>}
-                          {student.phone_number && student.email && <span> • </span>}
-                          {student.email && <span>{student.email}</span>}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {student.grade && <span>Grade {student.grade}</span>}
-                          {student.grade && student.high_school && <span> • </span>}
-                          {student.high_school && <span>{student.high_school}</span>}
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        View Details
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {searchTerm.length >= 2 && !isSearching && searchResults?.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No students found matching "{searchTerm}"
-                </div>
-              )}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search students by name, phone, or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          )}
+
+            {isSearching && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              </div>
+            )}
+
+            {/* Show filtered results or all students */}
+            {(() => {
+              const studentsToShow = searchTerm.length >= 2
+                ? searchResults
+                : analyticsData?.studentStats?.slice(0, 50).map(s => {
+                    // Find the full student record from the students data
+                    const fullStudent = analyticsData?.totalStudents ? null : null;
+                    return {
+                      name: s.name,
+                      grade: s.grade,
+                      // We'll need to fetch full details when user clicks
+                    };
+                  });
+
+              if (!studentsToShow || studentsToShow.length === 0) {
+                return searchTerm.length >= 2 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No students found matching "{searchTerm}"
+                  </div>
+                ) : null;
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-border text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="border border-border p-3 text-left">Name</th>
+                        <th className="border border-border p-3 text-left">Grade</th>
+                        <th className="border border-border p-3 text-left">School</th>
+                        <th className="border border-border p-3 text-left">Phone</th>
+                        <th className="border border-border p-3 text-left">Email</th>
+                        <th className="border border-border p-3 text-left">Instagram</th>
+                        <th className="border border-border p-3 text-left">Mother</th>
+                        <th className="border border-border p-3 text-left">Mother Phone</th>
+                        <th className="border border-border p-3 text-left">Father</th>
+                        <th className="border border-border p-3 text-left">Father Phone</th>
+                        <th className="border border-border p-3 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchTerm.length >= 2 && searchResults ? (
+                        searchResults.map((student, index) => (
+                          <tr key={student.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
+                            <td className="border border-border p-3 font-medium">
+                              {student.first_name} {student.last_name}
+                            </td>
+                            <td className="border border-border p-3">{student.grade || '-'}</td>
+                            <td className="border border-border p-3">{student.high_school || '-'}</td>
+                            <td className="border border-border p-3">{student.phone_number || '-'}</td>
+                            <td className="border border-border p-3">{student.email || '-'}</td>
+                            <td className="border border-border p-3">
+                              {student.instagram_handle ? `@${student.instagram_handle}` : '-'}
+                            </td>
+                            <td className="border border-border p-3">
+                              {student.mother_first_name
+                                ? `${student.mother_first_name} ${student.mother_last_name || ''}`.trim()
+                                : student.parent_name || '-'}
+                            </td>
+                            <td className="border border-border p-3">
+                              {student.mother_phone || student.parent_phone || '-'}
+                            </td>
+                            <td className="border border-border p-3">
+                              {student.father_first_name
+                                ? `${student.father_first_name} ${student.father_last_name || ''}`.trim()
+                                : '-'}
+                            </td>
+                            <td className="border border-border p-3">
+                              {student.father_phone || '-'}
+                            </td>
+                            <td className="border border-border p-3 text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedStudentId(student.id);
+                                }}
+                              >
+                                View
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={11} className="border border-border p-4 text-center text-muted-foreground">
+                            Start typing to search for students
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
 
           {selectedStudentId && selectedStudent && (
             <div className="space-y-6">
