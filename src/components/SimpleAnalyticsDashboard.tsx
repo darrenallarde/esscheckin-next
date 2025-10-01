@@ -1,32 +1,39 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ComposedChart, 
-  Bar, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  Legend, 
-  LineChart, 
-  BarChart 
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Legend,
+  LineChart,
+  BarChart
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import UserHeader from "@/components/UserHeader";
-import { 
-  Calendar, 
-  Users, 
-  TrendingUp, 
-  BarChart3, 
-  UserPlus, 
-  Clock 
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  BarChart3,
+  UserPlus,
+  Clock,
+  Search,
+  User,
+  Phone,
+  Mail,
+  Instagram,
+  School
 } from "lucide-react";
 
 interface CheckInData {
@@ -56,6 +63,44 @@ interface StudentStats {
 
 const SimpleAnalyticsDashboard = () => {
   const [viewMode, setViewMode] = useState('unique-attendees');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Search students
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['student-search-dashboard', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return [];
+
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, phone_number, email, grade, high_school')
+        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: searchTerm.length >= 2
+  });
+
+  // Fetch selected student details
+  const { data: selectedStudent, isLoading: isLoadingStudent } = useQuery({
+    queryKey: ['student-details-dashboard', selectedStudentId],
+    queryFn: async () => {
+      if (!selectedStudentId) return null;
+
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', selectedStudentId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedStudentId
+  });
 
   // Fetch analytics data without auth restrictions
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -941,6 +986,280 @@ const SimpleAnalyticsDashboard = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+      )
+    },
+    'student-info': {
+      title: 'Student Information',
+      subtitle: 'Search and view detailed student profiles',
+      component: (
+        <div className="space-y-6">
+          {!selectedStudentId && (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search students by name, phone, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {isSearching && (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              )}
+
+              {searchResults && searchResults.length > 0 && (
+                <div className="space-y-2">
+                  {searchResults.map((student) => (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedStudentId(student.id);
+                        setSearchTerm('');
+                      }}
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {student.phone_number && <span>{student.phone_number}</span>}
+                          {student.phone_number && student.email && <span> • </span>}
+                          {student.email && <span>{student.email}</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {student.grade && <span>Grade {student.grade}</span>}
+                          {student.grade && student.high_school && <span> • </span>}
+                          {student.high_school && <span>{student.high_school}</span>}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        View Details
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchTerm.length >= 2 && !isSearching && searchResults?.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No students found matching "{searchTerm}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedStudentId && selectedStudent && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-bold">
+                  {selectedStudent.first_name} {selectedStudent.last_name}
+                </h3>
+                <Button variant="outline" onClick={() => setSelectedStudentId(null)}>
+                  Search Another Student
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Personal Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-5 h-5" />
+                      Personal Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-start gap-2 text-sm">
+                      <User className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-medium">Full Name:</span>
+                        <div>{selectedStudent.first_name} {selectedStudent.last_name}</div>
+                      </div>
+                    </div>
+
+                    {selectedStudent.date_of_birth && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Date of Birth:</span>
+                          <div>{new Date(selectedStudent.date_of_birth).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedStudent.phone_number && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Phone:</span>
+                          <div>{selectedStudent.phone_number}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedStudent.email && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Email:</span>
+                          <div>{selectedStudent.email}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedStudent.instagram_handle && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Instagram className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Instagram:</span>
+                          <div>@{selectedStudent.instagram_handle}</div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* School Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <School className="w-5 h-5" />
+                      School Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {selectedStudent.grade && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Grade:</span>
+                          <div>{selectedStudent.grade}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedStudent.high_school && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <School className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">High School:</span>
+                          <div>{selectedStudent.high_school}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!selectedStudent.grade && !selectedStudent.high_school && (
+                      <div className="text-sm text-muted-foreground py-4">
+                        No school information available
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Parent/Guardian Information */}
+              {(selectedStudent.mother_first_name || selectedStudent.father_first_name || selectedStudent.parent_name) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Parent / Guardian Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Mother Information */}
+                      {selectedStudent.mother_first_name && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm border-b pb-2">Mother</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2 text-sm">
+                              <User className="w-4 h-4 text-muted-foreground mt-0.5" />
+                              <div className="flex-1">
+                                <span className="font-medium">Name:</span>
+                                <div>{selectedStudent.mother_first_name} {selectedStudent.mother_last_name}</div>
+                              </div>
+                            </div>
+                            {selectedStudent.mother_phone && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div className="flex-1">
+                                  <span className="font-medium">Phone:</span>
+                                  <div>{selectedStudent.mother_phone}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Father Information */}
+                      {selectedStudent.father_first_name && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm border-b pb-2">Father</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2 text-sm">
+                              <User className="w-4 h-4 text-muted-foreground mt-0.5" />
+                              <div className="flex-1">
+                                <span className="font-medium">Name:</span>
+                                <div>{selectedStudent.father_first_name} {selectedStudent.father_last_name}</div>
+                              </div>
+                            </div>
+                            {selectedStudent.father_phone && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div className="flex-1">
+                                  <span className="font-medium">Phone:</span>
+                                  <div>{selectedStudent.father_phone}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Legacy Parent Information */}
+                      {!selectedStudent.mother_first_name && !selectedStudent.father_first_name && selectedStudent.parent_name && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm border-b pb-2">Parent / Guardian</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2 text-sm">
+                              <User className="w-4 h-4 text-muted-foreground mt-0.5" />
+                              <div className="flex-1">
+                                <span className="font-medium">Name:</span>
+                                <div>{selectedStudent.parent_name}</div>
+                              </div>
+                            </div>
+                            {selectedStudent.parent_phone && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div className="flex-1">
+                                  <span className="font-medium">Phone:</span>
+                                  <div>{selectedStudent.parent_phone}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {isLoadingStudent && selectedStudentId && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
         </div>
       )
     },
