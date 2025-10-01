@@ -56,17 +56,7 @@ const newStudentSchema = z.object({
       });
     }
 
-    // Check if at least one parent is provided
-    const hasFather = data.fatherFirstName && data.fatherLastName && data.fatherPhone && data.fatherPhone.length >= 10;
-    const hasMother = data.motherFirstName && data.motherLastName && data.motherPhone && data.motherPhone.length >= 10;
-
-    if (!hasFather && !hasMother) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["fatherFirstName"],
-        message: "At least one parent's complete information is required",
-      });
-    }
+    // Parent information is now optional - no validation required
   }
 });
 
@@ -336,7 +326,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
 
                 {/* Father Information */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-foreground">Father Information</h4>
+                  <h4 className="text-sm font-medium text-foreground">Father Information (Optional)</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -345,7 +335,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Father First Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="First name" {...field} />
+                            <Input placeholder="First name (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -359,7 +349,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Father Last Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Last name" {...field} />
+                            <Input placeholder="Last name (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -373,7 +363,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Father Phone</FormLabel>
                           <FormControl>
-                            <Input placeholder="Phone number" {...field} />
+                            <Input placeholder="Phone (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -384,7 +374,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
 
                 {/* Mother Information */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-foreground">Mother Information</h4>
+                  <h4 className="text-sm font-medium text-foreground">Mother Information (Optional)</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -393,7 +383,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Mother First Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="First name" {...field} />
+                            <Input placeholder="First name (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -407,7 +397,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Mother Last Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Last name" {...field} />
+                            <Input placeholder="Last name (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -421,7 +411,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                         <FormItem>
                           <FormLabel>Mother Phone</FormLabel>
                           <FormControl>
-                            <Input placeholder="Phone number" {...field} />
+                            <Input placeholder="Phone (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
