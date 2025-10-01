@@ -66,23 +66,28 @@ const SimpleAnalyticsDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // Search students
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['student-search-dashboard', searchTerm],
+  // Fetch ALL students with full details
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useQuery({
+    queryKey: ['all-students-full'],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
-
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-        .limit(50);
+        .order('first_name', { ascending: true });
 
       if (error) throw error;
       return data || [];
-    },
-    enabled: searchTerm.length >= 2
+    }
   });
+
+  // Filter students based on search term
+  const filteredStudents = searchTerm.length >= 2
+    ? allStudents?.filter(student =>
+        `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.phone_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : allStudents;
 
   // Fetch selected student details
   const { data: selectedStudent, isLoading: isLoadingStudent } = useQuery({
@@ -1005,32 +1010,22 @@ const SimpleAnalyticsDashboard = () => {
               />
             </div>
 
-            {isSearching && (
+            {isLoadingAllStudents && (
               <div className="text-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                <p className="text-sm text-muted-foreground mt-2">Loading all students...</p>
               </div>
             )}
 
-            {/* Show filtered results or all students */}
-            {(() => {
-              const studentsToShow = searchTerm.length >= 2
-                ? searchResults
-                : analyticsData?.studentStats?.slice(0, 50).map(s => {
-                    // Find the full student record from the students data
-                    const fullStudent = analyticsData?.totalStudents ? null : null;
-                    return {
-                      name: s.name,
-                      grade: s.grade,
-                      // We'll need to fetch full details when user clicks
-                    };
-                  });
-
-              if (!studentsToShow || studentsToShow.length === 0) {
-                return searchTerm.length >= 2 ? (
+            {!isLoadingAllStudents && (() => {
+              if (!filteredStudents || filteredStudents.length === 0) {
+                return (
                   <div className="text-center py-8 text-muted-foreground">
-                    No students found matching "{searchTerm}"
+                    {searchTerm.length >= 2
+                      ? `No students found matching "${searchTerm}"`
+                      : 'No students found'}
                   </div>
-                ) : null;
+                );
               }
 
               return (
@@ -1052,55 +1047,47 @@ const SimpleAnalyticsDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {searchTerm.length >= 2 && searchResults ? (
-                        searchResults.map((student, index) => (
-                          <tr key={student.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
-                            <td className="border border-border p-3 font-medium">
-                              {student.first_name} {student.last_name}
-                            </td>
-                            <td className="border border-border p-3">{student.grade || '-'}</td>
-                            <td className="border border-border p-3">{student.high_school || '-'}</td>
-                            <td className="border border-border p-3">{student.phone_number || '-'}</td>
-                            <td className="border border-border p-3">{student.email || '-'}</td>
-                            <td className="border border-border p-3">
-                              {student.instagram_handle ? `@${student.instagram_handle}` : '-'}
-                            </td>
-                            <td className="border border-border p-3">
-                              {student.mother_first_name
-                                ? `${student.mother_first_name} ${student.mother_last_name || ''}`.trim()
-                                : student.parent_name || '-'}
-                            </td>
-                            <td className="border border-border p-3">
-                              {student.mother_phone || student.parent_phone || '-'}
-                            </td>
-                            <td className="border border-border p-3">
-                              {student.father_first_name
-                                ? `${student.father_first_name} ${student.father_last_name || ''}`.trim()
-                                : '-'}
-                            </td>
-                            <td className="border border-border p-3">
-                              {student.father_phone || '-'}
-                            </td>
-                            <td className="border border-border p-3 text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStudentId(student.id);
-                                }}
-                              >
-                                View
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={11} className="border border-border p-4 text-center text-muted-foreground">
-                            Start typing to search for students
+                      {filteredStudents.map((student, index) => (
+                        <tr key={student.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
+                          <td className="border border-border p-3 font-medium">
+                            {student.first_name} {student.last_name}
+                          </td>
+                          <td className="border border-border p-3">{student.grade || '-'}</td>
+                          <td className="border border-border p-3">{student.high_school || '-'}</td>
+                          <td className="border border-border p-3">{student.phone_number || '-'}</td>
+                          <td className="border border-border p-3">{student.email || '-'}</td>
+                          <td className="border border-border p-3">
+                            {student.instagram_handle ? `@${student.instagram_handle}` : '-'}
+                          </td>
+                          <td className="border border-border p-3">
+                            {student.mother_first_name
+                              ? `${student.mother_first_name} ${student.mother_last_name || ''}`.trim()
+                              : student.parent_name || '-'}
+                          </td>
+                          <td className="border border-border p-3">
+                            {student.mother_phone || student.parent_phone || '-'}
+                          </td>
+                          <td className="border border-border p-3">
+                            {student.father_first_name
+                              ? `${student.father_first_name} ${student.father_last_name || ''}`.trim()
+                              : '-'}
+                          </td>
+                          <td className="border border-border p-3">
+                            {student.father_phone || '-'}
+                          </td>
+                          <td className="border border-border p-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedStudentId(student.id);
+                              }}
+                            >
+                              View
+                            </Button>
                           </td>
                         </tr>
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
