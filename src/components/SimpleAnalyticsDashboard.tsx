@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   ComposedChart,
   Bar,
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import UserHeader from "@/components/UserHeader";
 import {
   Calendar,
@@ -62,9 +64,18 @@ interface StudentStats {
 }
 
 const SimpleAnalyticsDashboard = () => {
+  const navigate = useNavigate();
+  const { user, userRole, loading } = useAuth();
   const [viewMode, setViewMode] = useState('unique-attendees');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
   // Fetch ALL students with full details
   const { data: allStudents, isLoading: isLoadingAllStudents } = useQuery({
@@ -437,6 +448,30 @@ const SimpleAnalyticsDashboard = () => {
       return result;
     },
   });
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated (handled by useEffect, but show loading during redirect)
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show error state
   if (error) {
