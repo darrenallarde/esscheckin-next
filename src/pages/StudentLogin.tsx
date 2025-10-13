@@ -20,6 +20,8 @@ type LoginData = z.infer<typeof loginSchema>;
 const StudentLogin = () => {
   const [loading, setLoading] = React.useState(false);
   const [emailSent, setEmailSent] = React.useState(false);
+  const [verificationCode, setVerificationCode] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const navigate = useNavigate();
 
   const form = useForm<LoginData>({
@@ -29,30 +31,70 @@ const StudentLogin = () => {
     },
   });
 
-  const handleSendMagicLink = async (data: LoginData) => {
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) {
+      toast({
+        title: "Invalid code",
+        description: "Please enter the 6-digit code from your email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/profile`;
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: verificationCode,
+        type: 'email',
+      });
 
+      if (error) {
+        toast({
+          title: "Verification failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "You're now logged in.",
+        });
+        navigate('/profile');
+      }
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendMagicCode = async (data: LoginData) => {
+    setLoading(true);
+    try {
       const { error } = await supabase.auth.signInWithOtp({
         email: data.email,
         options: {
           shouldCreateUser: false, // Don't create new users - students must be registered first
-          emailRedirectTo: redirectUrl,
         }
       });
 
       if (error) {
         toast({
-          title: "Unable to send magic link",
+          title: "Unable to send code",
           description: error.message,
           variant: "destructive",
         });
       } else {
+        setEmail(data.email); // Save email for verification
         setEmailSent(true);
         toast({
           title: "Check your email!",
-          description: "We've sent you a magic link to access your profile.",
+          description: "We've sent you a 6-digit code to access your profile.",
         });
       }
     } catch (error) {
@@ -76,22 +118,49 @@ const StudentLogin = () => {
                 <Mail className="h-8 w-8 text-green-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl">Check Your Email!</CardTitle>
+            <CardTitle className="text-2xl">Enter Your Code</CardTitle>
             <CardDescription className="text-base">
-              We've sent a magic link to <strong>{form.getValues("email")}</strong>
+              We've sent a 6-digit code to <strong>{email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Verification Code</label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                className="text-center text-2xl tracking-widest font-mono"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+
+            <Button
+              onClick={handleVerifyCode}
+              disabled={loading || verificationCode.length !== 6}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              {loading ? "Verifying..." : "Verify Code"}
+            </Button>
+
             <div className="text-center space-y-2 text-sm text-muted-foreground">
-              <p>Click the link in your email to access your profile.</p>
-              <p>The link will expire in 1 hour.</p>
+              <p>The code will expire in 1 hour.</p>
             </div>
 
             <div className="space-y-2">
               <Button
-                onClick={() => setEmailSent(false)}
+                onClick={() => {
+                  setEmailSent(false);
+                  setVerificationCode("");
+                }}
                 variant="outline"
                 className="w-full"
+                disabled={loading}
               >
                 Use a Different Email
               </Button>
@@ -99,6 +168,7 @@ const StudentLogin = () => {
                 onClick={() => navigate("/")}
                 variant="ghost"
                 className="w-full"
+                disabled={loading}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Check-In
@@ -118,12 +188,12 @@ const StudentLogin = () => {
             Access Your Profile
           </CardTitle>
           <CardDescription className="text-base">
-            Enter your email to receive a magic link
+            Enter your email to receive a verification code
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSendMagicLink)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSendMagicCode)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -148,7 +218,7 @@ const StudentLogin = () => {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                {loading ? "Sending..." : "Send Magic Link"}
+                {loading ? "Sending..." : "Send Code"}
               </Button>
             </form>
           </Form>
