@@ -144,151 +144,153 @@ const Profile = () => {
         {/* Regular Student Profile - only show if not super admin or if student info exists */}
         {!isSuperAdmin && studentInfo && (
           <>
-
-        {/* Main Profile Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl">
-                  {studentInfo.first_name} {studentInfo.last_name}
-                </CardTitle>
-                <CardDescription>
-                  {studentInfo.user_type === 'student_leader' ? (
-                    <Badge variant="secondary" className="mt-2">Student Leader</Badge>
-                  ) : studentInfo.grade && studentInfo.high_school ? (
-                    `Grade ${studentInfo.grade} • ${studentInfo.high_school}`
-                  ) : (
-                    'Student'
-                  )}
-                </CardDescription>
-              </div>
-              {currentRank && (
-                <div className="text-center">
-                  <div className="text-4xl mb-1">{currentRank.emoji}</div>
-                  <Badge style={{ backgroundColor: currentRank.color, color: 'white' }}>
-                    {currentRank.title}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Contact Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {studentInfo.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{studentInfo.email}</span>
-                </div>
-              )}
-              {studentInfo.phone_number && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{studentInfo.phone_number}</span>
-                </div>
-              )}
-              {studentInfo.instagram_handle && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Instagram className="h-4 w-4 text-muted-foreground" />
-                  <span>{studentInfo.instagram_handle}</span>
-                </div>
-              )}
-              {studentInfo.date_of_birth && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(studentInfo.date_of_birth).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Game Stats */}
-        {gameProfile && (
-          <>
+            {/* Main Profile Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  Your Progress
-                </CardTitle>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">
+                      {studentInfo.first_name} {studentInfo.last_name}
+                    </CardTitle>
+                    <CardDescription>
+                      {studentInfo.user_type === 'student_leader' ? (
+                        <Badge variant="secondary" className="mt-2">Student Leader</Badge>
+                      ) : studentInfo.grade && studentInfo.high_school ? (
+                        `Grade ${studentInfo.grade} • ${studentInfo.high_school}`
+                      ) : (
+                        'Student'
+                      )}
+                    </CardDescription>
+                  </div>
+                  {currentRank && (
+                    <div className="text-center">
+                      <div className="text-4xl mb-1">{currentRank.emoji}</div>
+                      <Badge style={{ backgroundColor: currentRank.color, color: 'white' }}>
+                        {currentRank.title}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-3xl font-bold text-purple-600">
-                      {gameProfile.total_points}
+                {/* Contact Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {studentInfo.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{studentInfo.email}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground">Total Points</div>
-                  </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {gameProfile.total_check_ins}
+                  )}
+                  {studentInfo.phone_number && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{studentInfo.phone_number}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground">Check-ins</div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-3xl font-bold text-green-600">
-                      {gameProfile.achievements_count}
+                  )}
+                  {studentInfo.instagram_handle && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Instagram className="h-4 w-4 text-muted-foreground" />
+                      <span>{studentInfo.instagram_handle}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground">Achievements</div>
-                  </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-lg">
-                    <div className="text-3xl font-bold text-orange-600">
-                      {Math.max(gameProfile.wednesday_streak, gameProfile.sunday_streak)}
+                  )}
+                  {studentInfo.date_of_birth && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>{new Date(studentInfo.date_of_birth).toLocaleDateString()}</span>
                     </div>
-                    <div className="text-sm text-muted-foreground">Best Streak</div>
-                  </div>
+                  )}
                 </div>
-
-                {/* Progress to Next Rank */}
-                {nextRank && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress to {nextRank.title}</span>
-                      <span className="font-semibold">
-                        {gameProfile.total_points} / {nextRank.minPoints} points
-                      </span>
-                    </div>
-                    <Progress value={progressToNext} className="h-3" />
-                    <p className="text-xs text-muted-foreground">
-                      {nextRank.minPoints - gameProfile.total_points} points until next rank!
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Achievements */}
-            {gameProfile.recent_achievements && gameProfile.recent_achievements.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-yellow-500" />
-                    Recent Achievements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {gameProfile.recent_achievements.map((achievement) => (
-                      <GameAchievement
-                        key={achievement.id}
-                        achievement={achievement}
-                        isNew={false}
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Game Stats */}
+            {gameProfile && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                      Your Progress
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-3xl font-bold text-purple-600">
+                          {gameProfile.total_points}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Total Points</div>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-3xl font-bold text-blue-600">
+                          {gameProfile.total_check_ins}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Check-ins</div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-3xl font-bold text-green-600">
+                          {gameProfile.achievements_count}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Achievements</div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 rounded-lg">
+                        <div className="text-3xl font-bold text-orange-600">
+                          {Math.max(gameProfile.wednesday_streak, gameProfile.sunday_streak)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Best Streak</div>
+                      </div>
+                    </div>
+
+                    {/* Progress to Next Rank */}
+                    {nextRank && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress to {nextRank.title}</span>
+                          <span className="font-semibold">
+                            {gameProfile.total_points} / {nextRank.minPoints} points
+                          </span>
+                        </div>
+                        <Progress value={progressToNext} className="h-3" />
+                        <p className="text-xs text-muted-foreground">
+                          {nextRank.minPoints - gameProfile.total_points} points until next rank!
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Achievements */}
+                {gameProfile.recent_achievements && gameProfile.recent_achievements.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Star className="h-5 w-5 text-yellow-500" />
+                        Recent Achievements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {gameProfile.recent_achievements.map((achievement) => (
+                          <GameAchievement
+                            key={achievement.id}
+                            achievement={achievement}
+                            isNew={false}
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
-        {/* Actions */}
-        <div className="flex gap-4">
-          <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
-            Back to Check-In
-          </Button>
-        </div>
+
+            {/* Actions */}
+            <div className="flex gap-4">
+              <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
+                Back to Check-In
+              </Button>
+            </div>
           </>
         )}
       </div>
