@@ -20,6 +20,11 @@ const newStudentSchema = z.object({
   isStudentLeader: z.boolean().default(false),
   grade: z.string().trim().optional().or(z.literal("")),
   highSchool: z.string().trim().optional().or(z.literal("")),
+  // Address information
+  address: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().optional().or(z.literal("")),
+  state: z.string().trim().min(1, "State is required"),
+  zip: z.string().trim().optional().or(z.literal("")),
   // Father information
   fatherFirstName: z.string().trim().optional().or(z.literal("")),
   fatherLastName: z.string().trim().optional().or(z.literal("")),
@@ -72,6 +77,10 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       isStudentLeader: false,
       grade: "",
       highSchool: "",
+      address: "",
+      city: "",
+      state: "California",
+      zip: "",
       fatherFirstName: "",
       fatherLastName: "",
       fatherPhone: "",
@@ -104,6 +113,10 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
           p_mother_first_name: data.isStudentLeader ? null : data.motherFirstName || null,
           p_mother_last_name: data.isStudentLeader ? null : data.motherLastName || null,
           p_mother_phone: data.isStudentLeader ? null : data.motherPhone || null,
+          p_address: data.address || null,
+          p_city: data.city || null,
+          p_state: data.state || 'California',
+          p_zip: data.zip || null,
         });
 
       if (error) {
@@ -262,6 +275,69 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Address Information */}
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-sm font-medium text-foreground">Address Information (Optional)</h4>
+
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123 Main Street" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Los Angeles" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input placeholder="California" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ZIP Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="90210" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Student-specific fields - only show if not a student leader */}

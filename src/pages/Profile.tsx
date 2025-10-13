@@ -27,6 +27,10 @@ const Profile = () => {
     phone_number: '',
     instagram_handle: '',
     date_of_birth: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
   });
 
   // Wait for initial auth check to complete before redirecting
@@ -90,6 +94,10 @@ const Profile = () => {
         phone_number: studentInfo.phone_number || '',
         instagram_handle: studentInfo.instagram_handle || '',
         date_of_birth: studentInfo.date_of_birth || '',
+        address: studentInfo.address || '',
+        city: studentInfo.city || '',
+        state: studentInfo.state || 'California',
+        zip: studentInfo.zip || '',
       });
     }
   }, [studentInfo]);
@@ -112,6 +120,10 @@ const Profile = () => {
           phone_number: formData.phone_number,
           instagram_handle: formData.instagram_handle,
           date_of_birth: formData.date_of_birth || null,
+          address: formData.address || null,
+          city: formData.city || null,
+          state: formData.state || 'California',
+          zip: formData.zip || null,
         })
         .eq('id', studentInfo.id);
 
@@ -313,6 +325,57 @@ const Profile = () => {
                         value={formData.date_of_birth}
                         onChange={(e) => handleFieldChange('date_of_birth', e.target.value)}
                       />
+                    </div>
+                  </div>
+
+                  {/* Address Fields */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-semibold text-sm text-muted-foreground">Address Information</h3>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Street Address</Label>
+                      <Input
+                        id="address"
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => handleFieldChange('address', e.target.value)}
+                        placeholder="123 Main Street"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2 md:col-span-1">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => handleFieldChange('city', e.target.value)}
+                          placeholder="Los Angeles"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          type="text"
+                          value={formData.state}
+                          onChange={(e) => handleFieldChange('state', e.target.value)}
+                          placeholder="California"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="zip">ZIP Code</Label>
+                        <Input
+                          id="zip"
+                          type="text"
+                          value={formData.zip}
+                          onChange={(e) => handleFieldChange('zip', e.target.value)}
+                          placeholder="90210"
+                        />
+                      </div>
                     </div>
                   </div>
 

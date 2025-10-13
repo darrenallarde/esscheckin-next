@@ -187,10 +187,14 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
         .from('students')
         .select('*')
         .eq('id', student.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         throw fetchError;
+      }
+
+      if (!fullStudent) {
+        throw new Error('Student not found');
       }
 
       // If student doesn't have an email, prompt for it
