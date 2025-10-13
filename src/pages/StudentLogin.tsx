@@ -46,7 +46,7 @@ const StudentLogin = () => {
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: verificationCode,
-        type: 'email',
+        type: 'magiclink', // Use 'magiclink' type for email OTP
       });
 
       if (error) {
@@ -121,15 +121,44 @@ const StudentLogin = () => {
                 <Mail className="h-8 w-8 text-green-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl">Check Your Email!</CardTitle>
+            <CardTitle className="text-2xl">Enter Your Code</CardTitle>
             <CardDescription className="text-base">
-              We've sent a link to <strong>{email}</strong>
+              We've sent a 6-digit code to <strong>{email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Verification Code</label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                className="text-center text-2xl tracking-widest font-mono"
+                disabled={loading}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && verificationCode.length === 6) {
+                    handleVerifyCode();
+                  }
+                }}
+              />
+            </div>
+
+            <Button
+              onClick={handleVerifyCode}
+              disabled={loading || verificationCode.length !== 6}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              {loading ? "Verifying..." : "Verify Code"}
+            </Button>
+
             <div className="text-center space-y-2 text-sm text-muted-foreground">
-              <p>Click the link in your email to access your profile.</p>
-              <p>The link will expire in 1 hour.</p>
+              <p>The code will expire in 1 hour.</p>
+              <p className="text-xs">You can also click the link in your email.</p>
             </div>
 
             <div className="space-y-2">
@@ -140,6 +169,7 @@ const StudentLogin = () => {
                 }}
                 variant="outline"
                 className="w-full"
+                disabled={loading}
               >
                 Use a Different Email
               </Button>
@@ -147,6 +177,7 @@ const StudentLogin = () => {
                 onClick={() => navigate("/")}
                 variant="ghost"
                 className="w-full"
+                disabled={loading}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Check-In
@@ -166,7 +197,7 @@ const StudentLogin = () => {
             Access Your Profile
           </CardTitle>
           <CardDescription className="text-base">
-            Enter your email to receive a login link
+            Enter your email to receive a 6-digit code
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -196,7 +227,7 @@ const StudentLogin = () => {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                {loading ? "Sending..." : "Send Login Link"}
+                {loading ? "Sending..." : "Send Code"}
               </Button>
             </form>
           </Form>

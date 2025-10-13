@@ -283,7 +283,7 @@ const GameCheckInSuccessDB = ({ student, checkInId, profilePin, onNewCheckIn }: 
                 </div>
                 <div className="text-sm text-green-600 space-y-1">
                   <p>Visit <strong className="font-mono">{window.location.origin}/login</strong></p>
-                  <p>and we'll send a login link to:</p>
+                  <p>and we'll send a 6-digit code to:</p>
                   <p className="font-semibold">{student.email}</p>
                 </div>
               </div>
