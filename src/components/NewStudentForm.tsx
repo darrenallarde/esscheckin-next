@@ -13,9 +13,8 @@ import { toast } from "@/hooks/use-toast";
 const newStudentSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
   lastName: z.string().trim().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
-  phoneNumber: z.string().trim().optional().or(z.literal("")),
-  noPhoneNumber: z.boolean().default(false),
-  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits"),
+  email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
   isStudentLeader: z.boolean().default(false),
@@ -30,15 +29,6 @@ const newStudentSchema = z.object({
   motherLastName: z.string().trim().optional().or(z.literal("")),
   motherPhone: z.string().trim().optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
-  // Phone number validation
-  if (!data.noPhoneNumber && (!data.phoneNumber || data.phoneNumber.length < 10)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["phoneNumber"],
-      message: "Phone number must be at least 10 digits (or check 'No phone')",
-    });
-  }
-
   // Student-specific validations
   if (!data.isStudentLeader) {
     if (!data.grade || data.grade.length === 0) {
@@ -76,7 +66,6 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       firstName: "",
       lastName: "",
       phoneNumber: "",
-      noPhoneNumber: false,
       email: "",
       dateOfBirth: "",
       instagramHandle: "",
@@ -93,7 +82,6 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   });
 
   const isStudentLeader = form.watch("isStudentLeader");
-  const noPhoneNumber = form.watch("noPhoneNumber");
 
   const onSubmit = async (data: NewStudentFormData) => {
     setIsSubmitting(true);
@@ -215,30 +203,11 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>{noPhoneNumber ? "Phone Number (Optional)" : "Phone Number"}</FormLabel>
-                      <FormField
-                        control={form.control}
-                        name="noPhoneNumber"
-                        render={({ field: toggleField }) => (
-                          <FormItem className="flex flex-row items-center gap-2">
-                            <FormLabel className="text-xs text-muted-foreground font-normal">No phone</FormLabel>
-                            <FormControl>
-                              <Switch
-                                checked={toggleField.value}
-                                onCheckedChange={toggleField.onChange}
-                                className="scale-75"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter phone number"
                         {...field}
-                        disabled={noPhoneNumber}
                       />
                     </FormControl>
                     <FormMessage />
@@ -251,9 +220,13 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter email address" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="Enter email address"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

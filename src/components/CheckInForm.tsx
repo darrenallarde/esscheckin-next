@@ -48,6 +48,7 @@ type ViewState =
   | { type: 'name-search' }
   | { type: 'confirm-student', student: Student }
   | { type: 'select-student', students: Student[] }
+  | { type: 'prompt-email', student: Student }
   | { type: 'new-student' }
   | { type: 'success', student: Student, checkInId: string, profilePin?: string };
 
@@ -181,6 +182,24 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const confirmCheckIn = async (student: Student) => {
     setIsSearching(true);
     try {
+      // First, fetch full student details to check if email is missing
+      const { data: fullStudent, error: fetchError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', student.id)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // If student doesn't have an email, prompt for it
+      if (!fullStudent.email || fullStudent.email.trim() === '') {
+        setIsSearching(false);
+        setViewState({ type: 'prompt-email', student: fullStudent });
+        return;
+      }
+
       const { data: result, error } = await supabase
         .rpc('checkin_student', { p_student_id: student.id });
 
@@ -238,6 +257,57 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
     }
   };
 
+  const handleEmailSubmit = async (student: Student, email: string) => {
+    setIsSearching(true);
+    try {
+      // Update student with email
+      const { error: updateError } = await supabase
+        .from('students')
+        .update({ email: email.trim() })
+        .eq('id', student.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: "Email added!",
+        description: "Your email has been saved. Proceeding with check-in...",
+      });
+
+      // Now proceed with check-in
+      const { data: result, error } = await supabase
+        .rpc('checkin_student', { p_student_id: student.id });
+
+      if (error) {
+        throw error;
+      }
+
+      if (result && result[0]?.success) {
+        const checkInId = result[0].check_in_id || result[0].id || 'temp-checkin-id';
+        const profilePin = result[0].profile_pin;
+
+        toast({
+          title: "Check-in successful!",
+          description: `Welcome back ${result[0].first_name}!`,
+        });
+
+        setViewState({ type: 'success', student, checkInId, profilePin });
+      } else {
+        throw new Error(result?.[0]?.message || 'Check-in failed');
+      }
+    } catch (error) {
+      console.error("Error updating email and checking in:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save email or check in. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const resetToSearch = () => {
     setViewState({ type: 'phone-search' });
     phoneForm.reset();
@@ -259,10 +329,92 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   // New student form
   if (viewState.type === 'new-student') {
     return (
-      <NewStudentForm 
+      <NewStudentForm
         onSuccess={() => setViewState({ type: 'phone-search' })}
         onBack={() => setViewState({ type: 'name-search' })}
       />
+    );
+  }
+
+  // Email prompt view
+  if (viewState.type === 'prompt-email') {
+    const { student } = viewState;
+    const [emailInput, setEmailInput] = useState('');
+    const [emailError, setEmailError] = useState('');
+
+    const handleEmailValidation = () => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailInput.trim()) {
+        setEmailError('Email is required');
+        return false;
+      }
+      if (!emailRegex.test(emailInput.trim())) {
+        setEmailError('Please enter a valid email address');
+        return false;
+      }
+      setEmailError('');
+      return true;
+    };
+
+    return (
+      <Card className="w-full max-w-lg mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">One More Thing...</CardTitle>
+          <CardDescription className="text-center">
+            Hi {student.first_name}! We need your email to send you access to your profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email-input" className="text-sm font-medium">
+              Email Address
+            </label>
+            <Input
+              id="email-input"
+              type="email"
+              placeholder="your.email@example.com"
+              value={emailInput}
+              onChange={(e) => {
+                setEmailInput(e.target.value);
+                setEmailError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (handleEmailValidation()) {
+                    handleEmailSubmit(student, emailInput);
+                  }
+                }
+              }}
+              className={emailError ? 'border-red-500' : ''}
+              autoFocus
+            />
+            {emailError && (
+              <p className="text-sm text-red-600">{emailError}</p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setViewState({ type: 'phone-search' })}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (handleEmailValidation()) {
+                  handleEmailSubmit(student, emailInput);
+                }
+              }}
+              disabled={isSearching}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              {isSearching ? 'Saving...' : 'Continue'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

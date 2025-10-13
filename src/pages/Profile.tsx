@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Trophy, Star, LogOut, Calendar, Phone, Mail, Instagram, User, School, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +19,15 @@ const Profile = () => {
   const isSuperAdmin = userRole === 'super_admin';
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  // Editable form state
+  const [formData, setFormData] = React.useState({
+    email: '',
+    phone_number: '',
+    instagram_handle: '',
+    date_of_birth: '',
+  });
 
   // Wait for initial auth check to complete before redirecting
   React.useEffect(() => {
@@ -70,6 +81,55 @@ const Profile = () => {
       navigate('/login');
     }
   }, [user, authChecked, navigate]);
+
+  // Populate form data when student info loads
+  React.useEffect(() => {
+    if (studentInfo) {
+      setFormData({
+        email: studentInfo.email || '',
+        phone_number: studentInfo.phone_number || '',
+        instagram_handle: studentInfo.instagram_handle || '',
+        date_of_birth: studentInfo.date_of_birth || '',
+      });
+    }
+  }, [studentInfo]);
+
+  // Handle form field changes
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    if (!studentInfo?.id) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({
+          email: formData.email,
+          phone_number: formData.phone_number,
+          instagram_handle: formData.instagram_handle,
+          date_of_birth: formData.date_of_birth || null,
+        })
+        .eq('id', studentInfo.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        alert('Failed to save changes. Please try again.');
+      } else {
+        alert('Profile updated successfully!');
+        // Refetch student data to update display
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('An error occurred while saving. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -197,32 +257,73 @@ const Profile = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Contact Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {studentInfo.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{studentInfo.email}</span>
+                {/* Editable Contact Information */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        Email Address
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleFieldChange('email', e.target.value)}
+                        placeholder="your.email@example.com"
+                      />
                     </div>
-                  )}
-                  {studentInfo.phone_number && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{studentInfo.phone_number}</span>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone_number" className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phone_number"
+                        type="tel"
+                        value={formData.phone_number}
+                        onChange={(e) => handleFieldChange('phone_number', e.target.value)}
+                        placeholder="(123) 456-7890"
+                      />
                     </div>
-                  )}
-                  {studentInfo.instagram_handle && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Instagram className="h-4 w-4 text-muted-foreground" />
-                      <span>{studentInfo.instagram_handle}</span>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="instagram_handle" className="flex items-center gap-2">
+                        <Instagram className="h-4 w-4 text-muted-foreground" />
+                        Instagram Handle
+                      </Label>
+                      <Input
+                        id="instagram_handle"
+                        type="text"
+                        value={formData.instagram_handle}
+                        onChange={(e) => handleFieldChange('instagram_handle', e.target.value)}
+                        placeholder="@username"
+                      />
                     </div>
-                  )}
-                  {studentInfo.date_of_birth && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{new Date(studentInfo.date_of_birth).toLocaleDateString()}</span>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="date_of_birth" className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        Date of Birth
+                      </Label>
+                      <Input
+                        id="date_of_birth"
+                        type="date"
+                        value={formData.date_of_birth}
+                        onChange={(e) => handleFieldChange('date_of_birth', e.target.value)}
+                      />
                     </div>
-                  )}
+                  </div>
+
+                  {/* Save Button */}
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
