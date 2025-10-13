@@ -314,9 +314,9 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
                     name="highSchool"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>High School</FormLabel>
+                        <FormLabel>School Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter high school" {...field} />
+                          <Input placeholder="Enter school name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
