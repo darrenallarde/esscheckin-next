@@ -46,16 +46,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .from('user_roles')
                 .select('role')
                 .eq('user_id', session.user.id)
-                .single();
-              
+                .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
+
               if (!error && data) {
                 setUserRole(data.role);
+              } else if (!data) {
+                // No role found - default to 'student' for users without a role
+                setUserRole('student');
               }
             } catch (error) {
               console.error('Error fetching user role:', error);
+              // Default to student if there's an error
+              setUserRole('student');
             }
           };
-          
+
           setTimeout(fetchUserRole, 0);
         } else {
           setUserRole(null);

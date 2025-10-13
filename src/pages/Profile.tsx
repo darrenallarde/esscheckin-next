@@ -30,10 +30,12 @@ const Profile = () => {
   }, [authLoading]);
 
   // Fetch student information based on authenticated email
-  const { data: studentInfo, isLoading: isLoadingStudent } = useQuery({
+  const { data: studentInfo, isLoading: isLoadingStudent, error: studentError } = useQuery({
     queryKey: ['student-profile', user?.email],
     queryFn: async () => {
       if (!user?.email) return null;
+
+      console.log('Looking up student with email:', user.email);
 
       const { data, error } = await supabase
         .from('students')
@@ -41,7 +43,12 @@ const Profile = () => {
         .eq('email', user.email)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching student:', error);
+        throw error;
+      }
+
+      console.log('Student found:', data);
       return data;
     },
     enabled: !!user?.email
@@ -93,20 +100,25 @@ const Profile = () => {
   }
 
   // Student not found
-  if (!studentInfo) {
+  if (!isLoadingStudent && !studentInfo && user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Profile Not Found</CardTitle>
             <CardDescription>
-              We couldn't find a student profile associated with this email address.
+              We couldn't find a student profile for: <strong>{user.email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Make sure you've checked in at least once to create your profile.
+              Make sure you've checked in at least once and that your email address matches your student record.
             </p>
+            {studentError && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                Error: {studentError.message}
+              </div>
+            )}
             <div className="flex gap-2">
               <Button onClick={() => navigate("/")} className="flex-1">
                 Go to Check-In
