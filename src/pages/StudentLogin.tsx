@@ -227,7 +227,7 @@ const StudentLogin = () => {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               >
-                {loading ? "Sending..." : "Send Code"}
+                {loading ? "Sending..." : "Send One-Time Password"}
               </Button>
             </form>
           </Form>
