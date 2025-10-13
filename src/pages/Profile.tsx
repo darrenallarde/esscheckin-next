@@ -16,6 +16,18 @@ const Profile = () => {
   const { user, session, userRole, signOut, loading: authLoading } = useAuth();
   const isSuperAdmin = userRole === 'super_admin';
   const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = React.useState(false);
+
+  // Wait for initial auth check to complete before redirecting
+  React.useEffect(() => {
+    if (!authLoading) {
+      // Give a moment for the auth state to settle
+      const timer = setTimeout(() => {
+        setAuthChecked(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading]);
 
   // Fetch student information based on authenticated email
   const { data: studentInfo, isLoading: isLoadingStudent } = useQuery({
@@ -45,12 +57,12 @@ const Profile = () => {
     enabled: !!studentInfo?.id
   });
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (after auth check completes)
   React.useEffect(() => {
-    if (!authLoading && !user) {
+    if (authChecked && !user) {
       navigate('/login');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authChecked, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
