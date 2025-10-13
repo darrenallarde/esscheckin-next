@@ -10,6 +10,8 @@ import AuthPage from "./pages/AuthPage";
 import AccountPage from "./pages/AccountPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentProfile from "./pages/StudentProfile";
+import StudentLogin from "./pages/StudentLogin";
+import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import ImportStudents from "./pages/ImportStudents";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
@@ -29,6 +31,8 @@ const App: React.FC = () => {
             <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/login" element={<StudentLogin />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/admin" element={<AdminDashboard />} />

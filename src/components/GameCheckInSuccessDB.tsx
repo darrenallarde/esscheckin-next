@@ -135,23 +135,6 @@ const GameCheckInSuccessDB = ({ student, checkInId, profilePin, onNewCheckIn }: 
   if (isLoading || !reward) {
     return (
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        {/* Show PIN even during loading */}
-        {profilePin && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200">
-            <div className="text-center">
-              <div className="text-sm font-medium text-green-700 mb-2">
-                Your Profile PIN (save this!)
-              </div>
-              <div className="text-5xl font-bold text-green-600 tracking-widest mb-2 font-mono">
-                {profilePin}
-              </div>
-              <div className="text-xs text-green-600">
-                You'll need this PIN to view and edit your profile
-              </div>
-            </div>
-          </div>
-        )}
-
         <Card className="w-full max-w-2xl mx-auto">
           <CardContent className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
@@ -291,18 +274,17 @@ const GameCheckInSuccessDB = ({ student, checkInId, profilePin, onNewCheckIn }: 
             </div>
           )}
 
-          {/* Profile PIN Display */}
-          {profilePin && (
+          {/* Profile Access Instructions */}
+          {student.email && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border-2 border-green-200">
-              <div className="text-center">
-                <div className="text-sm font-medium text-green-700 mb-2">
-                  Your Profile PIN (save this!)
+              <div className="text-center space-y-3">
+                <div className="text-lg font-bold text-green-700">
+                  Want to view your profile?
                 </div>
-                <div className="text-5xl font-bold text-green-600 tracking-widest mb-2 font-mono">
-                  {profilePin}
-                </div>
-                <div className="text-xs text-green-600">
-                  You'll need this PIN to view and edit your profile
+                <div className="text-sm text-green-600 space-y-1">
+                  <p>Visit <strong className="font-mono">{window.location.origin}/login</strong></p>
+                  <p>and we'll send a magic link to:</p>
+                  <p className="font-semibold">{student.email}</p>
                 </div>
               </div>
             </div>
@@ -311,12 +293,12 @@ const GameCheckInSuccessDB = ({ student, checkInId, profilePin, onNewCheckIn }: 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
-              onClick={() => window.location.href = `/profile/${student.id}`}
+              onClick={() => window.location.href = `/login`}
               size="lg"
               variant="outline"
               className="flex-1 border-2 border-purple-300 text-purple-600 hover:bg-purple-50 font-semibold px-8 py-3 rounded-2xl"
             >
-              View My Profile
+              Access My Profile
             </Button>
             <Button
               onClick={onNewCheckIn}
