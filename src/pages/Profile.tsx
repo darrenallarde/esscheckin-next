@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Star, LogOut, Calendar, Phone, Mail, Instagram, User, School } from "lucide-react";
+import { Trophy, Star, LogOut, Calendar, Phone, Mail, Instagram, User, School, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getStudentGameProfile, getRankInfo, getNextRank } from "@/utils/gamificationDB";
 import GameAchievement from "@/components/GameAchievement";
+import SuperAdminProfileManager from "@/components/SuperAdminProfileManager";
 
 const Profile = () => {
-  const { user, session, signOut, loading: authLoading } = useAuth();
+  const { user, session, userRole, signOut, loading: authLoading } = useAuth();
+  const isSuperAdmin = userRole === 'super_admin';
   const navigate = useNavigate();
 
   // Fetch student information based on authenticated email
@@ -119,14 +121,29 @@ const Profile = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            My Profile
-          </h1>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              {isSuperAdmin ? 'Super Admin Profile Manager' : 'My Profile'}
+            </h1>
+            {isSuperAdmin && (
+              <div className="flex items-center gap-2 mt-1">
+                <Shield className="h-4 w-4 text-purple-600" />
+                <span className="text-sm text-muted-foreground">Super Admin Access</span>
+              </div>
+            )}
+          </div>
           <Button onClick={handleSignOut} variant="outline" size="sm">
             <LogOut className="h-4 w-4 mr-2" />
             Sign Out
           </Button>
         </div>
+
+        {/* Super Admin Profile Manager */}
+        {isSuperAdmin && <SuperAdminProfileManager isSuperAdmin={isSuperAdmin} />}
+
+        {/* Regular Student Profile - only show if not super admin or if student info exists */}
+        {!isSuperAdmin && studentInfo && (
+          <>
 
         {/* Main Profile Card */}
         <Card>
@@ -266,15 +283,14 @@ const Profile = () => {
                 </CardContent>
               </Card>
             )}
-          </>
-        )}
-
         {/* Actions */}
         <div className="flex gap-4">
           <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
             Back to Check-In
           </Button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
