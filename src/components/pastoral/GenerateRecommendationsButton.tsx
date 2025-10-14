@@ -23,11 +23,11 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
   onComplete
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentStudent, setCurrentStudent] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const [useFallback, setUseFallback] = useState(false);
+  const [apiKey, setApiKey] = useState('');
 
   const handleGenerate = async () => {
     if (!curriculum) {
@@ -39,96 +39,107 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
       return;
     }
 
-    if (!apiKey.trim() && !useFallback) {
-      toast({
-        title: 'API key required',
-        description: 'Please enter your Anthropic API key or use fallback mode.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     setIsGenerating(true);
     setProgress(0);
+    setStatusMessage('Starting generation...');
 
-    const totalStudents = students.length;
-    let successCount = 0;
-    let errorCount = 0;
+    if (useFallback) {
+      // Use local fallback generation (client-side)
+      const totalStudents = students.length;
+      let successCount = 0;
+      let errorCount = 0;
 
-    for (let i = 0; i < students.length; i++) {
-      const student = students[i];
-      setCurrentStudent(`${student.first_name} ${student.last_name}`);
-      setProgress(((i + 1) / totalStudents) * 100);
+      for (let i = 0; i < students.length; i++) {
+        const student = students[i];
+        const currentStudent = `${student.first_name} ${student.last_name}`;
+        setStatusMessage(currentStudent);
+        setProgress(((i + 1) / totalStudents) * 100);
 
-      try {
-        // Fetch extended profile if it exists
-        const { data: profile } = await supabase
-          .from('student_profiles_extended')
-          .select('*')
-          .eq('student_id', student.student_id)
-          .single();
+        try {
+          // Fetch extended profile if it exists
+          const { data: profile } = await supabase
+            .from('student_profiles_extended')
+            .select('*')
+            .eq('student_id', student.student_id)
+            .maybeSingle();
 
-        let recommendation;
-
-        if (useFallback) {
           // Use fallback generator
-          recommendation = generateFallbackRecommendation({
+          const recommendation = generateFallbackRecommendation({
             student,
             studentProfile: profile as StudentProfileExtended | null,
             curriculum
           });
-        } else {
-          // Use AI generator
-          recommendation = await generateRecommendation(
-            {
-              student,
-              studentProfile: profile as StudentProfileExtended | null,
-              curriculum
-            },
-            apiKey
-          );
-        }
 
-        // Save to database
-        const { error } = await supabase
-          .from('ai_recommendations')
-          .upsert({
-            student_id: student.student_id,
-            curriculum_week_id: curriculum.id,
-            key_insight: recommendation.key_insight,
-            action_bullets: recommendation.action_bullets,
-            context_paragraph: recommendation.context_paragraph,
-            engagement_status: student.belonging_status,
-            days_since_last_seen: student.days_since_last_seen
-          }, {
-            onConflict: 'student_id,curriculum_week_id'
-          });
+          // Save to database
+          const { error } = await supabase
+            .from('ai_recommendations')
+            .upsert({
+              student_id: student.student_id,
+              curriculum_week_id: curriculum.id,
+              key_insight: recommendation.key_insight,
+              action_bullets: recommendation.action_bullets,
+              context_paragraph: recommendation.context_paragraph,
+              engagement_status: student.belonging_status,
+              days_since_last_seen: student.days_since_last_seen
+            }, {
+              onConflict: 'student_id,curriculum_week_id'
+            });
+
+          if (error) throw error;
+          successCount++;
+        } catch (error) {
+          console.error(`Error generating recommendation for ${student.first_name}:`, error);
+          errorCount++;
+        }
+      }
+
+      setIsGenerating(false);
+      setIsOpen(false);
+      setProgress(0);
+      setStatusMessage('');
+
+      toast({
+        title: 'Recommendations generated!',
+        description: `Successfully generated ${successCount} recommendations${errorCount > 0 ? ` (${errorCount} errors)` : ''}.`
+      });
+
+      onComplete();
+    } else {
+      // Call Edge Function for AI generation (server-side)
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
+          body: {
+            curriculum_id: curriculum.id
+          }
+        });
+
+        setIsGenerating(false);
+        setIsOpen(false);
+        setProgress(0);
+        setStatusMessage('');
 
         if (error) throw error;
 
-        successCount++;
+        toast({
+          title: 'Recommendations generated!',
+          description: `Successfully generated ${data.successful || 0} recommendations${data.failed > 0 ? ` (${data.failed} errors)` : ''}.`
+        });
 
-        // Small delay to avoid rate limiting
-        if (!useFallback) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        onComplete();
       } catch (error) {
-        console.error(`Error generating recommendation for ${student.first_name}:`, error);
-        errorCount++;
+        console.error('Error calling Edge Function:', error);
+        setIsGenerating(false);
+        setIsOpen(false);
+        setProgress(0);
+        setStatusMessage('');
+
+        toast({
+          title: 'Generation failed',
+          description: error instanceof Error ? error.message : 'Failed to generate recommendations. Make sure the Edge Function is deployed.',
+          variant: 'destructive'
+        });
       }
     }
-
-    setIsGenerating(false);
-    setIsOpen(false);
-    setProgress(0);
-    setCurrentStudent('');
-
-    toast({
-      title: 'Recommendations generated!',
-      description: `Successfully generated ${successCount} recommendations${errorCount > 0 ? ` (${errorCount} errors)` : ''}.`
-    });
-
-    onComplete();
   };
 
   return (
@@ -236,7 +247,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
                   Generating recommendations...
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {currentStudent}
+                  {statusMessage}
                 </div>
               </div>
 

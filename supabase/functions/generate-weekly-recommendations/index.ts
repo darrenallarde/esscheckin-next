@@ -40,18 +40,48 @@ interface Curriculum {
 
 serve(async (req) => {
   try {
-    // Verify this is a scheduled request (cron) or has valid authorization
+    // Allow calls from:
+    // 1. Scheduled cron jobs (with CRON_SECRET)
+    // 2. Authenticated Supabase users (the function will check their JWT)
     const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    let supabase;
+
+    // Check if this is a cron job
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      // Use service role for cron jobs
+      supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Use the user's JWT token for authenticated requests
+      const token = authHeader.replace('Bearer ', '');
+      supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      });
+
+      // Verify the user is authenticated and has admin role
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized - Invalid token' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // For now, we'll use service role key for the operations since we verified the user
+      // In the future, you could add role checking here
+      supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    } else {
+      return new Response(JSON.stringify({ error: 'Unauthorized - No valid credentials' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     console.log('🤖 Starting automated recommendation generation...');
 
