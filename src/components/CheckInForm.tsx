@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -55,6 +55,8 @@ type ViewState =
 const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const [viewState, setViewState] = useState<ViewState>({ type: 'phone-search' });
   const [isSearching, setIsSearching] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   const phoneForm = useForm<PhoneSearchData>({
     resolver: zodResolver(phoneSearchSchema),
@@ -65,6 +67,14 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
     resolver: zodResolver(nameEmailSearchSchema),
     defaultValues: { searchTerm: "" },
   });
+
+  // Reset email input when view state changes
+  useEffect(() => {
+    if (viewState.type !== 'prompt-email') {
+      setEmailInput('');
+      setEmailError('');
+    }
+  }, [viewState.type]);
 
   const searchByPhone = async (data: PhoneSearchData) => {
     setIsSearching(true);
@@ -182,28 +192,29 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const confirmCheckIn = async (student: Student) => {
     setIsSearching(true);
     try {
-      // First, fetch full student details to check if email is missing
-      const { data: fullStudent, error: fetchError } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', student.id)
-        .maybeSingle();
+      console.log('Confirming check-in for student:', student);
+      console.log('Student ID:', student.id);
 
-      if (fetchError) {
-        throw fetchError;
+      // First, check if student has an email using secure function
+      console.log('Checking email for student ID:', student.id);
+      const { data: studentEmail, error: emailError } = await supabase
+        .rpc('get_student_email', { p_student_id: student.id });
+
+      console.log('Email check result:', { studentEmail, emailError });
+
+      if (emailError) {
+        console.error('Error checking student email:', emailError);
+        // Proceed with check-in even if we can't check email
       }
 
-      if (!fullStudent) {
-        throw new Error('Student not found');
-      }
+      // Check if student has an email (but don't block check-in)
+      const hasEmail = studentEmail && studentEmail.trim() !== '';
+      console.log('Student has email:', hasEmail, 'Email value:', studentEmail);
 
-      // If student doesn't have an email, prompt for it
-      if (!fullStudent.email || fullStudent.email.trim() === '') {
-        setIsSearching(false);
-        setViewState({ type: 'prompt-email', student: fullStudent });
-        return;
-      }
+      // Always proceed with check-in - email prompt will show on success screen if needed
+      console.log('Proceeding with check-in, email will be prompted on success screen if missing');
 
+      // Proceed with check-in
       const { data: result, error } = await supabase
         .rpc('checkin_student', { p_student_id: student.id });
 
@@ -227,7 +238,7 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
         toast({
           title: isAlreadyCheckedIn ? "Already checked in!" : "Check-in successful!",
           description: isAlreadyCheckedIn
-            ? `${result[0].first_name}, you already checked in today! Here's your PIN to access your profile.`
+            ? `${result[0].first_name}, you already checked in today!`
             : `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
         });
 
@@ -245,7 +256,9 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
           // For now, pass the temp ID but log the issue
         }
 
-        setViewState({ type: 'success', student, checkInId: finalCheckInId, profilePin });
+        // Create student object with email for success screen
+        const studentWithEmail = { ...student, email: studentEmail };
+        setViewState({ type: 'success', student: studentWithEmail, checkInId: finalCheckInId, profilePin });
       } else {
         throw new Error(result?.[0]?.message || 'Check-in failed');
       }
@@ -264,14 +277,19 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const handleEmailSubmit = async (student: Student, email: string) => {
     setIsSearching(true);
     try {
-      // Update student with email
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ email: email.trim() })
-        .eq('id', student.id);
+      // Update student with email using secure function
+      const { data: updateResult, error: updateError } = await supabase
+        .rpc('update_student_email', {
+          p_student_id: student.id,
+          p_email: email.trim()
+        });
 
       if (updateError) {
         throw updateError;
+      }
+
+      if (!updateResult) {
+        throw new Error('Failed to update email');
       }
 
       toast({
@@ -343,8 +361,6 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   // Email prompt view
   if (viewState.type === 'prompt-email') {
     const { student } = viewState;
-    const [emailInput, setEmailInput] = useState('');
-    const [emailError, setEmailError] = useState('');
 
     const handleEmailValidation = () => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
