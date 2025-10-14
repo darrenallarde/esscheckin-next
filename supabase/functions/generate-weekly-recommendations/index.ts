@@ -38,7 +38,17 @@ interface Curriculum {
   faith_skills: string[];
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     // Allow calls from:
     // 1. Scheduled cron jobs (with CRON_SECRET)
@@ -69,7 +79,7 @@ serve(async (req) => {
       if (authError || !user) {
         return new Response(JSON.stringify({ error: 'Unauthorized - Invalid token' }), {
           status: 401,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -79,7 +89,7 @@ serve(async (req) => {
     } else {
       return new Response(JSON.stringify({ error: 'Unauthorized - No valid credentials' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -99,7 +109,7 @@ serve(async (req) => {
         message: 'Please set a current curriculum week before generating recommendations'
       }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -116,7 +126,7 @@ serve(async (req) => {
         details: studentsError
       }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -188,7 +198,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
@@ -198,7 +208,7 @@ serve(async (req) => {
       message: error.message
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
@@ -218,9 +228,8 @@ async function generateRecommendation(student: Student, profile: any, curriculum
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      temperature: 0.7,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
       messages: [{
         role: 'user',
         content: prompt
@@ -230,7 +239,8 @@ async function generateRecommendation(student: Student, profile: any, curriculum
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(`Claude API error: ${errorData.error?.message || response.statusText}`);
+    console.error('Claude API Error:', JSON.stringify(errorData, null, 2));
+    throw new Error(`Claude API error: ${JSON.stringify(errorData.error || errorData)}`);
   }
 
   const data = await response.json();

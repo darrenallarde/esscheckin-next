@@ -107,11 +107,28 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
     } else {
       // Call Edge Function for AI generation (server-side)
       try {
+        setStatusMessage(`Generating recommendations for ${students.length} students...`);
+
+        // Simulate progress while waiting (since we can't track real progress from Edge Function)
+        let simulatedProgress = 0;
+        const progressInterval = setInterval(() => {
+          simulatedProgress += 2;
+          if (simulatedProgress <= 90) {
+            setProgress(simulatedProgress);
+          }
+        }, 1000); // Update every second, capping at 90%
+
         const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
           body: {
             curriculum_id: curriculum.id
           }
         });
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        // Wait a moment to show completion
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         setIsGenerating(false);
         setIsOpen(false);
@@ -128,6 +145,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
         onComplete();
       } catch (error) {
         console.error('Error calling Edge Function:', error);
+
         setIsGenerating(false);
         setIsOpen(false);
         setProgress(0);
