@@ -111,7 +111,7 @@ const PastoralDashboard = () => {
 
       return data as AIRecommendation[];
     },
-    enabled: !!user && (userRole === 'admin' || userRole === 'super-admin') && !!currentCurriculum,
+    enabled: !!user && (userRole === 'admin' || userRole === 'super_admin') && !!currentCurriculum,
   });
 
   // Calculate distribution and priorities
