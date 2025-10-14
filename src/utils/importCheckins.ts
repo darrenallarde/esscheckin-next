@@ -167,7 +167,7 @@ export const createStudentAndCheckin = async (record: CheckinRecord): Promise<{ 
       .from('students')
       .insert({
         first_name: record.firstName,
-        last_name: record.lastName || null,
+        last_name: record.lastName || '', // Empty string if no last name
         phone_number: normalizedPhone || null,
         grade: record.grade || null,
         user_type: 'student'
