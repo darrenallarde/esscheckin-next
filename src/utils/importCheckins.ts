@@ -72,25 +72,48 @@ const parseCheckinDate = (dateStr: string): string => {
 
 /**
  * Find student record (does NOT create new students)
+ * Priority: Phone number first, then fallback to name matching
  */
 const findStudent = async (record: CheckinRecord): Promise<{ studentId: string | null; action: string; error?: string }> => {
   const normalizedPhone = normalizePhone(record.phone);
 
-  // Try to find existing student by phone and name
-  const { data: existingStudent, error: searchError } = await supabase
+  // FIRST: Try to find by phone number only (most reliable)
+  if (normalizedPhone) {
+    const { data: phoneMatch, error: phoneError } = await supabase
+      .from('students')
+      .select('id, first_name')
+      .eq('phone_number', normalizedPhone)
+      .maybeSingle();
+
+    if (phoneError) {
+      console.error('Error searching by phone:', phoneError);
+      return { studentId: null, action: 'error', error: phoneError.message };
+    }
+
+    if (phoneMatch) {
+      // Found by phone - log if name doesn't match (possible data issue)
+      if (!phoneMatch.first_name.toLowerCase().includes(record.firstName.toLowerCase())) {
+        console.warn(`Phone match found but name mismatch: CSV says "${record.firstName}", DB has "${phoneMatch.first_name}"`);
+      }
+      return { studentId: phoneMatch.id, action: 'found_student' };
+    }
+  }
+
+  // FALLBACK: Try to find by first name only (less reliable, but better than nothing)
+  const { data: nameMatch, error: nameError } = await supabase
     .from('students')
     .select('id')
-    .eq('phone_number', normalizedPhone)
     .ilike('first_name', record.firstName)
     .maybeSingle();
 
-  if (searchError) {
-    console.error('Error searching for student:', searchError);
-    return { studentId: null, action: 'error', error: searchError.message };
+  if (nameError) {
+    console.error('Error searching by name:', nameError);
+    return { studentId: null, action: 'error', error: nameError.message };
   }
 
-  if (existingStudent) {
-    return { studentId: existingStudent.id, action: 'found_student' };
+  if (nameMatch) {
+    console.warn(`Found student by name only (no phone match): ${record.firstName}`);
+    return { studentId: nameMatch.id, action: 'found_student' };
   }
 
   // Student doesn't exist - skip them
