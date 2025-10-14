@@ -10,9 +10,9 @@ const AdminDashboard = () => {
   const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if not admin
+  // Redirect if not admin or super_admin
   React.useEffect(() => {
-    if (user && userRole && userRole !== 'admin') {
+    if (user && userRole && userRole !== 'admin' && userRole !== 'super_admin') {
       navigate('/');
     }
   }, [user, userRole, navigate]);
@@ -27,7 +27,7 @@ const AdminDashboard = () => {
   }
 
   // Redirect non-admins
-  if (userRole !== 'admin') {
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
     return null;
   }
 

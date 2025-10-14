@@ -57,7 +57,7 @@ const AnalyticsDashboard = () => {
 
   // Redirect if not admin
   React.useEffect(() => {
-    if (user && userRole && userRole !== 'admin') {
+    if (user && userRole && userRole !== 'admin' && userRole !== 'super_admin') {
       navigate('/');
     }
   }, [user, userRole, navigate]);
@@ -207,7 +207,7 @@ const AnalyticsDashboard = () => {
   }
 
   // Redirect non-admins
-  if (userRole !== 'admin') {
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
     return null;
   }
 

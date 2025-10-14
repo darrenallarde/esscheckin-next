@@ -9,7 +9,7 @@ const ImportStudents = () => {
 
   // Redirect if not admin
   useEffect(() => {
-    if (user && userRole && userRole !== 'admin') {
+    if (user && userRole && userRole !== 'admin' && userRole !== 'super_admin') {
       navigate('/');
     }
   }, [user, userRole, navigate]);
@@ -24,7 +24,7 @@ const ImportStudents = () => {
   }
 
   // Redirect non-admins
-  if (userRole !== 'admin') {
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
     return null;
   }
 
