@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import UserHeader from "@/components/UserHeader";
+import DashboardNav from "@/components/DashboardNav";
 import {
   Calendar,
   Users,
@@ -1413,13 +1414,16 @@ const SimpleAnalyticsDashboard = () => {
       <div className="container mx-auto px-4 py-8">
         {/* User Header */}
         <UserHeader />
-        
+
+        {/* Dashboard Navigation */}
+        <DashboardNav />
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
             Echo Student Ministry Analytics
           </h1>
-          <p className="text-xl text-white/90 mb-4">
+          <p className="text-xl text-white/90">
             Live Data: {analyticsData.totalStudents} Students, {analyticsData.totalCheckIns} Total Check-ins
           </p>
         </div>

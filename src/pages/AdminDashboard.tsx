@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Users, Clock, LogOut } from "lucide-react";
+import { BarChart3, Users, Clock, LogOut, Heart } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, userRole, signOut } = useAuth();
@@ -97,23 +97,43 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
+                <BarChart3 className="w-5 h-5 text-blue-600" />
                 Analytics Dashboard
               </CardTitle>
               <CardDescription>
-                View detailed student attendance analytics and insights
+                View detailed attendance analytics, charts, and trends
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => navigate('/admin/analytics')} 
-                className="w-full"
+              <Button
+                onClick={() => navigate('/dashboard')}
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                View Analytics Dashboard
+                View Analytics
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-green-600" />
+                Pastoral Insights
+              </CardTitle>
+              <CardDescription>
+                Track student belonging, engagement, and pastoral actions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => navigate('/admin/pastoral')}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                View Pastoral Insights
               </Button>
             </CardContent>
           </Card>
