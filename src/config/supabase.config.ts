@@ -17,7 +17,7 @@ export const SUPABASE_CONFIG = {
 
 // Auto-detect environment based on hostname
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-export const ACTIVE_ENVIRONMENT: 'production' | 'staging' = 'production'; // YOLO: Force production for testing
+export const ACTIVE_ENVIRONMENT: 'production' | 'staging' = isLocalhost ? 'staging' : 'production';
 
 // Export the active configuration
 export const ACTIVE_CONFIG = SUPABASE_CONFIG[ACTIVE_ENVIRONMENT];
