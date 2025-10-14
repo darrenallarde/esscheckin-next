@@ -30,9 +30,12 @@ const PastoralDashboard = () => {
   const studentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [curriculumModalOpen, setCurriculumModalOpen] = useState(false);
 
-  // Redirect if not admin
+  // Redirect if not admin (only redirect when auth is fully loaded)
   React.useEffect(() => {
-    if (user && userRole && userRole !== 'admin') {
+    // Only redirect if we have a user AND a role AND the role is not admin
+    // Don't redirect while still loading (userRole is null during load)
+    if (user && userRole !== null && userRole !== 'admin') {
+      console.log('❌ Non-admin user detected, redirecting to home');
       navigate('/');
     }
   }, [user, userRole, navigate]);
@@ -221,22 +224,25 @@ const PastoralDashboard = () => {
   };
 
   // Show loading while determining access
-  if (!user || !userRole) {
-    console.log('⏳ Waiting for auth... user:', !!user, 'userRole:', userRole);
+  if (!user || userRole === null || userRole === undefined) {
+    console.log('⏳ Pastoral Dashboard - Waiting for auth... user:', !!user, 'userRole:', userRole);
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Loading authentication...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-sm text-white">Loading Pastoral Dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Redirect non-admins
+  // Redirect non-admins (this shouldn't execute if useEffect above works)
   if (userRole !== 'admin') {
+    console.log('❌ Pastoral Dashboard - Not admin, showing nothing');
     return null;
   }
+
+  console.log('✅ Pastoral Dashboard - Admin access confirmed, rendering dashboard');
 
   // Show error state
   if (error) {
