@@ -2,20 +2,25 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AIRecommendation } from '@/types/curriculum';
-import { ChevronDown, ChevronUp, Sparkles, CheckCircle, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Sparkles, CheckCircle, X, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
 
 interface RecommendationDisplayProps {
   recommendation: AIRecommendation | null;
   studentName: string;
+  studentId: string;
   onDismiss?: () => void;
+  onViewHistory?: () => void;
 }
 
 const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
   recommendation,
   studentName,
-  onDismiss
+  studentId,
+  onDismiss,
+  onViewHistory
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -118,10 +123,28 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
         </div>
 
         {/* Metadata */}
-        <div className="flex gap-2 text-xs text-gray-600 mt-3 pt-3 border-t border-purple-200">
-          <span>Generated: {new Date(recommendation.generated_at).toLocaleDateString()}</span>
-          <span>•</span>
-          <span>Status: {recommendation.engagement_status}</span>
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-purple-200">
+          <div className="flex gap-2 text-xs text-gray-600">
+            <span title={new Date(recommendation.generated_at).toLocaleString()}>
+              Generated {formatDistanceToNow(new Date(recommendation.generated_at), { addSuffix: true })}
+            </span>
+            <span>•</span>
+            <span>Status: {recommendation.engagement_status}</span>
+          </div>
+          {onViewHistory && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewHistory();
+              }}
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs text-purple-700 hover:text-purple-900"
+            >
+              <History className="w-3 h-3 mr-1" />
+              History
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

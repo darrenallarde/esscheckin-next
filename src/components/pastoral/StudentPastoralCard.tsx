@@ -202,7 +202,12 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
             <RecommendationDisplay
               recommendation={recommendation}
               studentName={`${student.first_name} ${student.last_name}`}
+              studentId={student.student_id}
               onDismiss={onRecommendationDismiss}
+              onViewHistory={() => {
+                // TODO: Open history modal/drawer
+                console.log('View history for student:', student.student_id);
+              }}
             />
           </div>
         )}

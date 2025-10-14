@@ -149,10 +149,10 @@ serve(async (req) => {
         // Generate recommendation using Claude
         const recommendation = await generateRecommendation(student, profile, curriculum);
 
-        // Save to database (upsert to avoid duplicates)
+        // Save to database (insert to preserve history)
         const { error: saveError } = await supabase
           .from('ai_recommendations')
-          .upsert({
+          .insert({
             student_id: student.student_id,
             curriculum_week_id: curriculum.id,
             key_insight: recommendation.key_insight,
@@ -161,8 +161,6 @@ serve(async (req) => {
             engagement_status: student.belonging_status,
             days_since_last_seen: student.days_since_last_seen,
             generated_at: new Date().toISOString()
-          }, {
-            onConflict: 'student_id,curriculum_week_id'
           });
 
         if (saveError) {
