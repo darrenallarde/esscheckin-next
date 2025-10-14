@@ -1,14 +1,15 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { importCheckinsFromCSV } from "@/utils/importCheckins";
+import { importCheckinsFromCSV, createStudentAndCheckin } from "@/utils/importCheckins";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, UserPlus } from "lucide-react";
 
 const CheckinImporter = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importResults, setImportResults] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [creatingStudent, setCreatingStudent] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -62,6 +63,57 @@ const CheckinImporter = () => {
       });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handleCreateStudent = async (studentData: any) => {
+    setCreatingStudent(studentData.student);
+
+    try {
+      const result = await createStudentAndCheckin(studentData.studentData);
+
+      if (result.success) {
+        toast({
+          title: "Student created!",
+          description: `${studentData.student} has been added and checked in.`,
+        });
+
+        // Update the results to reflect the new student
+        setImportResults((prev: any) => {
+          const updated = { ...prev };
+          updated.studentsFound++;
+          updated.studentsNotFound--;
+          updated.checkinsCreated++;
+
+          // Update the specific result
+          const resultIndex = updated.results.findIndex((r: any) => r.student === studentData.student);
+          if (resultIndex !== -1) {
+            updated.results[resultIndex] = {
+              ...updated.results[resultIndex],
+              success: true,
+              action: 'created_student',
+              error: undefined
+            };
+          }
+
+          return updated;
+        });
+      } else {
+        toast({
+          title: "Failed to create student",
+          description: result.error || 'Unknown error',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating student:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to create student',
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingStudent(null);
     }
   };
 
@@ -126,18 +178,34 @@ const CheckinImporter = () => {
               )}
             </div>
 
-            {/* Show skipped students */}
+            {/* Show skipped students with option to create */}
             {importResults.results.some((r: any) => r.action === 'student_not_found') && (
-              <details className="mt-4">
+              <details className="mt-4" open>
                 <summary className="font-medium text-yellow-700 cursor-pointer">
-                  Students Not Found ({importResults.studentsNotFound})
+                  Potential New Students ({importResults.studentsNotFound})
                 </summary>
-                <div className="text-xs space-y-1 mt-2 max-h-48 overflow-y-auto">
+                <div className="text-xs space-y-2 mt-2 max-h-96 overflow-y-auto">
                   {importResults.results
                     .filter((r: any) => r.action === 'student_not_found')
                     .map((r: any, index: number) => (
-                      <div key={index} className="text-yellow-700">
-                        {r.student}
+                      <div key={index} className="flex items-center justify-between bg-yellow-50 p-2 rounded border border-yellow-200">
+                        <div className="flex-1">
+                          <div className="font-medium text-yellow-900">{r.student}</div>
+                          <div className="text-yellow-700">
+                            Check-in date: {r.checkinDate}
+                            {r.studentData?.phone && ` • Phone: ${r.studentData.phone}`}
+                            {r.studentData?.grade && ` • Grade: ${r.studentData.grade}`}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleCreateStudent(r)}
+                          disabled={creatingStudent === r.student}
+                          className="ml-2"
+                        >
+                          <UserPlus className="w-3 h-3 mr-1" />
+                          {creatingStudent === r.student ? 'Creating...' : 'Create & Check-in'}
+                        </Button>
                       </div>
                     ))}
                 </div>

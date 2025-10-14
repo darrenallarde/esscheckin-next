@@ -11,9 +11,10 @@ interface CheckinRecord {
 interface ImportResult {
   student: string;
   success: boolean;
-  action?: string; // 'created_student', 'found_student', 'checked_in'
+  action?: string; // 'created_student', 'found_student', 'checked_in', 'student_not_found'
   error?: string;
   checkinDate?: string;
+  studentData?: CheckinRecord; // Keep original data for creating new students
 }
 
 /**
@@ -155,6 +156,44 @@ const createCheckin = async (studentId: string, checkinDate: string): Promise<{ 
 };
 
 /**
+ * Create a new student and check them in
+ */
+export const createStudentAndCheckin = async (record: CheckinRecord): Promise<{ success: boolean; error?: string; studentId?: string }> => {
+  const normalizedPhone = normalizePhone(record.phone);
+
+  try {
+    // Create new student
+    const { data: newStudent, error: insertError } = await supabase
+      .from('students')
+      .insert({
+        first_name: record.firstName,
+        last_name: record.lastName || null,
+        phone_number: normalizedPhone || null,
+        grade: record.grade || null,
+        user_type: 'student'
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !newStudent) {
+      return { success: false, error: insertError?.message || 'Failed to create student' };
+    }
+
+    // Create check-in for the new student
+    const checkinDate = parseCheckinDate(record.date);
+    const { success: checkinSuccess, error: checkinError } = await createCheckin(newStudent.id, checkinDate);
+
+    if (!checkinSuccess) {
+      return { success: false, error: `Student created but check-in failed: ${checkinError}`, studentId: newStudent.id };
+    }
+
+    return { success: true, studentId: newStudent.id };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Unexpected error' };
+  }
+};
+
+/**
  * Import check-ins from CSV
  */
 export const importCheckinsFromCSV = async (csvText: string) => {
@@ -179,13 +218,15 @@ export const importCheckinsFromCSV = async (csvText: string) => {
       const { studentId, action, error: studentError } = await findStudent(record);
 
       if (!studentId) {
-        // Student not found - skip (this is OK, not an error)
+        // Student not found - save for potential creation
         if (action === 'student_not_found') {
           results.push({
             student: studentName,
             success: false,
             action: 'student_not_found',
-            error: 'Student not found - skipped'
+            error: 'Student not found - could be created',
+            checkinDate: record.date,
+            studentData: record
           });
           studentsNotFound++;
           continue;
