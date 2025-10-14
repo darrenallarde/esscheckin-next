@@ -32,9 +32,9 @@ const PastoralDashboard = () => {
 
   // Redirect if not admin (only redirect when auth is fully loaded)
   React.useEffect(() => {
-    // Only redirect if we have a user AND a role AND the role is not admin or super-admin
+    // Only redirect if we have a user AND a role AND the role is not admin or super_admin
     // Don't redirect while still loading (userRole is null during load)
-    if (user && userRole !== null && userRole !== 'admin' && userRole !== 'super-admin') {
+    if (user && userRole !== null && userRole !== 'admin' && userRole !== 'super_admin') {
       console.log('❌ Non-admin user detected, redirecting to home');
       navigate('/');
     }
@@ -56,7 +56,7 @@ const PastoralDashboard = () => {
 
       return data as CurriculumWeek | null;
     },
-    enabled: !!user && (userRole === 'admin' || userRole === 'super-admin'),
+    enabled: !!user && (userRole === 'admin' || userRole === 'super_admin'),
   });
 
   // Fetch pastoral analytics data
@@ -87,7 +87,7 @@ const PastoralDashboard = () => {
       }
       return data as StudentPastoralData[];
     },
-    enabled: !!user && (userRole === 'admin' || userRole === 'super-admin'),
+    enabled: !!user && (userRole === 'admin' || userRole === 'super_admin'),
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 1,
   });
@@ -237,7 +237,7 @@ const PastoralDashboard = () => {
   }
 
   // Redirect non-admins (this shouldn't execute if useEffect above works)
-  if (userRole !== 'admin' && userRole !== 'super-admin') {
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
     console.log('❌ Pastoral Dashboard - Not admin, showing nothing');
     console.log('   User email:', user?.email);
     console.log('   User role detected:', userRole);

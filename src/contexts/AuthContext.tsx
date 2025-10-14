@@ -39,18 +39,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user role with proper async handling
+          // Fetch user roles (plural - users can have multiple roles)
           const fetchUserRole = async () => {
             try {
               const { data, error } = await supabase
                 .from('user_roles')
                 .select('role')
-                .eq('user_id', session.user.id)
-                .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
+                .eq('user_id', session.user.id);
 
-              if (!error && data) {
-                setUserRole(data.role);
-              } else if (!data) {
+              if (!error && data && data.length > 0) {
+                // User can have multiple roles - pick the highest permission level
+                // Priority order: super_admin > admin > student_leader > student
+                const roles = data.map(r => r.role);
+
+                if (roles.includes('super_admin')) {
+                  setUserRole('super_admin');
+                } else if (roles.includes('admin')) {
+                  setUserRole('admin');
+                } else if (roles.includes('student_leader')) {
+                  setUserRole('student_leader');
+                } else if (roles.includes('student')) {
+                  setUserRole('student');
+                } else {
+                  // Unknown role, default to student
+                  setUserRole('student');
+                }
+              } else if (!data || data.length === 0) {
                 // No role found - default to 'student' for users without a role
                 setUserRole('student');
               }

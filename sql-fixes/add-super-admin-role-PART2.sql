@@ -1,8 +1,5 @@
--- Add super_admin role to the app_role enum
-ALTER TYPE public.app_role ADD VALUE 'super_admin';
-
--- Update has_role function to work with super_admin
--- (No changes needed - it already works with any role)
+-- PART 2: Update functions and policies to use super_admin
+-- RUN THIS AFTER running PART 1 and committing that transaction
 
 -- Create helper function to check if user is super_admin
 CREATE OR REPLACE FUNCTION public.is_super_admin(_user_id UUID)
@@ -111,7 +108,4 @@ USING (
   public.has_role(auth.uid(), 'super_admin')
 );
 
--- Comment: To promote a user to super_admin, run:
--- INSERT INTO public.user_roles (user_id, role)
--- VALUES ('<user-uuid>', 'super_admin')
--- ON CONFLICT (user_id, role) DO NOTHING;
+-- Done! Super admin role is now fully configured
