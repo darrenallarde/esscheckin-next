@@ -1,4 +1,5 @@
 import StudentImporter from "@/components/StudentImporter";
+import CheckinImporter from "@/components/CheckinImporter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -32,14 +33,17 @@ const ImportStudents = () => {
     <div className="min-h-screen bg-gradient-background">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Import Students</h1>
-          <p className="text-muted-foreground">Import student data from CSV file</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Import Data</h1>
+          <p className="text-muted-foreground">Import student and check-in data from CSV files</p>
         </div>
-        
-        <StudentImporter />
-        
+
+        <div className="space-y-8">
+          <StudentImporter />
+          <CheckinImporter />
+        </div>
+
         <div className="mt-8 text-center">
-          <button 
+          <button
             onClick={() => navigate('/admin')}
             className="text-primary hover:underline"
           >
