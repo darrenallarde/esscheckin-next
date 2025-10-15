@@ -158,10 +158,11 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                 >
                   {hasAttendance ? (
                     <CheckCircle
-                      className={`w-4 h-4 ${multipleAttendance ? 'text-white' : 'text-green-500'}`}
+                      className={`w-5 h-5 ${multipleAttendance ? 'text-white' : 'text-green-600'}`}
+                      strokeWidth={3}
                     />
                   ) : (
-                    <XCircle className="w-3 h-3 text-gray-400" />
+                    <XCircle className="w-4 h-4 text-gray-400" strokeWidth={2} />
                   )}
                 </div>
               );
