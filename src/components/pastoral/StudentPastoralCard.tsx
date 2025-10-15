@@ -123,25 +123,30 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
           )}
         </div>
 
-        {/* Last 8 weeks attendance pattern */}
+        {/* Last 6 weeks attendance pattern (12 services: Wed + Sun) */}
         <div className="mb-4">
-          <div className="text-xs font-semibold text-muted-foreground mb-2">Last 8 Weeks</div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2">Last 6 Weeks (Wed + Sun)</div>
           <div className="flex gap-1">
-            {student.attendance_pattern.map((week, idx) => (
-              <div
-                key={idx}
-                className={`flex-1 h-8 rounded flex items-center justify-center ${
-                  week.attended ? 'bg-green-500' : 'bg-gray-200'
-                }`}
-                title={`Week of ${new Date(week.week_start).toLocaleDateString()}`}
-              >
-                {week.attended ? (
-                  <CheckCircle className="w-4 h-4 text-white" />
-                ) : (
-                  <XCircle className="w-3 h-3 text-gray-400" />
-                )}
-              </div>
-            ))}
+            {student.attendance_pattern.map((service, idx) => {
+              const serviceDate = new Date(service.service_date);
+              const isWednesday = service.service_type === 'Wednesday';
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex-1 h-8 rounded flex items-center justify-center ${
+                    service.attended ? 'bg-green-500' : 'bg-gray-200'
+                  }`}
+                  title={`${service.service_type} ${serviceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                >
+                  {service.attended ? (
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  ) : (
+                    <XCircle className="w-3 h-3 text-gray-400" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

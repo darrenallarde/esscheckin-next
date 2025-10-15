@@ -159,30 +159,47 @@ BEGIN
       -- Last check-in date
       MAX(ci.checked_in_at) AS last_checkin,
 
-      -- Build attendance pattern for last 8 complete weeks
-      -- Start from 8 weeks ago and go back from last Sunday (week boundary)
+      -- Build attendance pattern for last 6 weeks (12 services: Wed + Sun)
+      -- Show individual Wed/Sun attendance, most recent first
       jsonb_agg(
         jsonb_build_object(
-          'week_start', week_starts.week_start,
-          'attended', week_checkins.has_checkin
+          'service_date', service_dates.service_date,
+          'service_type', service_dates.service_type,
+          'attended', service_attendance.has_checkin
         )
-        ORDER BY week_starts.week_start DESC
+        ORDER BY service_dates.service_date DESC
       ) AS attendance_pattern
 
-    FROM generate_series(
-      date_trunc('week', v_today) - INTERVAL '8 weeks',
-      date_trunc('week', v_today) - INTERVAL '1 week',  -- Stop at last week (don't include current incomplete week)
-      '1 week'::interval
-    ) AS week_starts(week_start)
+    FROM (
+      -- Generate the last 6 weeks of Wed + Sun dates
+      SELECT
+        week_start + INTERVAL '3 days' AS service_date,  -- Wednesday (3 days after Sunday)
+        'Wednesday' AS service_type
+      FROM generate_series(
+        date_trunc('week', v_today) - INTERVAL '6 weeks',
+        date_trunc('week', v_today) - INTERVAL '1 week',
+        '1 week'::interval
+      ) week_start
+
+      UNION ALL
+
+      SELECT
+        week_start AS service_date,  -- Sunday (week start)
+        'Sunday' AS service_type
+      FROM generate_series(
+        date_trunc('week', v_today) - INTERVAL '6 weeks',
+        date_trunc('week', v_today) - INTERVAL '1 week',
+        '1 week'::interval
+      ) week_start
+    ) service_dates
     LEFT JOIN LATERAL (
       SELECT EXISTS(
         SELECT 1
         FROM check_ins ci2
         WHERE ci2.student_id = s.id
-          AND ci2.checked_in_at >= week_starts.week_start
-          AND ci2.checked_in_at < week_starts.week_start + INTERVAL '1 week'
+          AND ci2.checked_in_at::DATE = service_dates.service_date::DATE
       ) AS has_checkin
-    ) week_checkins ON true
+    ) service_attendance ON true
     LEFT JOIN check_ins ci ON ci.student_id = s.id
       AND ci.checked_in_at >= v_eight_weeks_ago
     GROUP BY s.id
