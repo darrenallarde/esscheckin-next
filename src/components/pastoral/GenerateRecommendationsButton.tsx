@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Sparkles, AlertCircle } from 'lucide-react';
 import { CurriculumWeek, StudentProfileExtended } from '@/types/curriculum';
 import { StudentPastoralData } from '@/types/pastoral';
 import { generateRecommendation, generateFallbackRecommendation } from '@/utils/aiRecommendations';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface GenerateRecommendationsButtonProps {
   students: StudentPastoralData[];
@@ -28,6 +29,77 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
   const [statusMessage, setStatusMessage] = useState('');
   const [useFallback, setUseFallback] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null);
+
+  // Cleanup realtime subscription on unmount or when modal closes
+  useEffect(() => {
+    return () => {
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
+  }, [realtimeChannel]);
+
+  // Subscribe to realtime progress updates when session starts
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const channel = supabase
+      .channel(`generation-progress-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'generation_progress',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload: any) => {
+          const data = payload.new;
+
+          // Update progress percentage
+          const percentage = Math.round((data.current_index / data.total_students) * 100);
+          setProgress(percentage);
+
+          // Update status message
+          setStatusMessage(data.message || '');
+
+          // Add to logs
+          if (data.message && !logs.includes(data.message)) {
+            setLogs(prev => [...prev, `[${data.current_index}/${data.total_students}] ${data.message}`]);
+          }
+
+          // Check if complete
+          if (data.status === 'completed') {
+            setProgress(100);
+            setTimeout(() => {
+              setIsGenerating(false);
+              setIsOpen(false);
+              setProgress(0);
+              setStatusMessage('');
+              setLogs([]);
+              setSessionId(null);
+
+              toast({
+                title: 'Recommendations generated!',
+                description: `Successfully generated ${data.successful_count} recommendations${data.failed_count > 0 ? ` (${data.failed_count} failed)` : ''}.`,
+                duration: 5000
+              });
+
+              onComplete();
+            }, 1500);
+          }
+        }
+      )
+      .subscribe();
+
+    setRealtimeChannel(channel);
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   const handleGenerate = async () => {
     if (!curriculum) {
@@ -107,55 +179,28 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
     } else {
       // Call Edge Function for AI generation (server-side)
       try {
-        setStatusMessage(`Connecting to AI service...`);
+        setStatusMessage(`Starting AI generation...`);
         setLogs([]);
 
-        // Simulate progress while waiting
-        let simulatedProgress = 0;
-        const progressInterval = setInterval(() => {
-          simulatedProgress += 1;
-          if (simulatedProgress <= 95) { // Cap at 95% instead of 90%
-            setProgress(simulatedProgress);
-          }
-        }, 1500); // Update every 1.5 seconds
-
+        // Call Edge Function - it will return immediately with session_id
         const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
           body: {
             curriculum_id: curriculum.id
           }
         });
 
-        clearInterval(progressInterval);
-
         if (error) throw error;
 
-        // Show logs if available
-        if (data?.logs && data.logs.length > 0) {
-          setLogs(data.logs);
+        // Set session ID to start realtime subscription
+        if (data?.session_id) {
+          setSessionId(data.session_id);
+          setStatusMessage('Connected! Generating recommendations...');
+        } else {
+          throw new Error('No session ID returned from Edge Function');
         }
 
-        setProgress(100);
-        setStatusMessage('Complete!');
-
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        setIsGenerating(false);
-        setProgress(0);
-        setStatusMessage('');
-
-        toast({
-          title: 'Recommendations generated!',
-          description: `Successfully generated ${data.successful || 0} recommendations${data.failed > 0 ? ` (${data.failed} failed)` : ''}.`,
-          duration: 5000
-        });
-
-        onComplete();
-
-        // Keep modal open briefly to show logs
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsOpen(false);
-        setLogs([]);
+        // Note: Progress updates now come from realtime subscription
+        // The useEffect hook above handles all updates and completion
 
       } catch (error) {
         console.error('Error calling Edge Function:', error);
@@ -165,6 +210,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
         setProgress(0);
         setStatusMessage('');
         setLogs([]);
+        setSessionId(null);
 
         toast({
           title: 'Generation failed',

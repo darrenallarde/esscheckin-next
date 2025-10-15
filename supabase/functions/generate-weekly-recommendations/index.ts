@@ -132,21 +132,40 @@ serve(async (req) => {
 
     console.log(`✅ Found ${students.length} students`);
 
-    // 3. Generate recommendations for each student
+    // 3. Create session for progress tracking
+    const sessionId = crypto.randomUUID();
+
+    // Initialize progress record
+    await supabase.from('generation_progress').insert({
+      session_id: sessionId,
+      curriculum_week_id: curriculum.id,
+      total_students: students.length,
+      current_index: 0,
+      status: 'running',
+      message: 'Starting generation...'
+    });
+
+    // 4. Generate recommendations for each student
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
-    const logs: string[] = []; // User-visible logs
 
     for (let i = 0; i < students.length; i++) {
       const student = students[i] as Student;
       const currentStudent = `${student.first_name} ${student.last_name}`;
 
       try {
-        // Log progress
-        const progressLog = `[${i + 1}/${students.length}] Generating for ${currentStudent}...`;
-        console.log(progressLog);
-        logs.push(progressLog);
+        // Update progress - starting generation
+        await supabase.from('generation_progress')
+          .update({
+            current_index: i + 1,
+            current_student_name: currentStudent,
+            message: `Generating for ${currentStudent}...`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', sessionId);
+
+        console.log(`[${i + 1}/${students.length}] Generating for ${currentStudent}...`);
 
         // Fetch extended profile
         const { data: profile } = await supabase
@@ -180,21 +199,47 @@ serve(async (req) => {
         }
 
         successCount++;
-        const successLog = `✅ [${i + 1}/${students.length}] ${currentStudent}`;
-        console.log(successLog);
-        logs.push(successLog);
+
+        // Update progress - successful
+        await supabase.from('generation_progress')
+          .update({
+            successful_count: successCount,
+            message: `✅ ${currentStudent}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', sessionId);
+
+        console.log(`✅ [${i + 1}/${students.length}] ${currentStudent}`);
 
         // Rate limiting: wait 1 second between API calls
         await new Promise(resolve => setTimeout(resolve, 1000));
 
       } catch (error) {
         errorCount++;
-        const errorMsg = `❌ [${i + 1}/${students.length}] ${currentStudent}: ${error.message}`;
+        const errorMsg = `${error.message}`;
         errors.push(errorMsg);
-        logs.push(errorMsg);
-        console.error(errorMsg);
+
+        // Update progress - failed
+        await supabase.from('generation_progress')
+          .update({
+            failed_count: errorCount,
+            message: `❌ ${currentStudent}: ${errorMsg}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', sessionId);
+
+        console.error(`❌ [${i + 1}/${students.length}] ${currentStudent}: ${errorMsg}`);
       }
     }
+
+    // Mark generation as complete
+    await supabase.from('generation_progress')
+      .update({
+        status: 'completed',
+        message: `Complete! ${successCount} successful, ${errorCount} failed`,
+        updated_at: new Date().toISOString()
+      })
+      .eq('session_id', sessionId);
 
     const result = {
       success: true,
@@ -204,7 +249,7 @@ serve(async (req) => {
       successful: successCount,
       failed: errorCount,
       errors: errors.length > 0 ? errors : undefined,
-      logs: logs, // Include all logs for user visibility
+      session_id: sessionId, // Return session_id for client to track progress
       timestamp: new Date().toISOString()
     };
 
