@@ -92,7 +92,7 @@ BEGIN
     (sp.checkins_last_4weeks < sp.checkins_prev_4weeks AND sp.checkins_last_4weeks < 2) AS is_declining,
 
     -- Attendance pattern for last 8 weeks
-    sp.attendance_pattern,
+    attendance_agg.attendance_pattern,
 
     -- Recommended action based on belonging status
     CASE
@@ -157,8 +157,15 @@ BEGIN
       )::integer AS sunday_checkins,
 
       -- Last check-in date
-      MAX(ci.checked_in_at) AS last_checkin,
+      MAX(ci.checked_in_at) AS last_checkin
 
+    FROM check_ins ci
+    WHERE ci.student_id = s.id
+      AND ci.checked_in_at >= v_eight_weeks_ago
+  ) sp ON true
+
+  LEFT JOIN LATERAL (
+    SELECT
       -- Build attendance pattern for last 8 COMPLETE weeks
       -- One box per week, ordered oldest to newest (left to right in UI)
       jsonb_agg(
@@ -181,10 +188,7 @@ BEGIN
         AND ci2.checked_in_at >= week_starts.week_start
         AND ci2.checked_in_at < week_starts.week_start + INTERVAL '1 week'
     ) week_checkins ON true
-    LEFT JOIN check_ins ci ON ci.student_id = s.id
-      AND ci.checked_in_at >= v_eight_weeks_ago
-    GROUP BY s.id
-  ) sp ON true
+  ) attendance_agg ON true
 
   ORDER BY priority_score DESC, s.first_name, s.last_name;
 END;
