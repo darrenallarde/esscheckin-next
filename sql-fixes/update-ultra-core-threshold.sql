@@ -1,7 +1,10 @@
 -- Update Ultra-Core definition to: 5+ check-ins in last 4 weeks
 -- This makes it more achievable while still identifying highly engaged students
 
-CREATE OR REPLACE FUNCTION public.get_pastoral_analytics()
+-- Drop the existing function first (signature changed)
+DROP FUNCTION IF EXISTS public.get_pastoral_analytics();
+
+CREATE FUNCTION public.get_pastoral_analytics()
 RETURNS TABLE(
   student_id uuid,
   first_name text,
