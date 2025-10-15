@@ -125,28 +125,41 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
 
         {/* Last 6 weeks attendance pattern (12 services: Wed + Sun) */}
         <div className="mb-4">
-          <div className="text-xs font-semibold text-muted-foreground mb-2">Last 6 Weeks (Wed + Sun)</div>
+          <div className="text-xs font-semibold text-muted-foreground mb-2">
+            Last 6 Weeks • {student.attendance_pattern.length} services tracked
+          </div>
           <div className="flex gap-1">
-            {student.attendance_pattern.map((service, idx) => {
-              const serviceDate = new Date(service.service_date);
-              const isWednesday = service.service_type === 'Wednesday';
+            {student.attendance_pattern.length === 0 ? (
+              <div className="text-xs text-muted-foreground italic">No recent attendance</div>
+            ) : (
+              student.attendance_pattern.map((service, idx) => {
+                const serviceDate = new Date(service.service_date);
+                const formattedDate = serviceDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+                const dayOfWeek = serviceDate.toLocaleDateString('en-US', { weekday: 'short' });
 
-              return (
-                <div
-                  key={idx}
-                  className={`flex-1 h-8 rounded flex items-center justify-center ${
-                    service.attended ? 'bg-green-500' : 'bg-gray-200'
-                  }`}
-                  title={`${service.service_type} ${serviceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                >
-                  {service.attended ? (
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  ) : (
-                    <XCircle className="w-3 h-3 text-gray-400" />
-                  )}
-                </div>
-              );
-            })}
+                return (
+                  <div
+                    key={idx}
+                    className={`flex-1 h-8 rounded flex items-center justify-center cursor-help transition-all ${
+                      service.attended
+                        ? 'bg-green-500 hover:bg-green-600'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                    title={`${dayOfWeek}, ${formattedDate} - ${service.attended ? 'Attended' : 'Absent'}`}
+                  >
+                    {service.attended ? (
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    ) : (
+                      <XCircle className="w-3 h-3 text-gray-400" />
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 

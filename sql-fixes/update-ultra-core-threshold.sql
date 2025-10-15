@@ -160,37 +160,49 @@ BEGIN
       MAX(ci.checked_in_at) AS last_checkin,
 
       -- Build attendance pattern for last 6 weeks (12 services: Wed + Sun)
-      -- Show individual Wed/Sun attendance, most recent first
-      jsonb_agg(
-        jsonb_build_object(
-          'service_date', service_dates.service_date,
-          'service_type', service_dates.service_type,
-          'attended', service_attendance.has_checkin
-        )
-        ORDER BY service_dates.service_date DESC
+      -- Only show services after student's first check-in
+      COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'service_date', service_dates.service_date,
+            'service_type', service_dates.service_type,
+            'attended', service_attendance.has_checkin
+          )
+          ORDER BY service_dates.service_date DESC
+        ) FILTER (WHERE service_dates.service_date >= first_checkin_date.first_checkin::DATE),
+        '[]'::jsonb
       ) AS attendance_pattern
 
     FROM (
+      -- Get student's first check-in date to filter services
+      SELECT MIN(ci.checked_in_at)::DATE AS first_checkin
+      FROM check_ins ci
+      WHERE ci.student_id = s.id
+    ) first_checkin_date
+    CROSS JOIN LATERAL (
       -- Generate the last 6 weeks of Wed + Sun dates
-      SELECT
-        week_start + INTERVAL '3 days' AS service_date,  -- Wednesday (3 days after Sunday)
-        'Wednesday' AS service_type
-      FROM generate_series(
-        date_trunc('week', v_today) - INTERVAL '6 weeks',
-        date_trunc('week', v_today) - INTERVAL '1 week',
-        '1 week'::interval
-      ) week_start
+      SELECT service_date, service_type
+      FROM (
+        SELECT
+          week_start + INTERVAL '3 days' AS service_date,
+          'Wednesday' AS service_type
+        FROM generate_series(
+          date_trunc('week', v_today) - INTERVAL '6 weeks',
+          date_trunc('week', v_today) - INTERVAL '1 week',
+          '1 week'::interval
+        ) week_start
 
-      UNION ALL
+        UNION ALL
 
-      SELECT
-        week_start AS service_date,  -- Sunday (week start)
-        'Sunday' AS service_type
-      FROM generate_series(
-        date_trunc('week', v_today) - INTERVAL '6 weeks',
-        date_trunc('week', v_today) - INTERVAL '1 week',
-        '1 week'::interval
-      ) week_start
+        SELECT
+          week_start AS service_date,
+          'Sunday' AS service_type
+        FROM generate_series(
+          date_trunc('week', v_today) - INTERVAL '6 weeks',
+          date_trunc('week', v_today) - INTERVAL '1 week',
+          '1 week'::interval
+        ) week_start
+      ) dates
     ) service_dates
     LEFT JOIN LATERAL (
       SELECT EXISTS(
@@ -202,7 +214,7 @@ BEGIN
     ) service_attendance ON true
     LEFT JOIN check_ins ci ON ci.student_id = s.id
       AND ci.checked_in_at >= v_eight_weeks_ago
-    GROUP BY s.id
+    GROUP BY s.id, first_checkin_date.first_checkin
   ) sp ON true
 
   ORDER BY priority_score DESC, s.first_name, s.last_name;
