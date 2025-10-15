@@ -33,9 +33,9 @@ const BelongingSpectrum: React.FC<BelongingSpectrumProps> = ({
   ];
 
   const statusDescriptions = {
-    'Ultra-Core': '2x/week attendance (Wed + Sun) - 12+ check-ins in 8 weeks',
-    'Core': '1x/week consistently - 6+ check-ins in 8 weeks',
-    'Connected': '2x/month - 3+ check-ins in 8 weeks',
+    'Ultra-Core': 'Highly engaged - 5+ check-ins in last 4 weeks',
+    'Core': 'Consistent - 4+ check-ins in 8 weeks (~1x/week)',
+    'Connected': 'Periodic - 2-3 check-ins in 8 weeks',
     'On the Fringe': 'Not seen in 30-59 days - needs immediate outreach',
     'Missing': 'Not seen in 60+ days - urgent parent contact needed'
   };
