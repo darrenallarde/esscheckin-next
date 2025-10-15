@@ -58,8 +58,9 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
         (payload: any) => {
           const data = payload.new;
 
-          // Update progress percentage
-          const percentage = Math.round((data.current_index / data.total_students) * 100);
+          // Update progress percentage using completed count (successful + failed)
+          const completedCount = (data.successful_count || 0) + (data.failed_count || 0);
+          const percentage = Math.round((completedCount / data.total_students) * 100);
           setProgress(percentage);
 
           // Update status message
@@ -67,7 +68,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
 
           // Add to logs
           if (data.message && !logs.includes(data.message)) {
-            setLogs(prev => [...prev, `[${data.current_index}/${data.total_students}] ${data.message}`]);
+            setLogs(prev => [...prev, `[${completedCount}/${data.total_students}] ${data.message}`]);
           }
 
           // Check if complete
