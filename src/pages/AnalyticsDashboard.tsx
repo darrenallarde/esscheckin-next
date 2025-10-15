@@ -30,6 +30,12 @@ import {
   Clock 
 } from "lucide-react";
 
+interface CheckInRecord {
+  studentName: string;
+  checkedInAt: string;
+  studentId: string;
+}
+
 interface CheckInData {
   date: string;
   dayLabel: string;
@@ -38,6 +44,7 @@ interface CheckInData {
   uniqueAttendees: number;
   newStudents: number;
   studentNames: string[];
+  checkInRecords: CheckInRecord[];
 }
 
 interface StudentStats {
@@ -101,6 +108,7 @@ const AnalyticsDashboard = () => {
         uniqueStudents: Set<string>;
         newStudents: Set<string>;
         studentNames: string[];
+        checkInRecords: CheckInRecord[];
       }>();
 
       checkIns?.forEach(checkIn => {
@@ -108,7 +116,7 @@ const AnalyticsDashboard = () => {
         const dateKey = date.toISOString().split('T')[0];
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
         const shortDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
+
         if (!dailyMap.has(dateKey)) {
           dailyMap.set(dateKey, {
             date: dateKey,
@@ -117,19 +125,27 @@ const AnalyticsDashboard = () => {
             totalCheckIns: 0,
             uniqueStudents: new Set(),
             newStudents: new Set(),
-            studentNames: []
+            studentNames: [],
+            checkInRecords: []
           });
         }
 
         const dayData = dailyMap.get(dateKey)!;
         dayData.totalCheckIns++;
         dayData.uniqueStudents.add(checkIn.student_id);
-        
+
         if (checkIn.students) {
           const fullName = `${checkIn.students.first_name} ${checkIn.students.last_name || ''}`.trim();
           if (!dayData.studentNames.includes(fullName)) {
             dayData.studentNames.push(fullName);
           }
+
+          // Add detailed check-in record with timestamp
+          dayData.checkInRecords.push({
+            studentName: fullName,
+            checkedInAt: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            studentId: checkIn.student_id
+          });
         }
       });
 
@@ -141,7 +157,8 @@ const AnalyticsDashboard = () => {
         totalAttendees: day.totalCheckIns,
         uniqueAttendees: day.uniqueStudents.size,
         newStudents: 0, // Will be calculated separately
-        studentNames: day.studentNames
+        studentNames: day.studentNames,
+        checkInRecords: day.checkInRecords
       }));
 
       // Get student statistics
@@ -283,7 +300,7 @@ const AnalyticsDashboard = () => {
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
+              <XAxis
                 dataKey="dayLabel"
                 angle={-45}
                 textAnchor="end"
@@ -294,6 +311,59 @@ const AnalyticsDashboard = () => {
               <Bar dataKey="totalAttendees" fill="#3B82F6" name="Total Check-ins" />
             </BarChart>
           </ResponsiveContainer>
+
+          {/* Detailed breakdown table */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Detailed Check-in Breakdown</h3>
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="w-full border-collapse border border-border">
+                <thead className="bg-muted sticky top-0">
+                  <tr>
+                    <th className="border border-border p-3 text-left">Date</th>
+                    <th className="border border-border p-3 text-left">Student Name</th>
+                    <th className="border border-border p-3 text-center">Check-in Time</th>
+                    <th className="border border-border p-3 text-center">Total Check-ins</th>
+                    <th className="border border-border p-3 text-center">Unique Students</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentData.map((day, dayIndex) => (
+                    day.checkInRecords.map((record, recordIndex) => (
+                      <tr key={`${dayIndex}-${recordIndex}`} className={dayIndex % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
+                        {recordIndex === 0 && (
+                          <td className="border border-border p-3 font-medium" rowSpan={day.checkInRecords.length}>
+                            {day.dayLabel}
+                          </td>
+                        )}
+                        <td className="border border-border p-3">{record.studentName}</td>
+                        <td className="border border-border p-3 text-center text-sm">{record.checkedInAt}</td>
+                        {recordIndex === 0 && (
+                          <>
+                            <td className="border border-border p-3 text-center font-semibold" rowSpan={day.checkInRecords.length}>
+                              <Badge variant={day.totalAttendees !== day.uniqueAttendees ? 'destructive' : 'default'}>
+                                {day.totalAttendees}
+                              </Badge>
+                            </td>
+                            <td className="border border-border p-3 text-center" rowSpan={day.checkInRecords.length}>
+                              {day.uniqueAttendees}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {currentData.some(day => day.totalAttendees !== day.uniqueAttendees) && (
+              <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                <p className="text-sm text-destructive font-medium">
+                  ⚠️ Warning: Some days have duplicate check-ins!
+                  Total check-ins should equal unique students. Apply the SQL fix at sql-fixes/add-unique-constraint-checkins.sql to remove duplicates.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )
     },
