@@ -129,7 +129,14 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
           <div className="flex gap-1">
             {student.attendance_pattern.map((week, idx) => {
               const weekStart = new Date(week.week_start);
-              const formattedDate = weekStart.toLocaleDateString('en-US', {
+              const weekEnd = new Date(weekStart);
+              weekEnd.setDate(weekEnd.getDate() + 6); // Sunday to Saturday
+
+              const formattedStart = weekStart.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+              });
+              const formattedEnd = weekEnd.toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric'
               });
@@ -148,7 +155,7 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                       ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-gray-200 hover:bg-gray-300'
                   }`}
-                  title={`Week of ${formattedDate} - ${
+                  title={`${formattedStart} - ${formattedEnd}: ${
                     week.days_attended === 0
                       ? 'No attendance'
                       : week.days_attended === 1
