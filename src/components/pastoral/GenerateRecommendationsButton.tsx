@@ -27,7 +27,6 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [useFallback, setUseFallback] = useState(false);
-  const [apiKey, setApiKey] = useState('');
 
   const handleGenerate = async () => {
     if (!curriculum) {
@@ -195,27 +194,17 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="api-key">Anthropic API Key</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-ant-..."
-                  disabled={useFallback}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Get your API key from{' '}
-                  <a
-                    href="https://console.anthropic.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline"
-                  >
-                    console.anthropic.com
-                  </a>
-                </p>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-purple-900 mb-1">AI-Powered Recommendations</div>
+                    <div className="text-sm text-purple-800">
+                      Uses Claude AI to generate personalized pastoral insights based on attendance patterns,
+                      developmental phase, and current teaching curriculum.
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -227,7 +216,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
                   className="rounded"
                 />
                 <label htmlFor="use-fallback" className="text-sm">
-                  Use fallback recommendations (no AI API, simpler output)
+                  Use simple template recommendations (no AI, instant generation)
                 </label>
               </div>
 
@@ -251,7 +240,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
                 </Button>
                 <Button
                   onClick={handleGenerate}
-                  disabled={!curriculum || (!apiKey.trim() && !useFallback)}
+                  disabled={!curriculum}
                 >
                   Generate Recommendations
                 </Button>
