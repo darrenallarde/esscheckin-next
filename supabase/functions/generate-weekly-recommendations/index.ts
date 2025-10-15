@@ -136,9 +136,18 @@ serve(async (req) => {
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
+    const logs: string[] = []; // User-visible logs
 
-    for (const student of students as Student[]) {
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i] as Student;
+      const currentStudent = `${student.first_name} ${student.last_name}`;
+
       try {
+        // Log progress
+        const progressLog = `[${i + 1}/${students.length}] Generating for ${currentStudent}...`;
+        console.log(progressLog);
+        logs.push(progressLog);
+
         // Fetch extended profile
         const { data: profile } = await supabase
           .from('student_profiles_extended')
@@ -149,10 +158,10 @@ serve(async (req) => {
         // Generate recommendation using Claude
         const recommendation = await generateRecommendation(student, profile, curriculum);
 
-        // Save to database (insert to preserve history)
+        // Save to database (UPSERT to handle duplicates)
         const { error: saveError } = await supabase
           .from('ai_recommendations')
-          .insert({
+          .upsert({
             student_id: student.student_id,
             curriculum_week_id: curriculum.id,
             key_insight: recommendation.key_insight,
@@ -161,6 +170,9 @@ serve(async (req) => {
             engagement_status: student.belonging_status,
             days_since_last_seen: student.days_since_last_seen,
             generated_at: new Date().toISOString()
+          }, {
+            onConflict: 'student_id,curriculum_week_id',
+            ignoreDuplicates: false // Update existing
           });
 
         if (saveError) {
@@ -168,16 +180,19 @@ serve(async (req) => {
         }
 
         successCount++;
-        console.log(`✅ Generated recommendation for ${student.first_name} ${student.last_name}`);
+        const successLog = `✅ [${i + 1}/${students.length}] ${currentStudent}`;
+        console.log(successLog);
+        logs.push(successLog);
 
         // Rate limiting: wait 1 second between API calls
         await new Promise(resolve => setTimeout(resolve, 1000));
 
       } catch (error) {
         errorCount++;
-        const errorMsg = `Failed for ${student.first_name} ${student.last_name}: ${error.message}`;
+        const errorMsg = `❌ [${i + 1}/${students.length}] ${currentStudent}: ${error.message}`;
         errors.push(errorMsg);
-        console.error(`❌ ${errorMsg}`);
+        logs.push(errorMsg);
+        console.error(errorMsg);
       }
     }
 
@@ -188,7 +203,8 @@ serve(async (req) => {
       total_students: students.length,
       successful: successCount,
       failed: errorCount,
-      errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Limit error output
+      errors: errors.length > 0 ? errors : undefined,
+      logs: logs, // Include all logs for user visibility
       timestamp: new Date().toISOString()
     };
 

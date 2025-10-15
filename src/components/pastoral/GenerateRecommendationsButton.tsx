@@ -27,6 +27,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [useFallback, setUseFallback] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
 
   const handleGenerate = async () => {
     if (!curriculum) {
@@ -106,16 +107,17 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
     } else {
       // Call Edge Function for AI generation (server-side)
       try {
-        setStatusMessage(`Generating recommendations for ${students.length} students...`);
+        setStatusMessage(`Connecting to AI service...`);
+        setLogs([]);
 
-        // Simulate progress while waiting (since we can't track real progress from Edge Function)
+        // Simulate progress while waiting
         let simulatedProgress = 0;
         const progressInterval = setInterval(() => {
-          simulatedProgress += 2;
-          if (simulatedProgress <= 90) {
+          simulatedProgress += 1;
+          if (simulatedProgress <= 95) { // Cap at 95% instead of 90%
             setProgress(simulatedProgress);
           }
-        }, 1000); // Update every second, capping at 90%
+        }, 1500); // Update every 1.5 seconds
 
         const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
           body: {
@@ -124,24 +126,37 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
         });
 
         clearInterval(progressInterval);
-        setProgress(100);
-
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        setIsGenerating(false);
-        setIsOpen(false);
-        setProgress(0);
-        setStatusMessage('');
 
         if (error) throw error;
 
+        // Show logs if available
+        if (data?.logs && data.logs.length > 0) {
+          setLogs(data.logs);
+        }
+
+        setProgress(100);
+        setStatusMessage('Complete!');
+
+        // Wait a moment to show completion
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        setIsGenerating(false);
+        setProgress(0);
+        setStatusMessage('');
+
         toast({
           title: 'Recommendations generated!',
-          description: `Successfully generated ${data.successful || 0} recommendations${data.failed > 0 ? ` (${data.failed} errors)` : ''}.`
+          description: `Successfully generated ${data.successful || 0} recommendations${data.failed > 0 ? ` (${data.failed} failed)` : ''}.`,
+          duration: 5000
         });
 
         onComplete();
+
+        // Keep modal open briefly to show logs
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setIsOpen(false);
+        setLogs([]);
+
       } catch (error) {
         console.error('Error calling Edge Function:', error);
 
@@ -149,6 +164,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
         setIsOpen(false);
         setProgress(0);
         setStatusMessage('');
+        setLogs([]);
 
         toast({
           title: 'Generation failed',
@@ -263,6 +279,27 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
               <div className="text-center text-sm text-muted-foreground">
                 {Math.round(progress)}% complete
               </div>
+
+              {/* Real-time logs display */}
+              {logs.length > 0 && (
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">Generation Progress:</div>
+                  <div className="space-y-1">
+                    {logs.map((log, idx) => (
+                      <div
+                        key={idx}
+                        className={`text-xs font-mono ${
+                          log.startsWith('✅') ? 'text-green-600' :
+                          log.startsWith('❌') ? 'text-red-600' :
+                          'text-gray-600'
+                        }`}
+                      >
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
