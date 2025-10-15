@@ -171,7 +171,7 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
         </div>
 
         {/* Attendance stats */}
-        <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
+        <div className="grid grid-cols-2 gap-2 mb-4 text-center text-sm">
           <div className="bg-white/50 p-2 rounded">
             <div className="font-bold text-lg">{student.total_checkins_8weeks}</div>
             <div className="text-xs text-muted-foreground">Check-ins</div>
@@ -181,12 +181,6 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
               {student.days_since_last_seen === 999999 ? 'Never' : formatLastSeen(student.days_since_last_seen)}
             </div>
             <div className="text-xs text-muted-foreground">Last Seen</div>
-          </div>
-          <div className="bg-white/50 p-2 rounded">
-            <div className="font-bold text-lg">
-              {student.wednesday_count}W / {student.sunday_count}S
-            </div>
-            <div className="text-xs text-muted-foreground">Wed/Sun</div>
           </div>
         </div>
 
