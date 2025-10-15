@@ -271,8 +271,17 @@ async function generateRecommendation(student: Student, profile: any, curriculum
 
 function buildPrompt(student: Student, profile: any, curriculum: Curriculum): string {
   const grade = student.grade || 'Unknown';
+  const gradeNum = parseInt(grade);
+  const isHighSchool = gradeNum >= 9;
 
   return `You are a Christ-centered youth ministry AI assistant. Generate a specific, actionable pastoral recommendation.
+
+## DEVELOPMENTAL PHASE
+${isHighSchool ? 'HIGH SCHOOL' : 'MIDDLE SCHOOL'} - ${grade}th grade
+${isHighSchool
+  ? 'Strategy: Need independence, challenge, leadership opportunities. Treat as adults, not kids.'
+  : 'Strategy: High energy, peer-focused, make faith tangible and relevant to daily life.'}
+${profile?.gender ? `Gender: ${profile.gender} - ${profile.gender === 'Male' ? 'Approach with challenge and purpose' : 'Approach with relational depth and safety'}` : ''}
 
 ## CURRENT TEACHING
 Series: ${curriculum.series_name}

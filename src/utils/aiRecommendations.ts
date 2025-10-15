@@ -30,57 +30,119 @@ const PHASE_DESCRIPTIONS: Record<string, string> = {
 - Want to own faith, not just inherit it`,
 
   '9': `9th Grade "This Is Me Now" Phase:
-- Defining identity separate from parents
-- Exploring who God made them to be
-- Need independence but still need guidance`,
+- Identity formation intensifies - "my faith" vs "my parents' faith"
+- Friend groups shift dramatically from middle school
+- Questioning everything taught growing up
+- Dating/relationships become major focus
+- Need to discover personal beliefs, not inherited ones
+- Starting to think more abstractly about God`,
 
   '10': `10th Grade "Why Not?" Phase:
-- Risk-taking and questioning authority
-- Exploring boundaries
-- Need Biblical wisdom for decisions`,
+- Peak risk-taking years (driving, independence, experimentation)
+- Strong resistance to authority and rules
+- Need wisdom and "why", not just "what"
+- This is when many walk away from youth group
+- Looking for authentic faith, not performance
+- Need challenge and purpose, not just activities`,
 
   '11': `11th Grade "Just Trust Me" Phase:
-- Seeking full independence
-- Testing leadership skills
-- Learning to trust God's guidance`,
+- Junior year pressure: academics, testing, college prep
+- Leadership opportunities are critical - they need to be needed
+- Questioning "Is church worth my limited time?"
+- Want to be treated as adults, not kids
+- Need mentors and 1-on-1s more than large group
+- Can handle deep theology and real-life application`,
 
   '12': `12th Grade "What's Next?" Phase:
-- Future-focused, transition anxiety
-- Preparing for next chapter
-- Need to understand God's call and purpose`
+- Transition anxiety dominates everything
+- Need to own faith before leaving home
+- Already mentally checked out or deeply invested (no middle ground)
+- Legacy mindset - want to invest in younger students
+- College/career decisions causing real stress
+- Last chance to root them in truth before launch`
 };
 
 // Engagement-specific guidance for AI
 const ENGAGEMENT_GUIDANCE: Record<string, string> = {
-  'Ultra-Core': `This student is HIGHLY ENGAGED (2x/week):
-- Prime for leadership development
-- Can be a peer influencer
-- Ready for deeper theological discussions
-- May need challenge to grow, not just affirmation`,
+  'Ultra-Core': `This student is HIGHLY ENGAGED (5+ check-ins in 4 weeks):
+- Prime for leadership development - give them something to lead
+- Can be a peer influencer - leverage their consistency
+- Ready for deeper theology and 1-on-1 discipleship
+- Challenge them to grow, not just affirm
+- If high school, connect them with younger students to mentor
+- If middle school, develop leadership skills through serving`,
 
-  'Core': `This student is CONSISTENTLY ENGAGED (1x/week):
-- Solid foundation, encourage consistency
-- Ready to invite friends
-- Can handle accountability
-- Celebrate their faithfulness`,
+  'Core': `This student is CONSISTENTLY ENGAGED (4+ in 8 weeks):
+- Solid foundation, celebrate their faithfulness
+- Ready to invite friends - make it easy for them
+- Can handle accountability and deeper conversations
+- Push them toward Ultra-Core with specific challenges
+- If high school, they're ready for serving/leading roles
+- If middle school, affirm consistency and build confidence`,
 
-  'Connected': `This student is PERIODICALLY ENGAGED (2x/month):
-- Connection is fragile, needs strengthening
-- May have scheduling conflicts or competing interests
-- Need to feel missed and valued
-- One personal contact could shift them to Core`,
+  'Connected': `This student is PERIODICALLY ENGAGED (2-3 in 8 weeks):
+- Connection is fragile - one personal touch could shift them to Core
+- May have scheduling conflicts, sports, or competing interests
+- Need to feel missed and valued when absent
+- Find out what's keeping them from more consistency
+- If declining from Core, something changed - dig deeper
+- Personal text after absence is critical`,
 
-  'On the Fringe': `⚠️ This student is AT RISK:
-- Immediate outreach needed within 48 hours
-- Something changed - need to find out what
-- Text or call, not just social media
-- Escalate to parent contact if no response`,
+  'On the Fringe': `⚠️ This student is AT RISK (not seen 30-60 days):
+- URGENT: Outreach needed within 48 hours
+- Something changed - injury, family issue, friend conflict, doubt?
+- Text or call personally, not just group message
+- If no response in 48 hours, escalate to parent contact
+- Don't guilt them - focus on "we miss you" not "where have you been"
+- Have a specific invitation ready (not just "come back")`,
 
-  'Missing': `🚨 This student is DISCONNECTED:
-- Parent contact is essential
-- May indicate family crisis or major life change
-- Home visit may be appropriate
-- Don't give up - they're still your student`
+  'Missing': `🚨 This student is DISCONNECTED (60+ days absent):
+- START with parent contact - don't skip this step
+- May indicate family crisis, depression, major life change
+- Home visit may be appropriate if parents are open
+- Don't just invite back - find out what happened first
+- Long absence = shame/awkwardness about returning
+- Make return easy: "No questions asked, we just want to see you"`
+};
+
+// Gender-specific guidance for pastoral approach
+const GENDER_GUIDANCE = {
+  'Male': `Ministry approach for guys:
+- Need challenge, competition, and purpose
+- Respond to direct questions, less to emotional processing
+- High school guys want to be treated as men, not boys
+- Middle school guys still need high energy and fun
+- Leadership = giving them something real to do, not just a title`,
+
+  'Female': `Ministry approach for girls:
+- Need safety, authenticity, and deeper relational connection
+- Process emotions more openly - create space for that
+- High school girls need mentorship from older women
+- Middle school girls navigating intense social dynamics
+- Watch for comparison, body image, and relational drama`,
+
+  'Unknown': `Gender not specified - use balanced approach:
+- Focus on developmental phase and engagement level
+- Offer both relational connection and purposeful challenge
+- Watch their response to previous outreach for cues`
+};
+
+// Age-appropriate ministry strategies
+const AGE_STRATEGIES = {
+  'middle': `Middle School Strategy (6th-8th):
+- Keep with same age peers - cross-age can be intimidating
+- High energy, short attention spans (especially 6th-7th)
+- Make faith tangible and relevant to daily life
+- Parents are still very involved - communicate with them
+- Friend drama is REAL - don't minimize it`,
+
+  'high': `High School Strategy (9th-12th):
+- Can mix 9th-10th and 11th-12th, but not always together
+- Need independence and adult treatment
+- Push toward leadership and mentorship of younger students
+- Parents want updates but students want privacy
+- Only involve parents if crisis-level concern
+- They can handle real theology and life application`
 };
 
 interface RecommendationInput {
@@ -101,6 +163,14 @@ export const generateRecommendationPrompt = (input: RecommendationInput): string
   const grade = student.grade || 'Unknown';
   const phaseDescription = PHASE_DESCRIPTIONS[grade] || 'Phase information not available';
   const engagementGuidance = ENGAGEMENT_GUIDANCE[student.belonging_status] || '';
+
+  // Determine gender guidance
+  const gender = studentProfile?.gender || 'Unknown';
+  const genderGuidance = GENDER_GUIDANCE[gender as keyof typeof GENDER_GUIDANCE] || GENDER_GUIDANCE['Unknown'];
+
+  // Determine age strategy
+  const gradeNum = parseInt(grade);
+  const ageStrategy = gradeNum >= 9 ? AGE_STRATEGIES['high'] : AGE_STRATEGIES['middle'];
 
   return `You are a Christ-centered youth ministry AI assistant helping pastors provide personalized, developmentally-appropriate follow-up with students.
 
@@ -143,7 +213,14 @@ ${student.sunday_count > student.wednesday_count ? '✅ Prefers Sunday services 
 Attendance Pattern (last 8 weeks): ${student.attendance_pattern.map(w => w.attended ? '✓' : '✗').join(' ')}
 ${student.parent_name ? `Parent Contact Available: ${student.parent_name} at ${student.parent_phone}` : '❌ No parent contact on file'}
 
+## ENGAGEMENT GUIDANCE
 ${engagementGuidance}
+
+## GENDER-SPECIFIC APPROACH
+${genderGuidance}
+
+## AGE-APPROPRIATE STRATEGY
+${ageStrategy}
 
 ## CRITICAL CONTEXT FOR RECOMMENDATIONS
 - Use ${student.first_name}'s actual numbers (${student.total_checkins_8weeks} check-ins, ${student.days_since_last_seen} days since last seen)
@@ -187,17 +264,19 @@ You must provide EXACTLY this JSON structure:
 - ❌ BAD: "Encourage them to attend more"
 - ✅ GOOD: "Jessica came 3x in first 4 weeks, then dropped to 1x last 4 weeks. Something changed. Call her parents this week to check in"
 
-**For Ultra-Core students (8+ check-ins, both Wed & Sun):**
+**For Ultra-Core students (5+ check-ins in 4 weeks):**
 - Name specific leadership opportunities: "Invite [Name] to co-lead small group starting next month"
 - Challenge with advanced discipleship: "Ask [Name] to read [specific book/passage] and discuss it 1-on-1"
-- Reference their consistency: "They've been here [X]/8 weeks - they're ready for more"
+- Reference their consistency: "[Name] came 5 of last 4 weeks - that's Ultra-Core! They're ready for more responsibility"
+- If high school: "Connect [Name] with a 7th grader to mentor"
+- If middle school: "Give [Name] a serving role - setup team, welcome team, tech team"
 
-**For Core students (6-7 check-ins):**
+**For Core students (4+ check-ins in 8 weeks):**
 - Celebrate specific wins: "[Name] has been here 6 straight weeks - text them 'Your consistency is inspiring!'"
 - Give concrete serving opportunities: "Ask [Name] to help with setup next Wednesday"
 - Name specific friends they could invite based on their interests
 
-**For Connected students (3-5 check-ins):**
+**For Connected students (2-3 check-ins in 8 weeks):**
 - Point out the pattern: "[Name] came 4x in first month, 1x this month - what changed?"
 - Personal invitation with specifics: "Text [Name] Tuesday: 'This Sunday we're doing [activity]. Would love to see you!'"
 - Mention what they've missed: "They missed the [specific series] - might not feel caught up"
