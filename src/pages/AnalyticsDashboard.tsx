@@ -269,32 +269,8 @@ const AnalyticsDashboard = () => {
 
   const chartConfigs = {
     'unique-attendees': {
-      title: `Unique Students by Day`,
-      subtitle: 'Individual students (no double counting) per day',
-      component: (
-        <div className="space-y-6">
-          <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={currentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="dayLabel"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis label={{ value: 'Unique Students', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value, name) => [value, name === 'uniqueAttendees' ? 'Unique Students' : 'Total Check-ins']} />
-              <Legend />
-              <Bar dataKey="uniqueAttendees" fill="#10B981" name="Unique Students" />
-              <Line type="monotone" dataKey="totalAttendees" stroke="#EF4444" strokeWidth={3} name="Total Check-ins" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    },
-    'total-attendees': {
-      title: `Total Check-ins by Day`,
-      subtitle: 'All submissions including multiple from same students',
+      title: `Daily Attendance`,
+      subtitle: 'Unique students per day',
       component: (
         <div className="space-y-6">
           <ResponsiveContainer width="100%" height={400}>
@@ -306,9 +282,9 @@ const AnalyticsDashboard = () => {
                 textAnchor="end"
                 height={80}
               />
-              <YAxis label={{ value: 'Total Check-ins', angle: -90, position: 'insideLeft' }} />
-              <Tooltip formatter={(value) => [value, 'Total Check-ins']} />
-              <Bar dataKey="totalAttendees" fill="#3B82F6" name="Total Check-ins" />
+              <YAxis label={{ value: 'Students', angle: -90, position: 'insideLeft' }} />
+              <Tooltip formatter={(value) => [value, 'Students']} />
+              <Bar dataKey="uniqueAttendees" fill="#10B981" name="Students" />
             </BarChart>
           </ResponsiveContainer>
 
@@ -322,8 +298,6 @@ const AnalyticsDashboard = () => {
                     <th className="border border-border p-3 text-left">Date</th>
                     <th className="border border-border p-3 text-left">Student Name</th>
                     <th className="border border-border p-3 text-center">Check-in Time</th>
-                    <th className="border border-border p-3 text-center">Total Check-ins</th>
-                    <th className="border border-border p-3 text-center">Unique Students</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,18 +311,6 @@ const AnalyticsDashboard = () => {
                         )}
                         <td className="border border-border p-3">{record.studentName}</td>
                         <td className="border border-border p-3 text-center text-sm">{record.checkedInAt}</td>
-                        {recordIndex === 0 && (
-                          <>
-                            <td className="border border-border p-3 text-center font-semibold" rowSpan={day.checkInRecords.length}>
-                              <Badge variant={day.totalAttendees !== day.uniqueAttendees ? 'destructive' : 'default'}>
-                                {day.totalAttendees}
-                              </Badge>
-                            </td>
-                            <td className="border border-border p-3 text-center" rowSpan={day.checkInRecords.length}>
-                              {day.uniqueAttendees}
-                            </td>
-                          </>
-                        )}
                       </tr>
                     ))
                   ))}
@@ -358,8 +320,8 @@ const AnalyticsDashboard = () => {
             {currentData.some(day => day.totalAttendees !== day.uniqueAttendees) && (
               <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
                 <p className="text-sm text-destructive font-medium">
-                  ⚠️ Warning: Some days have duplicate check-ins!
-                  Total check-ins should equal unique students. Apply the SQL fix at sql-fixes/add-unique-constraint-checkins.sql to remove duplicates.
+                  ⚠️ Warning: Duplicate check-ins detected in database!
+                  Apply sql-fixes/check-and-clean-duplicates.sql to remove them.
                 </p>
               </div>
             )}
