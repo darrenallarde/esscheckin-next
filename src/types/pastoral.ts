@@ -2,10 +2,9 @@
 
 export type BelongingStatus = 'Ultra-Core' | 'Core' | 'Connected' | 'On the Fringe' | 'Missing';
 
-export interface AttendanceService {
-  service_date: string;
-  service_type: 'Wednesday' | 'Sunday';
-  attended: boolean;
+export interface AttendanceWeek {
+  week_start: string;
+  days_attended: number;  // 0 = absent, 1 = attended once, 2+ = attended multiple times
 }
 
 export interface StudentPastoralData {
@@ -27,7 +26,7 @@ export interface StudentPastoralData {
   days_since_last_seen: number;
   last_checkin_date: string | null;
 
-  attendance_pattern: AttendanceService[];
+  attendance_pattern: AttendanceWeek[];
 
   wednesday_count: number;
   sunday_count: number;
