@@ -1,4 +1,29 @@
-# Welcome to your Lovable project
+# ESS Check-in System
+
+A comprehensive student check-in and pastoral care system with gamification, AI-powered recommendations, and engagement analytics.
+
+## 📚 Documentation
+
+**New here? Start with these guides:**
+
+- **[HANDOFF.md](HANDOFF.md)** - **START HERE!** Quick overview and guide for new developers
+- **[CLAUDE.md](CLAUDE.md)** - Complete architecture documentation
+- **[DATABASE.md](DATABASE.md)** - Database schema and SQL functions
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Step-by-step deployment guide
+- **[sql-fixes/README.md](sql-fixes/README.md)** - Production SQL patches
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+```
 
 ## Project info
 

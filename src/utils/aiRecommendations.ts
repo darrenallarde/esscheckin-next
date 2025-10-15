@@ -210,7 +210,7 @@ Attendance Trend: ${student.is_declining ? '📉 DECLINING - This is a red flag!
 Wednesday/Sunday Split: ${student.wednesday_count} Wednesdays / ${student.sunday_count} Sundays
 ${student.wednesday_count > student.sunday_count ? '⚠️ More Wed than Sun - may prefer small group over large gathering' : ''}
 ${student.sunday_count > student.wednesday_count ? '✅ Prefers Sunday services over midweek' : ''}
-Attendance Pattern (last 8 weeks): ${student.attendance_pattern.map(w => w.attended ? '✓' : '✗').join(' ')}
+Attendance Pattern (last 8 weeks): ${student.attendance_pattern.map(w => w.days_attended > 0 ? '✓' : '✗').join(' ')}
 ${student.parent_name ? `Parent Contact Available: ${student.parent_name} at ${student.parent_phone}` : '❌ No parent contact on file'}
 
 ## ENGAGEMENT GUIDANCE

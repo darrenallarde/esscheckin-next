@@ -1,3 +1,27 @@
+/**
+ * PastoralDashboard.tsx - Main pastoral care dashboard
+ *
+ * This dashboard provides comprehensive student engagement tracking based on check-in patterns.
+ *
+ * BELONGING STATUS CATEGORIES:
+ * - Ultra-Core: 5+ check-ins in last 4 weeks (highly engaged, ready for leadership)
+ * - Core: 4+ check-ins in 8 weeks (~1x/week, consistent)
+ * - Connected: 2-3 check-ins in 8 weeks (periodic, fragile connection)
+ * - On the Fringe: Not seen in 30-60 days (at-risk, urgent outreach needed)
+ * - Missing: Not seen in 60+ days (disconnected, start with parent contact)
+ *
+ * KEY FEATURES:
+ * - Visual attendance patterns (8 weekly boxes per student)
+ * - AI-powered recommendations linked to current curriculum
+ * - Automated pastoral action suggestions with copyable templates
+ * - Priority-based sorting (urgent students first)
+ * - Search and filter by status/grade
+ *
+ * DATA SOURCE:
+ * All analytics calculated by get_pastoral_analytics() PostgreSQL function
+ * (see /sql-fixes/update-ultra-core-threshold.sql)
+ */
+
 import React, { useState, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

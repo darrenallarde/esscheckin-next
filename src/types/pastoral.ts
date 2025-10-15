@@ -21,8 +21,7 @@ export interface StudentPastoralData {
   belonging_status: BelongingStatus;
 
   total_checkins_8weeks: number;
-  total_checkins_30days: number;
-  total_checkins_60days: number;
+  checkins_last_4weeks: number;  // Added: check-ins in last 4 weeks
   days_since_last_seen: number;
   last_checkin_date: string | null;
 
@@ -32,10 +31,9 @@ export interface StudentPastoralData {
   sunday_count: number;
 
   is_declining: boolean;
-  previous_status: BelongingStatus;
 
   recommended_action: string;
-  action_priority: number;
+  action_priority: number;  // 1 = most urgent (Missing), 6 = least urgent (Ultra-Core)
   action_message: string;
 }
 

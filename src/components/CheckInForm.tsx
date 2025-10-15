@@ -1,3 +1,21 @@
+/**
+ * CheckInForm.tsx - Main check-in interface component
+ *
+ * This component handles the entire check-in flow for students:
+ * 1. Search by phone number (default) or name/email
+ * 2. Handle multiple match selection if needed
+ * 3. Confirm student identity
+ * 4. Process idempotent check-in (one per day per student)
+ * 5. Calculate and award gamification rewards
+ * 6. Display success screen with PIN
+ *
+ * Key features:
+ * - Flexible search: handles phone formats, fuzzy name matching
+ * - State machine pattern using discriminated union ViewState
+ * - Integration with Supabase RPC functions for secure check-in
+ * - Gamification rewards processed via processCheckinRewards utility
+ */
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,12 +30,11 @@ import NewStudentForm from "./NewStudentForm";
 import GameCheckInSuccessDB from "./GameCheckInSuccessDB";
 import { processCheckinRewards } from "@/utils/gamificationDB";
 
-// Schema for universal search (phone, name, or email)
+// Zod schemas for form validation
 const phoneSearchSchema = z.object({
   phoneNumber: z.string().trim().min(2, "Enter at least 2 characters").max(50, "Entry is too long"),
 });
 
-// Schema for name/email search
 const nameEmailSearchSchema = z.object({
   searchTerm: z.string().trim().min(1, "Please enter a name or email"),
 });
@@ -43,14 +60,18 @@ interface Student {
   created_at: string;
 }
 
+/**
+ * ViewState - Discriminated union for managing check-in flow
+ * Uses type field to ensure type-safe state transitions
+ */
 type ViewState =
-  | { type: 'phone-search' }
-  | { type: 'name-search' }
-  | { type: 'confirm-student', student: Student }
-  | { type: 'select-student', students: Student[] }
-  | { type: 'prompt-email', student: Student }
-  | { type: 'new-student' }
-  | { type: 'success', student: Student, checkInId: string, profilePin?: string };
+  | { type: 'phone-search' }           // Initial state: search by phone
+  | { type: 'name-search' }            // Alternative: search by name/email
+  | { type: 'confirm-student', student: Student }  // Single match found, confirm identity
+  | { type: 'select-student', students: Student[] }  // Multiple matches, let user select
+  | { type: 'prompt-email', student: Student }  // No email on file, prompt for it
+  | { type: 'new-student' }            // No match found, register new student
+  | { type: 'success', student: Student, checkInId: string, profilePin?: string };  // Check-in complete
 
 const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
   const [viewState, setViewState] = useState<ViewState>({ type: 'phone-search' });
