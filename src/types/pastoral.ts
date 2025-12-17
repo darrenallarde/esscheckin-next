@@ -18,6 +18,15 @@ export interface StudentPastoralData {
   parent_name: string | null;
   parent_phone: string | null;
 
+  // Extended fields for quick pastoral action
+  instagram_handle: string | null;
+  father_first_name: string | null;
+  father_last_name: string | null;
+  father_phone: string | null;
+  mother_first_name: string | null;
+  mother_last_name: string | null;
+  mother_phone: string | null;
+
   belonging_status: BelongingStatus;
 
   total_checkins_8weeks: number;

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { StudentPastoralData, BelongingStatus } from '@/types/pastoral';
 import { AIRecommendation } from '@/types/curriculum';
-import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check } from 'lucide-react';
+import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram, User, School, MessageSquare, Send, ChevronDown, ChevronUp, History, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import RecommendationDisplay from './RecommendationDisplay';
+import { StudentContextPanel } from './workflow';
 
 interface StudentPastoralCardProps {
   student: StudentPastoralData;
@@ -22,6 +24,57 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
   onRecommendationDismiss
 }) => {
   const [copiedAction, setCopiedAction] = useState(false);
+  const [showQuickAction, setShowQuickAction] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [showDetails, setShowDetails] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Generate default message based on student's belonging status
+  const getDefaultMessage = () => {
+    const firstName = student.first_name;
+    switch (student.belonging_status) {
+      case 'Missing':
+        return `Hey ${firstName}! We've really missed seeing you at youth group. Everything okay? We'd love to catch up and see you soon. Let me know if there's anything going on or if you need a ride!`;
+      case 'On the Fringe':
+        return `Hey ${firstName}! Just wanted to check in - we noticed you haven't been around lately. Hope everything is good! We'd love to see you this Wednesday. Need anything?`;
+      case 'Connected':
+        return `Hey ${firstName}! Great to see you at youth group! I really enjoyed connecting with you. Can't wait to see you again this week!`;
+      case 'Core':
+        return `Hey ${firstName}! You've been such a consistent presence at youth group and it's been awesome to watch you grow. Have you thought about inviting a friend to come with you?`;
+      case 'Ultra-Core':
+        return `Hey ${firstName}! Your leadership and dedication has been incredible. I wanted to talk to you about potentially serving in a bigger role. Would you be up for a conversation about that?`;
+      default:
+        return `Hey ${firstName}! Just wanted to reach out and connect. How are you doing? Would love to catch up!`;
+    }
+  };
+
+  // Get parent info for display
+  const getParentInfo = () => {
+    const parents = [];
+    if (student.father_first_name || student.father_phone) {
+      parents.push({
+        label: 'Dad',
+        name: student.father_first_name ? `${student.father_first_name} ${student.father_last_name || ''}`.trim() : null,
+        phone: student.father_phone
+      });
+    }
+    if (student.mother_first_name || student.mother_phone) {
+      parents.push({
+        label: 'Mom',
+        name: student.mother_first_name ? `${student.mother_first_name} ${student.mother_last_name || ''}`.trim() : null,
+        phone: student.mother_phone
+      });
+    }
+    // Fallback to legacy parent_name/parent_phone
+    if (parents.length === 0 && (student.parent_name || student.parent_phone)) {
+      parents.push({
+        label: 'Parent',
+        name: student.parent_name,
+        phone: student.parent_phone
+      });
+    }
+    return parents;
+  };
 
   const statusConfig = {
     'Ultra-Core': { color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50', icon: '💎' },
@@ -74,8 +127,17 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't toggle if clicking on interactive elements
+    if ((e.target as HTMLElement).closest('button, a, input, textarea')) {
+      return;
+    }
+    setIsExpanded(!isExpanded);
+    onClick?.();
+  };
+
   return (
-    <Card className={`hover:shadow-lg transition-all cursor-pointer ${config.bgLight} border-2`} onClick={onClick}>
+    <Card className={`hover:shadow-lg transition-all cursor-pointer ${config.bgLight} border-2 ${isExpanded ? 'ring-2 ring-primary' : ''}`} onClick={handleCardClick}>
       <CardContent className="p-6">
         {/* Header with name and status */}
         <div className="flex items-start justify-between mb-4">
@@ -85,7 +147,7 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
               {getInitials(student.first_name, student.last_name)}
             </div>
 
-            <div>
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-lg">
                   {student.first_name} {student.last_name}
@@ -94,33 +156,88 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                   <TrendingDown className="w-4 h-4 text-orange-500" title="Declining attendance" />
                 )}
               </div>
-              <div className="text-sm text-muted-foreground">
-                {student.grade ? `Grade ${student.grade}` : 'Unknown grade'}
-                {student.high_school && ` • ${student.high_school}`}
+
+              {/* Compact details row */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
+                {student.grade && (
+                  <span className="flex items-center gap-1">
+                    <School className="w-3 h-3" />
+                    Grade {student.grade}
+                  </span>
+                )}
+                {student.high_school && (
+                  <span className="truncate max-w-[120px]" title={student.high_school}>
+                    {student.high_school}
+                  </span>
+                )}
+                {student.phone_number && (
+                  <a
+                    href={`tel:${student.phone_number}`}
+                    className="flex items-center gap-1 hover:text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Phone className="w-3 h-3" />
+                    {student.phone_number}
+                  </a>
+                )}
+                {student.instagram_handle && (
+                  <a
+                    href={`https://instagram.com/${student.instagram_handle.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-pink-500"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Instagram className="w-3 h-3" />
+                    {student.instagram_handle.startsWith('@') ? student.instagram_handle : `@${student.instagram_handle}`}
+                  </a>
+                )}
               </div>
+
+              {/* Expandable parent details */}
+              {getParentInfo().length > 0 && (
+                <div className="mt-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDetails(!showDetails);
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <User className="w-3 h-3" />
+                    {getParentInfo().length} parent{getParentInfo().length > 1 ? 's' : ''} on file
+                    {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+
+                  {showDetails && (
+                    <div className="mt-2 space-y-1 text-xs bg-white/50 rounded p-2">
+                      {getParentInfo().map((parent, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-muted-foreground">
+                          <span className="font-medium text-foreground">{parent.label}:</span>
+                          {parent.name && <span>{parent.name}</span>}
+                          {parent.phone && (
+                            <a
+                              href={`tel:${parent.phone}`}
+                              className="flex items-center gap-1 hover:text-primary"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="w-3 h-3" />
+                              {parent.phone}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Status badge */}
-          <Badge className={`${config.color} text-white`}>
+          <Badge className={`${config.color} text-white flex-shrink-0`}>
             {config.icon} {student.belonging_status}
           </Badge>
-        </div>
-
-        {/* Contact info */}
-        <div className="flex gap-4 mb-4 text-sm">
-          {student.phone_number && (
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Phone className="w-3 h-3" />
-              <span>{student.phone_number}</span>
-            </div>
-          )}
-          {student.email && (
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Mail className="w-3 h-3" />
-              <span className="truncate max-w-[150px]">{student.email}</span>
-            </div>
-          )}
         </div>
 
         {/* Last 8 weeks attendance pattern */}
@@ -231,23 +348,170 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
               studentId={student.student_id}
               onDismiss={onRecommendationDismiss}
               onViewHistory={() => {
-                // TODO: Open history modal/drawer
-                console.log('View history for student:', student.student_id);
+                setIsExpanded(true);
               }}
             />
           </div>
         )}
 
-        {/* Parent contact (if Missing or Fringe) */}
-        {(student.belonging_status === 'Missing' || student.belonging_status === 'On the Fringe') &&
-         student.parent_name && student.parent_phone && (
-          <div className="bg-white/70 p-3 rounded border border-gray-200 text-xs">
-            <div className="font-semibold text-gray-700 mb-1">Parent Contact:</div>
-            <div className="text-gray-600">
-              {student.parent_name} • {student.parent_phone}
+        {/* Expand/Collapse Toggle */}
+        <div className="flex justify-center mb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            <History className="w-3 h-3 mr-1" />
+            {isExpanded ? 'Hide' : 'View'} History & Context
+            {isExpanded ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+          </Button>
+        </div>
+
+        {/* Expanded Context Panel */}
+        {isExpanded && (
+          <div className="mb-4 border-t border-b border-gray-200 py-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-gray-700">
+                {student.first_name}'s History & Context
+              </h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+            <StudentContextPanel
+              studentId={student.student_id}
+              studentName={`${student.first_name} ${student.last_name}`}
+              recommendationId={recommendation?.id}
+              onInteractionLogged={onRecommendationDismiss}
+            />
           </div>
         )}
+
+        {/* Quick Action Messaging Section */}
+        <div className="border-t border-gray-200 pt-3">
+          {!showQuickAction ? (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMessageText(getDefaultMessage());
+                setShowQuickAction(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Quick Message {student.first_name}
+            </Button>
+          ) : (
+            <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Message to {student.first_name}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowQuickAction(false)}
+                  className="h-7 px-2 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              {/* Contact method pills */}
+              <div className="flex flex-wrap gap-2">
+                {student.phone_number && (
+                  <a
+                    href={`sms:${student.phone_number}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+                  >
+                    <Phone className="w-3 h-3" />
+                    Text
+                  </a>
+                )}
+                {student.instagram_handle && (
+                  <a
+                    href={`https://instagram.com/${student.instagram_handle.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-pink-100 text-pink-700 rounded-full hover:bg-pink-200 transition-colors"
+                  >
+                    <Instagram className="w-3 h-3" />
+                    Instagram DM
+                  </a>
+                )}
+                {student.email && (
+                  <a
+                    href={`mailto:${student.email}?subject=Hey ${student.first_name}!&body=${encodeURIComponent(messageText)}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+                  >
+                    <Mail className="w-3 h-3" />
+                    Email
+                  </a>
+                )}
+              </div>
+
+              {/* Editable message textarea */}
+              <Textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Type your message..."
+                className="min-h-[100px] text-sm resize-none"
+              />
+
+              {/* Character count */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{messageText.length} characters</span>
+                <span className={messageText.length > 160 ? 'text-orange-500' : ''}>
+                  {messageText.length > 160 ? '(May split into multiple SMS)' : 'Single SMS'}
+                </span>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(messageText);
+                    toast({
+                      title: 'Copied!',
+                      description: 'Message copied to clipboard',
+                    });
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: 'Coming soon!',
+                      description: 'Send functionality will be available soon.',
+                    });
+                  }}
+                  size="sm"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
