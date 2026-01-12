@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StudentPastoralData, BelongingStatus } from '@/types/pastoral';
 import { AIRecommendation } from '@/types/curriculum';
 import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram, User, School, MessageSquare, Send, ChevronDown, ChevronUp, History, X } from 'lucide-react';
@@ -263,24 +264,36 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
               const hasAttendance = week.days_attended > 0;
 
               return (
-                <div
-                  key={idx}
-                  className={`flex-1 h-8 rounded flex items-center justify-center cursor-help transition-all ${
-                    hasAttendance
-                      ? 'bg-green-500 hover:bg-green-600'
-                      : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
-                  title={`Week of ${formattedStart}${hasAttendance ? ' ✓' : ' - No attendance'}`}
-                >
-                  {hasAttendance ? (
-                    <CheckCircle
-                      className="w-5 h-5 text-white"
-                      strokeWidth={3}
-                    />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-gray-400" strokeWidth={2} />
-                  )}
-                </div>
+                <TooltipProvider key={idx} delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={`flex-1 h-8 rounded flex items-center justify-center cursor-help transition-all ${
+                          hasAttendance
+                            ? 'bg-green-500 hover:bg-green-600'
+                            : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        {hasAttendance ? (
+                          <CheckCircle
+                            className="w-5 h-5 text-white"
+                            strokeWidth={3}
+                          />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-gray-400" strokeWidth={2} />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Week of {formattedStart}</p>
+                      {hasAttendance ? (
+                        <p className="text-xs text-green-600">Attended</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No attendance</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               );
             })}
           </div>
