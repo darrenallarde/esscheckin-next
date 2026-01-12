@@ -3,11 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BarChart3, Users, Clock, LogOut, Heart } from "lucide-react";
+import DashboardHeader from "@/components/DashboardHeader";
+import { BarChart3, Users, Clock, Heart } from "lucide-react";
 
 const AdminDashboard = () => {
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if not admin or super_admin
@@ -20,7 +20,7 @@ const AdminDashboard = () => {
   // Show loading while determining access
   if (!user || !userRole) {
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -31,32 +31,15 @@ const AdminDashboard = () => {
     return null;
   }
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant="default">Admin</Badge>
-              <span className="text-muted-foreground">{user.email}</span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              Back to Check-In
-            </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background">
+      <DashboardHeader />
+
+      <div className="container mx-auto px-4 pb-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage students and view insights</p>
         </div>
 
         {/* Dashboard Grid */}

@@ -33,8 +33,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import DashboardNav from '@/components/DashboardNav';
-import UserHeader from '@/components/UserHeader';
+import DashboardHeader from '@/components/DashboardHeader';
 import CurriculumModal from '@/components/curriculum/CurriculumModal';
 import QuickActionsTab from '@/components/pastoral/QuickActionsTab';
 import SermonTab from '@/components/pastoral/SermonTab';
@@ -260,14 +259,11 @@ const PastoralDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* User Header */}
-        <UserHeader />
+      {/* Sticky Header with Navigation */}
+      <DashboardHeader />
 
-        {/* Dashboard Navigation */}
-        <DashboardNav />
-
-        {/* Header */}
+      <div className="container mx-auto px-4 pb-8 max-w-7xl">
+        {/* Page Header */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-foreground flex items-center justify-center gap-3 mb-2">
             <Heart className="w-10 h-10 text-primary" />
@@ -305,8 +301,9 @@ const PastoralDashboard = () => {
         <div className="min-h-[60vh]">
           {activeTab === 'actions' && (
             <QuickActionsTab
-              priorities={priorities}
-              onStudentClick={scrollToStudent}
+              students={pastoralData}
+              recommendations={recommendations || []}
+              currentSermon={currentCurriculum?.big_idea}
             />
           )}
 

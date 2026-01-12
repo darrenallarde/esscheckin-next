@@ -22,8 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import UserHeader from "@/components/UserHeader";
-import DashboardNav from "@/components/DashboardNav";
+import DashboardHeader from "@/components/DashboardHeader";
 import {
   Calendar,
   Users,
@@ -1411,14 +1410,10 @@ const SimpleAnalyticsDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* User Header */}
-        <UserHeader />
+      <DashboardHeader />
 
-        {/* Dashboard Navigation */}
-        <DashboardNav />
-
-        {/* Header */}
+      <div className="container mx-auto px-4 pb-8">
+        {/* Page Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Student Ministry Analytics
