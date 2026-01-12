@@ -258,31 +258,23 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                 day: 'numeric'
               });
 
-              // 0 days = grey box with X
-              // 1 day = grey box with green checkmark
-              // 2+ days = full green box with checkmark
+              // Attended = green box with white check
+              // Not attended = grey box with X
               const hasAttendance = week.days_attended > 0;
-              const multipleAttendance = week.days_attended >= 2;
 
               return (
                 <div
                   key={idx}
                   className={`flex-1 h-8 rounded flex items-center justify-center cursor-help transition-all ${
-                    multipleAttendance
+                    hasAttendance
                       ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-gray-200 hover:bg-gray-300'
                   }`}
-                  title={`${formattedStart} - ${formattedEnd}: ${
-                    week.days_attended === 0
-                      ? 'No attendance'
-                      : week.days_attended === 1
-                      ? 'Attended 1 day'
-                      : `Attended ${week.days_attended} days`
-                  }`}
+                  title={`Week of ${formattedStart}${hasAttendance ? ' ✓' : ' - No attendance'}`}
                 >
                   {hasAttendance ? (
                     <CheckCircle
-                      className={`w-5 h-5 ${multipleAttendance ? 'text-white' : 'text-green-600'}`}
+                      className="w-5 h-5 text-white"
                       strokeWidth={3}
                     />
                   ) : (

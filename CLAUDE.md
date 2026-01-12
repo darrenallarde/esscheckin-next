@@ -125,7 +125,7 @@ Components follow the shadcn/ui pattern - imported from `@/components/ui/`. Thes
 **Pastoral Dashboard:**
 - **StudentPastoralCard.tsx** (`/src/components/pastoral/StudentPastoralCard.tsx`) - Individual student card showing:
   - Belonging status badge (Ultra-Core, Core, Connected, On the Fringe, Missing)
-  - Last 8 weeks attendance pattern (weekly boxes: grey+X = no attendance, grey+check = 1 day, green+check = 2+ days)
+  - Last 8 weeks attendance pattern (weekly boxes: grey+X = no attendance, green+white check = attended)
   - Recommended pastoral action with copyable message template
   - AI-generated recommendation (if available)
 - **BelongingSpectrum.tsx** (`/src/components/pastoral/BelongingSpectrum.tsx`) - Visual distribution of students across belonging statuses
