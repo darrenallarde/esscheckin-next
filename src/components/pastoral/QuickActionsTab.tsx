@@ -44,14 +44,17 @@ interface ActionItem {
 }
 
 // Helper to get parent info with proper names
+// When name is unknown, we'll use the student's name for context (e.g., "Sarah's Mom")
 const getParentInfo = (student: StudentPastoralData): ParentInfo[] => {
   const parents: ParentInfo[] = [];
+  const studentName = student.first_name;
 
   // Check for mother
   if (student.mother_first_name || student.mother_phone) {
-    const name = student.mother_first_name
+    const hasName = !!student.mother_first_name;
+    const name = hasName
       ? `${student.mother_first_name}${student.mother_last_name ? ' ' + student.mother_last_name : ''}`
-      : 'Mom';
+      : `${studentName}'s Mom`;
     parents.push({
       name,
       phone: student.mother_phone,
@@ -61,9 +64,10 @@ const getParentInfo = (student: StudentPastoralData): ParentInfo[] => {
 
   // Check for father
   if (student.father_first_name || student.father_phone) {
-    const name = student.father_first_name
+    const hasName = !!student.father_first_name;
+    const name = hasName
       ? `${student.father_first_name}${student.father_last_name ? ' ' + student.father_last_name : ''}`
-      : 'Dad';
+      : `${studentName}'s Dad`;
     parents.push({
       name,
       phone: student.father_phone,
@@ -73,8 +77,9 @@ const getParentInfo = (student: StudentPastoralData): ParentInfo[] => {
 
   // Fall back to generic parent_name/parent_phone
   if (parents.length === 0 && (student.parent_name || student.parent_phone)) {
+    const hasName = !!student.parent_name;
     parents.push({
-      name: student.parent_name || 'Parent',
+      name: hasName ? student.parent_name! : `${studentName}'s Parent`,
       phone: student.parent_phone,
       relationship: 'Parent'
     });
@@ -189,6 +194,12 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
 
       // === PARENT ACTIONS ===
       parents.forEach((parent, idx) => {
+        // Determine greeting - if we don't have a real name, use a generic greeting
+        const hasRealName = !parent.name.includes("'s ");
+        const greeting = hasRealName
+          ? `Hi ${parent.name.split(' ')[0]}!`
+          : `Hi there!`;
+
         // Primary outreach to parent (for missing/fringe students)
         if (student.belonging_status === 'Missing' || student.belonging_status === 'On the Fringe') {
           items.push({
@@ -199,7 +210,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
             parent,
             title: `Reach out to ${parent.name}`,
             reason: `${student.first_name}'s ${parent.relationship} - student ${student.belonging_status === 'Missing' ? 'missing' : 'slipping away'}`,
-            message: `Hi ${parent.name.split(' ')[0]}! This is [Your Name] from ESS Youth. We've missed seeing ${student.first_name} and wanted to check in. Is everything okay? We'd love to have them back!`,
+            message: `${greeting} This is [Your Name] from ESS Youth. We've missed seeing ${student.first_name} and wanted to check in. Is everything okay? We'd love to have them back!`,
             priority: student.action_priority
           });
         }
@@ -213,7 +224,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
           parent,
           title: `Connect with ${parent.name}`,
           reason: `${student.first_name}'s ${parent.relationship}`,
-          message: `Hi ${parent.name.split(' ')[0]}! Just wanted to reach out and see how your family is doing. Is there anything we can be praying for or supporting you with?`,
+          message: `${greeting} Just wanted to reach out and see how ${student.first_name}'s family is doing. Is there anything we can be praying for or supporting you with?`,
           priority: 5
         });
       });
