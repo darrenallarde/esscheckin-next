@@ -303,7 +303,7 @@ const PastoralDashboard = () => {
             <QuickActionsTab
               students={pastoralData}
               recommendations={recommendations || []}
-              currentSermon={currentCurriculum?.big_idea}
+              curriculum={currentCurriculum || null}
             />
           )}
 
