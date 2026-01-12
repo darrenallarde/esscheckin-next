@@ -453,10 +453,10 @@ const SimpleAnalyticsDashboard = () => {
   // Show loading state while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Checking authentication...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
         </div>
       </div>
     );
@@ -465,10 +465,10 @@ const SimpleAnalyticsDashboard = () => {
   // Redirect if not authenticated (handled by useEffect, but show loading during redirect)
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Redirecting to login...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to login...</p>
         </div>
       </div>
     );
@@ -477,10 +477,10 @@ const SimpleAnalyticsDashboard = () => {
   // Show error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-white">Error Loading Analytics</h2>
-          <p className="text-white/80 mb-4">{error.message}</p>
+          <h2 className="text-xl font-semibold mb-2 text-destructive">Error Loading Analytics</h2>
+          <p className="text-muted-foreground mb-4">{error.message}</p>
           <Button onClick={() => window.location.reload()}>Reload Page</Button>
         </div>
       </div>
@@ -490,10 +490,10 @@ const SimpleAnalyticsDashboard = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading analytics data...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading analytics data...</p>
         </div>
       </div>
     );
@@ -501,10 +501,10 @@ const SimpleAnalyticsDashboard = () => {
 
   if (!analyticsData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-white">No Data Available</h2>
-          <p className="text-white/80 mb-4">No check-in data found.</p>
+          <h2 className="text-xl font-semibold mb-2 text-foreground">No Data Available</h2>
+          <p className="text-muted-foreground mb-4">No check-in data found.</p>
         </div>
       </div>
     );
@@ -565,7 +565,7 @@ const SimpleAnalyticsDashboard = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="uniqueAttendees" fill="#10B981" name="Unique Students" />
+              <Bar dataKey="uniqueAttendees" fill="hsl(84, 81%, 44%)" name="Unique Students" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -683,8 +683,8 @@ const SimpleAnalyticsDashboard = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="wednesday" fill="#3B82F6" name="Wednesday" />
-                  <Bar dataKey="sunday" fill="#10B981" name="Sunday" />
+                  <Bar dataKey="wednesday" fill="hsl(149, 64%, 24%)" name="Wednesday" />
+                  <Bar dataKey="sunday" fill="hsl(84, 81%, 44%)" name="Sunday" />
                 </BarChart>
               </ResponsiveContainer>
             );
@@ -764,7 +764,7 @@ const SimpleAnalyticsDashboard = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="newStudents" fill="#F59E0B" name="New Students" />
+              <Bar dataKey="newStudents" fill="hsl(38, 70%, 50%)" name="New Students" />
             </BarChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -848,7 +848,7 @@ const SimpleAnalyticsDashboard = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="studentLeaders" fill="#DC2626" name="Student Leaders" />
+              <Bar dataKey="studentLeaders" fill="hsl(15, 70%, 50%)" name="Student Leaders" />
             </BarChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -900,7 +900,7 @@ const SimpleAnalyticsDashboard = () => {
                 type="monotone" 
                 dataKey="cumulativeReach" 
                 stroke="#8B5CF6" 
-                fill="#8B5CF6" 
+                fill="hsl(82, 78%, 55%)" 
                 fillOpacity={0.3}
                 name="Cumulative Students"
               />
@@ -972,7 +972,7 @@ const SimpleAnalyticsDashboard = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="totalAttendees" fill="#3B82F6" name="Total Check-ins" />
+              <Bar dataKey="totalAttendees" fill="hsl(149, 64%, 24%)" name="Total Check-ins" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -998,7 +998,7 @@ const SimpleAnalyticsDashboard = () => {
                 formatter={(value) => [value, 'Students']}
                 labelFormatter={(label) => `Grade ${label}`}
               />
-              <Bar dataKey="count" fill="#8B5CF6" name="Students" />
+              <Bar dataKey="count" fill="hsl(82, 78%, 55%)" name="Students" />
             </BarChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1410,7 +1410,7 @@ const SimpleAnalyticsDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* User Header */}
         <UserHeader />
@@ -1420,10 +1420,10 @@ const SimpleAnalyticsDashboard = () => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Echo Student Ministry Analytics
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            Student Ministry Analytics
           </h1>
-          <p className="text-xl text-white/90">
+          <p className="text-xl text-muted-foreground">
             Live Data: {analyticsData.totalStudents} Students, {analyticsData.totalCheckIns} Total Check-ins
           </p>
         </div>
@@ -1474,28 +1474,28 @@ const SimpleAnalyticsDashboard = () => {
           
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-secondary/10 rounded-lg mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 text-secondary" />
               </div>
               <div className="text-2xl font-bold text-foreground">{analyticsData.peakAttendance}</div>
               <div className="text-muted-foreground">Peak Daily Attendance</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-accent/20 rounded-lg mx-auto mb-4">
+                <Calendar className="w-6 h-6 text-secondary" />
               </div>
               <div className="text-2xl font-bold text-foreground">{analyticsData.totalCheckIns}</div>
               <div className="text-muted-foreground">Total Check-ins</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
-                <Clock className="w-6 h-6 text-yellow-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-muted rounded-lg mx-auto mb-4">
+                <Clock className="w-6 h-6 text-muted-foreground" />
               </div>
               <div className="text-2xl font-bold text-foreground">
                 {(() => {

@@ -1,65 +1,75 @@
+/* Google Fonts - Poppins and Nunito Sans */
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Seedling Design System
+ * Earth tones with bold chartreuse/forest green accents
+ * Fonts: Poppins (headings), Nunito Sans (body)
+ * All colors in HSL format
+ */
 
 @layer base {
   :root {
-    --background: 214 100% 97%;
-    --foreground: 215 25% 27%;
+    /* Base colors - warm earth tones */
+    --background: 38 29% 88%;           /* #e9e2d6 - warm cream */
+    --foreground: 12 6% 15%;            /* #292524 - dark brown */
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card: 0 0% 100%;                  /* white */
+    --card-foreground: 12 6% 15%;       /* dark brown */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover-foreground: 12 6% 15%;
 
-    --primary: 215 84% 53%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary - bold chartreuse */
+    --primary: 84 81% 44%;              /* #84cc16 - chartreuse */
+    --primary-foreground: 12 6% 15%;    /* dark text on bright green */
 
-    --secondary: 197 37% 96%;
-    --secondary-foreground: 215 25% 27%;
+    /* Secondary - forest green */
+    --secondary: 149 64% 24%;           /* #166534 - forest green */
+    --secondary-foreground: 0 0% 100%;  /* white text */
 
-    --muted: 197 37% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted - light stone */
+    --muted: 20 6% 90%;                 /* #e7e5e4 - light stone */
+    --muted-foreground: 25 5% 33%;      /* #57534e - warm gray */
 
-    --accent: 158 64% 52%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - brighter lime for highlights */
+    --accent: 82 78% 55%;               /* #a3e635 - bright lime */
+    --accent-foreground: 12 6% 15%;     /* dark text */
 
+    /* Destructive - keep functional red */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 215 84% 53%;
+    /* Borders and inputs */
+    --border: 30 10% 80%;               /* warm border */
+    --input: 30 10% 80%;
+    --ring: 84 81% 44%;                 /* chartreuse ring */
 
-    /* Ministry-specific design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(215 84% 53%), hsl(197 71% 73%));
-    --gradient-accent: linear-gradient(135deg, hsl(158 64% 52%), hsl(179 46% 65%));
-    --gradient-background: linear-gradient(180deg, hsl(214 100% 97%), hsl(197 37% 96%));
-    --shadow-card: 0 4px 6px -1px hsl(215 84% 53% / 0.1);
-    --shadow-input: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    /* Seedling design tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(84 81% 44%), hsl(82 78% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(149 64% 24%), hsl(149 50% 35%));
+    --gradient-background: linear-gradient(180deg, hsl(38 29% 88%), hsl(38 25% 92%));
+    --shadow-card: 0 4px 6px -1px hsl(12 6% 15% / 0.08);
+    --shadow-input: 0 1px 2px 0 hsl(12 6% 15% / 0.05);
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar - earth tones */
+    --sidebar-background: 38 25% 92%;
+    --sidebar-foreground: 12 6% 15%;
+    --sidebar-primary: 84 81% 44%;
+    --sidebar-primary-foreground: 12 6% 15%;
+    --sidebar-accent: 38 20% 85%;
+    --sidebar-accent-foreground: 12 6% 15%;
+    --sidebar-border: 30 10% 80%;
+    --sidebar-ring: 84 81% 44%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Typography */
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Nunito Sans', sans-serif;
   }
 
   .dark {
@@ -108,5 +118,10 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
   }
 }

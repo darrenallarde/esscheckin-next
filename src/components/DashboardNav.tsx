@@ -11,12 +11,12 @@ const DashboardNav: React.FC = () => {
   const isPastoral = location.pathname === '/admin/pastoral';
 
   return (
-    <div className="flex justify-center gap-3 mb-8">
+    <div className="flex flex-wrap justify-center gap-3 mb-8">
       <Button
         onClick={() => navigate('/admin')}
-        variant="secondary"
+        variant="outline"
         size="lg"
-        className="bg-white/90 hover:bg-white text-purple-700 font-semibold"
+        className="bg-card hover:bg-muted text-foreground font-semibold border-border"
       >
         <Home className="w-4 h-4 mr-2" />
         Admin Home
@@ -24,11 +24,11 @@ const DashboardNav: React.FC = () => {
 
       <Button
         onClick={() => navigate('/dashboard')}
-        variant={isAnalytics ? 'default' : 'secondary'}
+        variant={isAnalytics ? 'default' : 'outline'}
         size="lg"
         className={isAnalytics
-          ? 'bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg'
-          : 'bg-white/80 hover:bg-white text-blue-700 font-semibold'}
+          ? 'bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg'
+          : 'bg-card hover:bg-muted text-foreground font-semibold border-border'}
       >
         <BarChart3 className="w-4 h-4 mr-2" />
         Analytics
@@ -36,11 +36,11 @@ const DashboardNav: React.FC = () => {
 
       <Button
         onClick={() => navigate('/admin/pastoral')}
-        variant={isPastoral ? 'default' : 'secondary'}
+        variant={isPastoral ? 'default' : 'outline'}
         size="lg"
         className={isPastoral
-          ? 'bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg'
-          : 'bg-white/80 hover:bg-white text-green-700 font-semibold'}
+          ? 'bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold shadow-lg'
+          : 'bg-card hover:bg-muted text-foreground font-semibold border-border'}
       >
         <Heart className="w-4 h-4 mr-2" />
         Pastoral Insights

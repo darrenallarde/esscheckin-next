@@ -251,10 +251,10 @@ const PastoralDashboard = () => {
   if (!user || userRole === null || userRole === undefined) {
     console.log('⏳ Pastoral Dashboard - Waiting for auth... user:', !!user, 'userRole:', userRole);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-sm text-white">Loading Pastoral Dashboard...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading Pastoral Dashboard...</p>
         </div>
       </div>
     );
@@ -309,7 +309,7 @@ const PastoralDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* User Header */}
         <UserHeader />
@@ -321,20 +321,20 @@ const PastoralDashboard = () => {
         <div className="mb-8">
           <div className="text-center mb-4">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <h1 className="text-4xl font-bold text-white flex items-center gap-3">
-                <Heart className="w-10 h-10 text-white" />
+              <h1 className="text-4xl font-bold text-foreground flex items-center gap-3">
+                <Heart className="w-10 h-10 text-primary" />
                 Pastoral Insights Dashboard
               </h1>
               <Button
                 onClick={() => setCurriculumModalOpen(true)}
                 size="sm"
-                className="bg-white/90 hover:bg-white text-blue-700 font-semibold"
+                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Teaching
               </Button>
             </div>
-            <p className="text-xl text-white/90">
+            <p className="text-xl text-muted-foreground">
               Track student belonging and take pastoral action
             </p>
           </div>

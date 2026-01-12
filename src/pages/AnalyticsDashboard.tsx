@@ -284,7 +284,7 @@ const AnalyticsDashboard = () => {
               />
               <YAxis label={{ value: 'Students', angle: -90, position: 'insideLeft' }} />
               <Tooltip formatter={(value) => [value, 'Students']} />
-              <Bar dataKey="uniqueAttendees" fill="#10B981" name="Students" />
+              <Bar dataKey="uniqueAttendees" fill="hsl(84, 81%, 44%)" name="Students" />
             </BarChart>
           </ResponsiveContainer>
 
@@ -381,12 +381,12 @@ const AnalyticsDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-background">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            Echo Student Ministry Analytics
+            Student Ministry Analytics
           </h1>
           <p className="text-xl text-muted-foreground mb-4">
             Live Data: {analyticsData.totalStudents} Students, {analyticsData.totalCheckIns} Total Check-ins
@@ -431,7 +431,7 @@ const AnalyticsDashboard = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mx-auto mb-4">
@@ -441,35 +441,35 @@ const AnalyticsDashboard = () => {
               <div className="text-muted-foreground">Total Students</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-secondary/10 rounded-lg mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 text-secondary" />
               </div>
               <div className="text-2xl font-bold text-foreground">{analyticsData.peakAttendance}</div>
               <div className="text-muted-foreground">Peak Daily Attendance</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-accent/20 rounded-lg mx-auto mb-4">
+                <Calendar className="w-6 h-6 text-secondary" />
               </div>
               <div className="text-2xl font-bold text-foreground">{analyticsData.totalCheckIns}</div>
               <div className="text-muted-foreground">Total Check-ins</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
-                <Clock className="w-6 h-6 text-yellow-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-muted rounded-lg mx-auto mb-4">
+                <Clock className="w-6 h-6 text-muted-foreground" />
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {analyticsData.totalStudents > 0 ? 
-                  (analyticsData.totalCheckIns / analyticsData.totalStudents).toFixed(1) : 
+                {analyticsData.totalStudents > 0 ?
+                  (analyticsData.totalCheckIns / analyticsData.totalStudents).toFixed(1) :
                   '0'
                 }
               </div>

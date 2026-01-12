@@ -97,11 +97,11 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <BarChart3 className="w-5 h-5 text-primary" />
                 Analytics Dashboard
               </CardTitle>
               <CardDescription>
@@ -111,7 +111,7 @@ const AdminDashboard = () => {
             <CardContent>
               <Button
                 onClick={() => navigate('/dashboard')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 View Analytics
               </Button>
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-green-600" />
+                <Heart className="w-5 h-5 text-secondary" />
                 Pastoral Insights
               </CardTitle>
               <CardDescription>
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
             <CardContent>
               <Button
                 onClick={() => navigate('/admin/pastoral')}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
               >
                 View Pastoral Insights
               </Button>
@@ -141,7 +141,7 @@ const AdminDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
+                <Users className="w-5 h-5 text-muted-foreground" />
                 Student Management
               </CardTitle>
               <CardDescription>
