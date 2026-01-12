@@ -331,7 +331,7 @@ const PastoralDashboard = () => {
                 className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Teaching
+                Add Sermon
               </Button>
             </div>
             <p className="text-xl text-muted-foreground">

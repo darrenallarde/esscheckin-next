@@ -1,9 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CurriculumWeek } from '@/types/curriculum';
-import { Book, Calendar, Heart, Users, Edit } from 'lucide-react';
+import { FileText, Calendar, Edit } from 'lucide-react';
 
 interface CurrentCurriculumDisplayProps {
   curriculum: CurriculumWeek | null;
@@ -13,35 +12,40 @@ interface CurrentCurriculumDisplayProps {
 const CurrentCurriculumDisplay: React.FC<CurrentCurriculumDisplayProps> = ({ curriculum, onEdit }) => {
   if (!curriculum) {
     return (
-      <Card className="bg-yellow-50 border-yellow-200">
+      <Card className="bg-muted border-border">
         <CardContent className="p-6 text-center">
-          <Book className="w-12 h-12 mx-auto mb-3 text-yellow-600" />
-          <h3 className="font-semibold text-lg mb-2">No Current Curriculum Set</h3>
+          <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <h3 className="font-semibold text-lg mb-2">No Sermon Added</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Add this week's teaching content to enable AI-powered recommendations
+            Add this week's sermon to enable AI-powered recommendations
           </p>
           <Button onClick={onEdit}>
-            Add Current Teaching
+            Add Sermon
           </Button>
         </CardContent>
       </Card>
     );
   }
 
+  // Get sermon preview (first 300 chars)
+  const sermonContent = curriculum.big_idea || '';
+  const hasFullSermon = sermonContent.length > 200;
+  const sermonPreview = hasFullSermon
+    ? sermonContent.substring(0, 300) + '...'
+    : sermonContent;
+
   return (
-    <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
-      <CardHeader>
+    <Card className="bg-card border-border">
+      <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-xl flex items-center gap-2 mb-1">
-              <Book className="w-5 h-5 text-blue-600" />
-              Current Teaching: {curriculum.topic_title}
+            <CardTitle className="text-lg flex items-center gap-2 mb-1">
+              <FileText className="w-5 h-5 text-primary" />
+              Current Sermon
             </CardTitle>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
               <span>Week of {new Date(curriculum.week_date).toLocaleDateString()}</span>
-              <span className="text-gray-400">•</span>
-              <span className="font-medium">{curriculum.series_name}</span>
             </div>
           </div>
           {onEdit && (
@@ -53,55 +57,29 @@ const CurrentCurriculumDisplay: React.FC<CurrentCurriculumDisplayProps> = ({ cur
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Scripture */}
-        <div>
-          <div className="text-sm font-semibold text-gray-700 mb-1">Main Scripture</div>
-          <div className="text-base font-medium text-blue-900">{curriculum.main_scripture}</div>
-        </div>
+      <CardContent className="space-y-3">
+        {/* Topic/Title */}
+        {curriculum.topic_title && curriculum.topic_title !== 'Teaching' && (
+          <div className="font-medium text-foreground">
+            {curriculum.topic_title}
+          </div>
+        )}
 
-        {/* Big Idea */}
-        <div>
-          <div className="text-sm font-semibold text-gray-700 mb-1">Big Idea</div>
-          <div className="text-base italic text-gray-800">{curriculum.big_idea}</div>
-        </div>
-
-        {/* Tags Row */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t">
-          {/* Faith Skills */}
-          {curriculum.faith_skills.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Heart className="w-3 h-3 text-red-500" />
-              {curriculum.faith_skills.map(skill => (
-                <Badge key={skill} variant="secondary" className="text-xs">
-                  {skill}
-                </Badge>
-              ))}
+        {/* Sermon Preview */}
+        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">
+            {sermonPreview}
+          </div>
+          {hasFullSermon && (
+            <div className="text-xs text-muted-foreground mt-2">
+              {sermonContent.length.toLocaleString()} characters total
             </div>
           )}
-
-          {/* Target Phases */}
-          {curriculum.target_phases.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Users className="w-3 h-3 text-green-500" />
-              {curriculum.target_phases.sort().map(phase => (
-                <Badge key={phase} variant="outline" className="text-xs">
-                  {phase}th
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Application Challenge */}
-        <div className="bg-white/70 rounded-lg p-3 border border-blue-200">
-          <div className="text-xs font-semibold text-gray-600 mb-1">This Week's Challenge</div>
-          <div className="text-sm text-gray-800">{curriculum.application_challenge}</div>
         </div>
 
         {/* AI Context Notice */}
-        <div className="text-xs text-center text-gray-600 pt-2 border-t">
-          💡 This content powers AI recommendations for each student
+        <div className="text-xs text-center text-muted-foreground pt-2 border-t">
+          This sermon powers AI recommendations for each student
         </div>
       </CardContent>
     </Card>

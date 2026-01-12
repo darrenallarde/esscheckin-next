@@ -172,6 +172,10 @@ export const generateRecommendationPrompt = (input: RecommendationInput): string
   const gradeNum = parseInt(grade);
   const ageStrategy = gradeNum >= 9 ? AGE_STRATEGIES['high'] : AGE_STRATEGIES['middle'];
 
+  // The sermon content is stored in big_idea field
+  const sermonContent = curriculum.big_idea || '';
+  const hasFullSermon = sermonContent.length > 200;
+
   return `You are a Christ-centered youth ministry AI assistant helping pastors provide personalized, developmentally-appropriate follow-up with students.
 
 ## THEOLOGICAL FOUNDATION
@@ -180,16 +184,18 @@ All recommendations must flow from:
 2. Love Others (Matthew 22:39)
 3. Love Yourself (Understanding identity in Christ)
 
-Orange's 9 Core Truths: ${curriculum.core_truths.join(', ') || 'Not specified'}
-Faith Skills Focus: ${curriculum.faith_skills.join(', ') || 'Not specified'}
+## THIS WEEK'S SERMON/TEACHING
+${hasFullSermon ? `
+The pastor has provided their sermon notes below. Extract the key themes, scriptures, and application points to personalize your recommendation:
 
-## CURRENT TEACHING CONTEXT
-Series: ${curriculum.series_name}
+---BEGIN SERMON---
+${sermonContent}
+---END SERMON---
+` : `
 Topic: ${curriculum.topic_title}
-Scripture: ${curriculum.main_scripture}
-Big Idea: ${curriculum.big_idea}
-Key Biblical Principle: ${curriculum.key_biblical_principle}
-Application Challenge: ${curriculum.application_challenge}
+${curriculum.main_scripture ? `Scripture: ${curriculum.main_scripture}` : ''}
+${curriculum.application_challenge ? `Application: ${curriculum.application_challenge}` : ''}
+`}
 
 ## STUDENT CONTEXT
 Name: ${student.first_name}
@@ -226,7 +232,7 @@ ${ageStrategy}
 - Use ${student.first_name}'s actual numbers (${student.total_checkins_8weeks} check-ins, ${student.days_since_last_seen} days since last seen)
 - Reference their Wed/Sun preference (${student.wednesday_count}W vs ${student.sunday_count}S)
 - ${student.is_declining ? 'Their declining pattern suggests something changed - find out what!' : 'Their stable pattern suggests consistency - build on it!'}
-- This week's teaching on "${curriculum.topic_title}" is especially relevant because ${curriculum.application_challenge}
+- Connect this week's sermon/teaching to their specific life situation and developmental phase
 
 ## YOUR TASK
 Generate a pastoral recommendation that:
@@ -379,18 +385,18 @@ export const generateRecommendation = async (
 
 // Fallback recommendation generator (when API is unavailable or for testing)
 export const generateFallbackRecommendation = (input: RecommendationInput): RecommendationOutput => {
-  const { student, curriculum } = input;
+  const { student } = input;
 
   const actionsByStatus: Record<string, [string, string, string]> = {
     'Ultra-Core': [
       `Invite ${student.first_name} to a leadership development conversation`,
-      `Challenge them with deeper study on ${curriculum.topic_title}`,
+      `Challenge them with deeper study on this week's teaching`,
       `Ask them to mentor a younger or newer student`
     ],
     'Core': [
       `Text ${student.first_name}: "Love seeing you every week!"`,
       `Encourage them to invite a friend to next week's session`,
-      `Ask how they're applying ${curriculum.topic_title} in their life`
+      `Ask how they're applying this week's message in their life`
     ],
     'Connected': [
       `Reach out: "Hey ${student.first_name}! We miss you when you're not here"`,
@@ -411,7 +417,7 @@ export const generateFallbackRecommendation = (input: RecommendationInput): Reco
 
   const actions = actionsByStatus[student.belonging_status] || [
     `Reach out to ${student.first_name} this week`,
-    `Connect their situation to ${curriculum.topic_title}`,
+    `Connect this week's sermon to their situation`,
     `Follow up with parents if needed`
   ];
 
@@ -426,6 +432,6 @@ export const generateFallbackRecommendation = (input: RecommendationInput): Reco
     action_bullets: actions,
     context_paragraph: `As a ${student.grade}th grader in ${student.belonging_status} status, ${student.first_name} needs specific pastoral attention. With ${student.days_since_last_seen} days since last attendance, this is ${
       student.days_since_last_seen > 30 ? 'urgent' : 'important'
-    }. Connect this week's teaching on ${curriculum.topic_title} to their specific situation.`
+    }. Connect this week's teaching to their specific situation.`
   };
 };
