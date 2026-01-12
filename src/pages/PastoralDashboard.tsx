@@ -26,7 +26,7 @@
  * - Missing: Not seen in 60+ days (disconnected, start with parent contact)
  */
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,7 +41,7 @@ import SermonTab from '@/components/pastoral/SermonTab';
 import AllStudentsTab from '@/components/pastoral/AllStudentsTab';
 import { StudentPastoralData, BelongingDistribution, PastoralPriorities } from '@/types/pastoral';
 import { CurriculumWeek, AIRecommendation } from '@/types/curriculum';
-import { Heart, Zap, BookOpen, Users } from 'lucide-react';
+import { Heart, Zap, BookOpen, Users, Loader2 } from 'lucide-react';
 
 type TabType = 'actions' | 'sermon' | 'students';
 
@@ -49,8 +49,21 @@ const PastoralDashboard = () => {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('actions');
+  const [loadingTab, setLoadingTab] = useState<TabType | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [curriculumModalOpen, setCurriculumModalOpen] = useState(false);
   const studentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const handleTabChange = (tab: TabType) => {
+    if (activeTab === tab) return;
+    setLoadingTab(tab);
+    startTransition(() => {
+      setActiveTab(tab);
+      setTimeout(() => setLoadingTab(null), 100);
+    });
+  };
+
+  const isTabLoading = (tab: TabType) => loadingTab === tab || (isPending && loadingTab === tab);
 
   // Redirect if not admin (only redirect when auth is fully loaded)
   React.useEffect(() => {
@@ -270,14 +283,19 @@ const PastoralDashboard = () => {
           {tabs.map(tab => (
             <Button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               variant={activeTab === tab.id ? 'default' : 'outline'}
               size="lg"
+              disabled={isTabLoading(tab.id)}
               className={activeTab === tab.id
                 ? 'bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg'
                 : 'bg-card hover:bg-muted text-foreground font-semibold border-border'}
             >
-              <tab.icon className="w-5 h-5 mr-2" />
+              {isTabLoading(tab.id) ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <tab.icon className="w-5 h-5 mr-2" />
+              )}
               {tab.label}
             </Button>
           ))}
