@@ -67,7 +67,7 @@ interface StudentStats {
 const SimpleAnalyticsDashboard = () => {
   const navigate = useNavigate();
   const { user, userRole, loading } = useAuth();
-  const [viewMode, setViewMode] = useState('unique-attendees');
+  const [viewMode, setViewMode] = useState('wed-vs-sunday');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -572,8 +572,8 @@ const SimpleAnalyticsDashboard = () => {
       )
     },
     'wed-vs-sunday': {
-      title: 'Wednesday vs Sunday Attendance',
-      subtitle: 'Comparing attendance patterns between service days by week',
+      title: 'Weekly Attendance by Day',
+      subtitle: 'Stacked view showing Wednesday and Sunday attendance per week',
       component: (
         <div className="space-y-6">
           {/* Create combined data grouped by week */}
@@ -683,8 +683,8 @@ const SimpleAnalyticsDashboard = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="wednesday" fill="hsl(149, 64%, 24%)" name="Wednesday" />
-                  <Bar dataKey="sunday" fill="hsl(84, 81%, 44%)" name="Sunday" />
+                  <Bar dataKey="wednesday" stackId="attendance" fill="hsl(149, 64%, 24%)" name="Wednesday" />
+                  <Bar dataKey="sunday" stackId="attendance" fill="hsl(84, 81%, 44%)" name="Sunday" />
                 </BarChart>
               </ResponsiveContainer>
             );

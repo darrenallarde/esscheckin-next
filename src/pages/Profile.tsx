@@ -422,11 +422,11 @@ const Profile = () => {
                         </div>
                         <div className="text-sm text-muted-foreground">Achievements</div>
                       </div>
-                      <div className="text-center p-4 bg-orange-50 rounded-lg">
-                        <div className="text-3xl font-bold text-orange-600">
-                          {Math.max(gameProfile.wednesday_streak, gameProfile.sunday_streak)}
+                      <div className="text-center p-4 bg-secondary/10 rounded-lg">
+                        <div className="text-3xl font-bold text-secondary">
+                          {gameProfile.total_streak}
                         </div>
-                        <div className="text-sm text-muted-foreground">Best Streak</div>
+                        <div className="text-sm text-muted-foreground">Week Streak 🔥</div>
                       </div>
                     </div>
 

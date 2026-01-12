@@ -665,27 +665,21 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-primary/10 rounded-lg">
+                <div className="text-2xl font-bold text-primary">
                   {gameProfile?.total_check_ins || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Total Check-ins</div>
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {gameProfile?.wednesday_streak || 0}
+              <div className="text-center p-4 bg-secondary/10 rounded-lg">
+                <div className="text-2xl font-bold text-secondary">
+                  {gameProfile?.total_streak || 0}
                 </div>
-                <div className="text-xs text-muted-foreground">Wednesday Streak</div>
+                <div className="text-xs text-muted-foreground">Week Streak 🔥</div>
               </div>
-              <div className="text-center p-4 bg-pink-50 rounded-lg">
-                <div className="text-2xl font-bold text-pink-600">
-                  {gameProfile?.sunday_streak || 0}
-                </div>
-                <div className="text-xs text-muted-foreground">Sunday Streak</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="text-center p-4 bg-accent/20 rounded-lg">
+                <div className="text-2xl font-bold text-secondary">
                   {gameProfile?.achievements_count || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Achievements</div>
