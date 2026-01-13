@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StudentPastoralData } from '@/types/pastoral';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StudentPastoralData, BelongingStatus } from '@/types/pastoral';
 import { AIRecommendation, CurriculumWeek } from '@/types/curriculum';
 import {
-  MessageSquare,
   Check,
   Phone,
   Users,
@@ -14,7 +14,10 @@ import {
   BookOpen,
   Sparkles,
   Send,
-  GraduationCap
+  GraduationCap,
+  Filter,
+  Calendar,
+  X
 } from 'lucide-react';
 
 interface QuickActionsTabProps {
@@ -104,6 +107,8 @@ const getParentInfo = (student: StudentPastoralData): ParentInfo[] => {
   return parents;
 };
 
+type DateFilter = 'all' | '7days' | '30days' | '60days' | 'never';
+
 const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
   students,
   recommendations,
@@ -111,8 +116,20 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>('students');
+  const [statusFilter, setStatusFilter] = useState<BelongingStatus | 'all'>('all');
+  const [gradeFilter, setGradeFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   // Track which action type is selected per card
   const [selectedActions, setSelectedActions] = useState<Record<string, ActionType>>({});
+
+  // Get unique grades from students
+  const availableGrades = useMemo(() => {
+    const grades = new Set<string>();
+    students.forEach(s => {
+      if (s.grade) grades.add(s.grade);
+    });
+    return Array.from(grades).sort((a, b) => parseInt(a) - parseInt(b));
+  }, [students]);
 
   const sermonTopic = curriculum?.big_idea
     ? curriculum.big_idea.split('\n')[0].substring(0, 80)
@@ -220,8 +237,36 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
   }, [students, recommendations, sermonTopic]);
 
   const filteredCards = useMemo(() => {
-    return personCards.filter(card => card.audience === audienceFilter);
-  }, [personCards, audienceFilter]);
+    return personCards.filter(card => {
+      // Audience filter
+      if (card.audience !== audienceFilter) return false;
+
+      // Status filter
+      if (statusFilter !== 'all' && card.student.belonging_status !== statusFilter) return false;
+
+      // Grade filter
+      if (gradeFilter !== 'all' && card.student.grade !== gradeFilter) return false;
+
+      // Date filter (last seen)
+      if (dateFilter !== 'all') {
+        const days = card.student.days_since_last_seen;
+        if (dateFilter === 'never' && days !== 999999) return false;
+        if (dateFilter === '7days' && (days > 7 || days === 999999)) return false;
+        if (dateFilter === '30days' && (days > 30 || days === 999999)) return false;
+        if (dateFilter === '60days' && (days > 60 || days === 999999)) return false;
+      }
+
+      return true;
+    });
+  }, [personCards, audienceFilter, statusFilter, gradeFilter, dateFilter]);
+
+  const hasActiveFilters = statusFilter !== 'all' || gradeFilter !== 'all' || dateFilter !== 'all';
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setGradeFilter('all');
+    setDateFilter('all');
+  };
 
   const getSelectedAction = (card: PersonCard): ActionType => {
     // Default to primary if available, otherwise prayer
@@ -264,7 +309,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
       </div>
 
       {/* Audience Toggle */}
-      <div className="flex justify-center gap-2 mb-6">
+      <div className="flex justify-center gap-2 mb-4">
         <Button
           size="lg"
           variant={audienceFilter === 'students' ? 'default' : 'outline'}
@@ -284,6 +329,74 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
           Parents ({parentCount})
         </Button>
       </div>
+
+      {/* Filters */}
+      <Card className="mb-4">
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              <span>Filters:</span>
+            </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as BelongingStatus | 'all')}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Missing">Missing</SelectItem>
+                <SelectItem value="On the Fringe">On the Fringe</SelectItem>
+                <SelectItem value="Connected">Connected</SelectItem>
+                <SelectItem value="Core">Core</SelectItem>
+                <SelectItem value="Ultra-Core">Ultra-Core</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Grade Filter */}
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue placeholder="Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades</SelectItem>
+                {availableGrades.map(grade => (
+                  <SelectItem key={grade} value={grade}>Grade {grade}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter */}
+            <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
+              <SelectTrigger className="w-[140px] h-9">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Last Seen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Time</SelectItem>
+                <SelectItem value="7days">Last 7 days</SelectItem>
+                <SelectItem value="30days">Last 30 days</SelectItem>
+                <SelectItem value="60days">Last 60 days</SelectItem>
+                <SelectItem value="never">Never attended</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            )}
+
+            {/* Results count */}
+            <div className="ml-auto text-sm text-muted-foreground">
+              {filteredCards.length} of {personCards.filter(c => c.audience === audienceFilter).length}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cards */}
       <div className="space-y-4">
