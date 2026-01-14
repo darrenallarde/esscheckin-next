@@ -56,7 +56,7 @@ const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, o
         parent_communication: null,
         home_conversation_starter: null,
         prayer_focus: null,
-        is_current: isCurrent
+        is_current: false // Always insert as false first
       };
 
       const { data, error } = await supabase
@@ -67,9 +67,10 @@ const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, o
 
       if (error) throw error;
 
-      // If marked as current, set it
+      // Then set as current using the RPC (handles unsetting previous)
       if (isCurrent && data) {
-        await supabase.rpc('set_current_curriculum', { p_curriculum_id: data.id });
+        const { error: rpcError } = await supabase.rpc('set_current_curriculum', { p_curriculum_id: data.id });
+        if (rpcError) throw rpcError;
       }
 
       toast({
