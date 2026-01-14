@@ -312,8 +312,34 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
         <p className="text-muted-foreground">Select an action, preview the message, then send</p>
       </div>
 
-      {/* Audience Toggle */}
-      <div className="flex justify-center gap-2 mb-4">
+      {/* View Toggle + Audience Toggle */}
+      <div className="flex justify-center items-center gap-4 mb-4">
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-2 border rounded-lg p-1 bg-muted/30">
+          <Button
+            size="sm"
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            onClick={() => setViewMode('list')}
+            className="h-8 px-3"
+          >
+            <LayoutList className="w-4 h-4 mr-1" />
+            List
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+            onClick={() => setViewMode('gallery')}
+            className="h-8 px-3"
+          >
+            <LayoutGrid className="w-4 h-4 mr-1" />
+            Gallery
+          </Button>
+        </div>
+
+        <div className="h-8 w-px bg-border" />
+
+        {/* Audience Toggle */}
+        <div className="flex gap-2">
         <Button
           size="lg"
           variant={audienceFilter === 'students' ? 'default' : 'outline'}
@@ -332,6 +358,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
           <Users className="w-5 h-5 mr-2" />
           Parents ({parentCount})
         </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -397,26 +424,6 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
             {/* Results count */}
             <div className="ml-auto text-sm text-muted-foreground">
               {filteredCards.length} of {personCards.filter(c => c.audience === audienceFilter).length}
-            </div>
-
-            {/* View Toggle */}
-            <div className="flex border rounded-lg overflow-hidden">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setViewMode('list')}
-                className={`h-9 px-3 rounded-none ${viewMode === 'list' ? 'bg-muted' : ''}`}
-              >
-                <LayoutList className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setViewMode('gallery')}
-                className={`h-9 px-3 rounded-none border-l ${viewMode === 'gallery' ? 'bg-muted' : ''}`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </CardContent>
