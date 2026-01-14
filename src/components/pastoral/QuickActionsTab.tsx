@@ -17,7 +17,9 @@ import {
   GraduationCap,
   Filter,
   Calendar,
-  X
+  X,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react';
 
 interface QuickActionsTabProps {
@@ -108,6 +110,7 @@ const getParentInfo = (student: StudentPastoralData): ParentInfo[] => {
 };
 
 type DateFilter = 'all' | '7days' | '30days' | '60days' | 'never';
+type ViewMode = 'list' | 'gallery';
 
 const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
   students,
@@ -119,6 +122,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<BelongingStatus | 'all'>('all');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   // Track which action type is selected per card
   const [selectedActions, setSelectedActions] = useState<Record<string, ActionType>>({});
 
@@ -394,21 +398,42 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
             <div className="ml-auto text-sm text-muted-foreground">
               {filteredCards.length} of {personCards.filter(c => c.audience === audienceFilter).length}
             </div>
+
+            {/* View Toggle */}
+            <div className="flex border rounded-lg overflow-hidden">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewMode('list')}
+                className={`h-9 px-3 rounded-none ${viewMode === 'list' ? 'bg-muted' : ''}`}
+              >
+                <LayoutList className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewMode('gallery')}
+                className={`h-9 px-3 rounded-none border-l ${viewMode === 'gallery' ? 'bg-muted' : ''}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Cards */}
-      <div className="space-y-4">
-        {filteredCards.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Check className="w-12 h-12 mx-auto mb-4 text-green-500" />
-              <p className="text-lg font-semibold">No one in this category</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredCards.map((card) => {
+      {filteredCards.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Check className="w-12 h-12 mx-auto mb-4 text-green-500" />
+            <p className="text-lg font-semibold">No one in this category</p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'list' ? (
+        /* LIST VIEW */
+        <div className="space-y-4">
+          {filteredCards.map((card) => {
             const selectedType = getSelectedAction(card);
             const currentMessage = getCurrentMessage(card);
             const isCopied = copiedId === card.id;
@@ -535,9 +560,116 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
                 </CardContent>
               </Card>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        /* GALLERY VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredCards.map((card) => {
+            const selectedType = getSelectedAction(card);
+            const currentMessage = getCurrentMessage(card);
+            const isCopied = copiedId === card.id;
+            const student = card.student;
+
+            return (
+              <Card
+                key={card.id}
+                className={`border-2 transition-all flex flex-col ${isCopied ? 'ring-2 ring-green-500 bg-green-50' : ''}`}
+              >
+                <CardContent className="p-3 flex flex-col flex-1">
+                  {/* Compact Header */}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-bold text-base truncate">{card.displayName}</span>
+                    </div>
+                    <Badge className={`${getStatusColor(student.belonging_status)} text-xs`}>
+                      {student.belonging_status}
+                    </Badge>
+                  </div>
+
+                  {/* Compact Context */}
+                  <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
+                    {card.parent ? (
+                      <div>{student.first_name}'s {card.parent.relationship}</div>
+                    ) : (
+                      <>
+                        {student.grade && <div>Grade {student.grade}</div>}
+                        <div>
+                          {student.days_since_last_seen === 999999
+                            ? 'Never attended'
+                            : `${student.days_since_last_seen}d ago`}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Compact Action Selector - Icons only */}
+                  <div className="flex gap-1 mb-2">
+                    {card.actions.primary && (
+                      <Button
+                        size="sm"
+                        variant={selectedType === 'primary' ? 'default' : 'outline'}
+                        onClick={() => setSelectedActions(prev => ({ ...prev, [card.id]: 'primary' }))}
+                        className={`flex-1 px-2 ${selectedType === 'primary' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={selectedType === 'prayer' ? 'default' : 'outline'}
+                      onClick={() => setSelectedActions(prev => ({ ...prev, [card.id]: 'prayer' }))}
+                      className={`flex-1 px-2 ${selectedType === 'prayer' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
+                    >
+                      <Heart className="w-4 h-4" />
+                    </Button>
+                    {card.actions.teaching && (
+                      <Button
+                        size="sm"
+                        variant={selectedType === 'teaching' ? 'default' : 'outline'}
+                        onClick={() => setSelectedActions(prev => ({ ...prev, [card.id]: 'teaching' }))}
+                        className={`flex-1 px-2 ${selectedType === 'teaching' ? 'bg-green-500 hover:bg-green-600' : ''}`}
+                      >
+                        <BookOpen className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Compact Message Preview */}
+                  {currentMessage && (
+                    <div className="bg-muted/50 rounded p-2 mb-2 border flex-1">
+                      <div className="text-xs text-foreground line-clamp-3">{currentMessage.message}</div>
+                    </div>
+                  )}
+
+                  {/* Compact Send Button */}
+                  <Button
+                    onClick={() => handleSend(card)}
+                    disabled={!currentMessage || !card.phone}
+                    className={`w-full mt-auto ${isCopied ? 'bg-green-500 hover:bg-green-600' : 'bg-primary hover:bg-primary/90'}`}
+                    size="sm"
+                  >
+                    {isCopied ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-1" />
+                        Send
+                      </>
+                    )}
+                  </Button>
+
+                  {!card.phone && (
+                    <p className="text-xs text-muted-foreground text-center mt-1">
+                      No phone
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
