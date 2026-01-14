@@ -178,30 +178,74 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
 
       onComplete();
     } else {
-      // Call Edge Function for AI generation (server-side)
+      // Call Edge Function for AI generation (server-side) - BATCH MODE
       try {
         setStatusMessage(`Starting AI generation...`);
         setLogs([]);
 
-        // Call Edge Function - it will return immediately with session_id
-        const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
-          body: {
-            curriculum_id: curriculum.id
+        const totalStudents = students.length;
+        const batchSize = 15;
+        let batchStart = 0;
+        let totalSuccess = 0;
+        let totalFailed = 0;
+        const newSessionId = crypto.randomUUID();
+        setSessionId(newSessionId);
+
+        // Process in batches
+        while (batchStart < totalStudents) {
+          const batchEnd = Math.min(batchStart + batchSize, totalStudents);
+          setStatusMessage(`Processing students ${batchStart + 1}-${batchEnd} of ${totalStudents}...`);
+          setLogs(prev => [...prev, `📦 Starting batch ${batchStart + 1}-${batchEnd}...`]);
+
+          const { data, error } = await supabase.functions.invoke('generate-weekly-recommendations', {
+            body: {
+              curriculum_id: curriculum.id,
+              batch_start: batchStart,
+              batch_size: batchSize,
+              session_id: newSessionId
+            }
+          });
+
+          if (error) {
+            console.error('Batch error:', error);
+            setLogs(prev => [...prev, `❌ Batch ${batchStart + 1}-${batchEnd} failed: ${error.message}`]);
+            // Continue to next batch instead of failing completely
+          } else if (data) {
+            totalSuccess += data.batch_successful || 0;
+            totalFailed += data.batch_failed || 0;
+            setLogs(prev => [...prev, `✅ Batch ${batchStart + 1}-${batchEnd}: ${data.batch_successful} success, ${data.batch_failed} failed`]);
           }
-        });
 
-        if (error) throw error;
+          // Update progress
+          const completedCount = Math.min(batchEnd, totalStudents);
+          const percentage = Math.round((completedCount / totalStudents) * 100);
+          setProgress(percentage);
 
-        // Set session ID to start realtime subscription
-        if (data?.session_id) {
-          setSessionId(data.session_id);
-          setStatusMessage('Connected! Generating recommendations...');
-        } else {
-          throw new Error('No session ID returned from Edge Function');
+          // Move to next batch
+          batchStart = batchEnd;
         }
 
-        // Note: Progress updates now come from realtime subscription
-        // The useEffect hook above handles all updates and completion
+        // All batches complete
+        setProgress(100);
+        setStatusMessage('Complete!');
+        setLogs(prev => [...prev, `🎉 Done! ${totalSuccess} successful, ${totalFailed} failed`]);
+
+        setTimeout(() => {
+          setIsGenerating(false);
+          setIsOpen(false);
+          setProgress(0);
+          setStatusMessage('');
+          setLogs([]);
+          setSessionId(null);
+
+          toast({
+            title: 'Recommendations generated!',
+            description: `Successfully generated ${totalSuccess} recommendations${totalFailed > 0 ? ` (${totalFailed} failed)` : ''}.`,
+            duration: 5000
+          });
+
+          onComplete();
+        }, 1500);
 
       } catch (error) {
         console.error('Error calling Edge Function:', error);

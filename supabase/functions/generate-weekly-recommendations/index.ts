@@ -93,7 +93,13 @@ serve(async (req) => {
       });
     }
 
-    console.log('🤖 Starting automated recommendation generation...');
+    // Parse request body for batch parameters
+    const body = await req.json().catch(() => ({}));
+    const batchStart = body.batch_start || 0;
+    const batchSize = body.batch_size || 15; // Process 15 students per batch to stay under timeout
+    const sessionId = body.session_id || crypto.randomUUID();
+
+    console.log(`🤖 Starting batch generation: start=${batchStart}, size=${batchSize}, session=${sessionId}`);
 
     // 1. Get current curriculum
     const { data: curriculum, error: curriculumError } = await supabase
@@ -132,25 +138,35 @@ serve(async (req) => {
 
     console.log(`✅ Found ${students.length} students`);
 
-    // 3. Create session for progress tracking
-    const sessionId = crypto.randomUUID();
+    // 3. Calculate batch bounds
+    const totalStudents = students.length;
+    const batchEnd = Math.min(batchStart + batchSize, totalStudents);
+    const isFirstBatch = batchStart === 0;
+    const isLastBatch = batchEnd >= totalStudents;
 
-    // Initialize progress record
-    await supabase.from('generation_progress').insert({
-      session_id: sessionId,
-      curriculum_week_id: curriculum.id,
-      total_students: students.length,
-      current_index: 0,
-      status: 'running',
-      message: 'Starting generation...'
-    });
+    // Initialize progress record only on first batch
+    if (isFirstBatch) {
+      // Delete any existing progress for this session
+      await supabase.from('generation_progress').delete().eq('session_id', sessionId);
 
-    // 4. Generate recommendations for each student
+      await supabase.from('generation_progress').insert({
+        session_id: sessionId,
+        curriculum_week_id: curriculum.id,
+        total_students: totalStudents,
+        current_index: 0,
+        successful_count: 0,
+        failed_count: 0,
+        status: 'running',
+        message: 'Starting generation...'
+      });
+    }
+
+    // 4. Generate recommendations for this batch only
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < students.length; i++) {
+    for (let i = batchStart; i < batchEnd; i++) {
       const student = students[i] as Student;
       const currentStudent = `${student.first_name} ${student.last_name}`;
 
@@ -211,8 +227,8 @@ serve(async (req) => {
 
         console.log(`✅ [${i + 1}/${students.length}] ${currentStudent}`);
 
-        // Rate limiting: wait 1 second between API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Rate limiting: small delay between API calls
+        await new Promise(resolve => setTimeout(resolve, 300));
 
       } catch (error) {
         errorCount++;
@@ -232,28 +248,35 @@ serve(async (req) => {
       }
     }
 
-    // Mark generation as complete
-    await supabase.from('generation_progress')
-      .update({
-        status: 'completed',
-        message: `Complete! ${successCount} successful, ${errorCount} failed`,
-        updated_at: new Date().toISOString()
-      })
-      .eq('session_id', sessionId);
+    // Update progress with batch results
+    if (isLastBatch) {
+      // Mark generation as complete
+      await supabase.from('generation_progress')
+        .update({
+          status: 'completed',
+          message: `Complete! Batch finished.`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('session_id', sessionId);
+    }
 
     const result = {
       success: true,
-      message: `Generated ${successCount} recommendations`,
+      message: `Processed batch ${batchStart}-${batchEnd} of ${totalStudents}`,
       curriculum: curriculum.topic_title,
-      total_students: students.length,
-      successful: successCount,
-      failed: errorCount,
+      total_students: totalStudents,
+      batch_start: batchStart,
+      batch_end: batchEnd,
+      batch_successful: successCount,
+      batch_failed: errorCount,
+      is_complete: isLastBatch,
+      next_batch_start: isLastBatch ? null : batchEnd,
       errors: errors.length > 0 ? errors : undefined,
-      session_id: sessionId, // Return session_id for client to track progress
+      session_id: sessionId,
       timestamp: new Date().toISOString()
     };
 
-    console.log('✅ Recommendation generation complete:', result);
+    console.log(`✅ Batch complete: ${batchStart}-${batchEnd}`, result);
 
     return new Response(JSON.stringify(result), {
       status: 200,
