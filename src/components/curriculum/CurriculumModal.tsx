@@ -85,11 +85,12 @@ const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, o
       setWeekDate(new Date().toISOString().split('T')[0]);
       setSermonContent('');
       setIsCurrent(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving sermon:', error);
+      const errorMessage = error?.message || error?.code || 'Unknown error';
       toast({
         title: 'Failed to save',
-        description: 'There was an error saving the sermon. Please try again.',
+        description: `Error: ${errorMessage}`,
         variant: 'destructive'
       });
     } finally {
