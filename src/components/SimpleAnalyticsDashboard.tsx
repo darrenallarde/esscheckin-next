@@ -519,6 +519,26 @@ const SimpleAnalyticsDashboard = () => {
     let filename = 'export';
 
     switch (viewMode) {
+      case 'total-ministry':
+        headers = ['Date', 'Day', 'Total', 'Students', 'Leaders', 'Student Names', 'Leader Names'];
+        rows = currentData.map(day => {
+          const students = day.uniqueAttendees - day.studentLeaders;
+          const regularStudentNames = day.studentNames.filter(name =>
+            !day.studentLeaderNames.includes(name)
+          );
+          return [
+            day.date,
+            day.meetingDay,
+            String(day.uniqueAttendees),
+            String(students),
+            String(day.studentLeaders),
+            regularStudentNames.join('; '),
+            day.studentLeaderNames.join('; ')
+          ];
+        });
+        filename = 'total-ministry-checkins';
+        break;
+
       case 'unique-attendees':
       case 'total-attendees':
         headers = ['Date', 'Day', 'Unique Students', 'Total Check-ins', 'Students'];
@@ -672,6 +692,118 @@ const SimpleAnalyticsDashboard = () => {
   };
 
   const chartConfigs = {
+    'total-ministry': {
+      title: 'Total Ministry Check-ins',
+      subtitle: 'Students and Student Leaders stacked by day',
+      component: (
+        <div className="space-y-6">
+          {(() => {
+            // Calculate students (non-leaders) for each day
+            const stackedData = currentData.map(day => ({
+              ...day,
+              students: day.uniqueAttendees - day.studentLeaders,
+              leaders: day.studentLeaders,
+              // Filter out leader names from student names for tooltip
+              regularStudentNames: day.studentNames.filter(name =>
+                !day.studentLeaderNames.includes(name)
+              )
+            }));
+
+            return (
+              <>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={stackedData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="dayLabel"
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis label={{ value: 'Total Check-ins', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                                 style={{ pointerEvents: 'auto' }}>
+                              <p className="font-medium">{label}</p>
+                              <p className="font-semibold mt-1">Total: {data.uniqueAttendees}</p>
+                              <div className="mt-2 space-y-2">
+                                <div>
+                                  <p style={{ color: 'hsl(84, 81%, 44%)' }}>
+                                    Students: {data.students}
+                                  </p>
+                                  {data.regularStudentNames?.length > 0 && (
+                                    <div className="max-h-20 overflow-y-auto pr-2"
+                                         style={{ scrollbarWidth: 'thin' }}
+                                         onWheel={(e) => e.stopPropagation()}>
+                                      {data.regularStudentNames.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <p style={{ color: 'hsl(280, 70%, 50%)' }}>
+                                    Leaders: {data.leaders}
+                                  </p>
+                                  {data.studentLeaderNames?.length > 0 && (
+                                    <div className="max-h-20 overflow-y-auto pr-2"
+                                         style={{ scrollbarWidth: 'thin' }}
+                                         onWheel={(e) => e.stopPropagation()}>
+                                      {data.studentLeaderNames.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="students" stackId="ministry" fill="hsl(84, 81%, 44%)" name="Students" />
+                    <Bar dataKey="leaders" stackId="ministry" fill="hsl(280, 70%, 50%)" name="Student Leaders" />
+                  </BarChart>
+                </ResponsiveContainer>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold text-foreground">
+                        {stackedData.reduce((sum, day) => sum + day.uniqueAttendees, 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Ministry Check-ins</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold" style={{ color: 'hsl(84, 81%, 44%)' }}>
+                        {stackedData.reduce((sum, day) => sum + day.students, 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Student Check-ins</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <div className="text-2xl font-bold" style={{ color: 'hsl(280, 70%, 50%)' }}>
+                        {stackedData.reduce((sum, day) => sum + day.leaders, 0)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Total Leader Check-ins</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )
+    },
     'unique-attendees': {
       title: `Unique Students by Day`,
       subtitle: 'Individual students (no double counting) per day',
