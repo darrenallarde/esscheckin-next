@@ -21,13 +21,14 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { 
-  Calendar, 
-  Users, 
-  TrendingUp, 
-  BarChart3, 
-  UserPlus, 
-  Clock 
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  BarChart3,
+  UserPlus,
+  Clock,
+  Download
 } from "lucide-react";
 
 interface CheckInRecord {
@@ -267,6 +268,49 @@ const AnalyticsDashboard = () => {
 
   const currentData = analyticsData.dailyData;
 
+  // Export check-in data to CSV
+  const exportToCSV = () => {
+    // Create CSV header
+    const headers = ['Date', 'Day', 'Student Name', 'Grade', 'Check-in Time'];
+
+    // Build rows from the check-in data
+    const rows: string[][] = [];
+
+    currentData.forEach(day => {
+      day.checkInRecords.forEach(record => {
+        // Find student grade from studentStats
+        const studentStat = analyticsData.studentStats.find(s => s.name === record.studentName);
+        rows.push([
+          day.date,
+          day.meetingDay,
+          record.studentName,
+          studentStat?.grade || 'Unknown',
+          record.checkedInAt
+        ]);
+      });
+    });
+
+    // Sort by date descending (most recent first)
+    rows.sort((a, b) => b[0].localeCompare(a[0]));
+
+    // Convert to CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `checkins-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const chartConfigs = {
     'unique-attendees': {
       title: `Daily Attendance`,
@@ -394,6 +438,10 @@ const AnalyticsDashboard = () => {
           <div className="flex justify-center gap-4 mb-6">
             <Button variant="outline" onClick={() => navigate('/admin')}>
               ← Back to Admin Dashboard
+            </Button>
+            <Button onClick={exportToCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
             </Button>
           </div>
         </div>
