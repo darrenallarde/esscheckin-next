@@ -35,7 +35,8 @@ import {
   Phone,
   Mail,
   Instagram,
-  School
+  School,
+  Download
 } from "lucide-react";
 
 interface CheckInData {
@@ -510,6 +511,165 @@ const SimpleAnalyticsDashboard = () => {
   }
 
   const currentData = analyticsData.dailyData;
+
+  // Export data to CSV based on current view
+  const exportToCSV = () => {
+    let headers: string[] = [];
+    let rows: string[][] = [];
+    let filename = 'export';
+
+    switch (viewMode) {
+      case 'unique-attendees':
+      case 'total-attendees':
+        headers = ['Date', 'Day', 'Unique Students', 'Total Check-ins', 'Students'];
+        rows = currentData.map(day => [
+          day.date,
+          day.meetingDay,
+          String(day.uniqueAttendees),
+          String(day.totalAttendees),
+          day.studentNames.join('; ')
+        ]);
+        filename = 'attendance-by-day';
+        break;
+
+      case 'wed-vs-sunday':
+        headers = ['Week', 'Wednesday Attendance', 'Sunday Attendance', 'Wednesday Students', 'Sunday Students'];
+        const weekMap = new Map();
+        [...(analyticsData.wednesdayData || []), ...(analyticsData.sundayData || [])].forEach(day => {
+          const date = new Date(day.date);
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split('T')[0];
+          if (!weekMap.has(weekKey)) {
+            weekMap.set(weekKey, { week: weekKey, wednesday: 0, sunday: 0, wedStudents: [], sunStudents: [] });
+          }
+          const weekData = weekMap.get(weekKey);
+          if (day.meetingDay === 'Wednesday') {
+            weekData.wednesday = day.uniqueAttendees;
+            weekData.wedStudents = day.studentNames || [];
+          } else if (day.meetingDay === 'Sunday') {
+            weekData.sunday = day.uniqueAttendees;
+            weekData.sunStudents = day.studentNames || [];
+          }
+        });
+        rows = Array.from(weekMap.values()).map(w => [
+          w.week,
+          String(w.wednesday),
+          String(w.sunday),
+          w.wedStudents.join('; '),
+          w.sunStudents.join('; ')
+        ]);
+        filename = 'wed-vs-sunday';
+        break;
+
+      case 'new-students':
+        headers = ['Date', 'Day', 'New Students Count', 'New Student Names'];
+        rows = currentData.map(day => [
+          day.date,
+          day.meetingDay,
+          String(day.newStudents),
+          day.newStudentNames.join('; ')
+        ]);
+        filename = 'new-students';
+        break;
+
+      case 'student-leaders':
+        headers = ['Date', 'Day', 'Student Leaders Count', 'Student Leader Names'];
+        rows = currentData.map(day => [
+          day.date,
+          day.meetingDay,
+          String(day.studentLeaders),
+          day.studentLeaderNames.join('; ')
+        ]);
+        filename = 'student-leaders';
+        break;
+
+      case 'cumulative-reach':
+        headers = ['Date', 'Day', 'Daily Attendance', 'Cumulative Reach'];
+        rows = (analyticsData.cumulativeData || []).map(day => [
+          day.date,
+          day.meetingDay,
+          String(day.uniqueAttendees),
+          String(day.cumulativeReach)
+        ]);
+        filename = 'cumulative-reach';
+        break;
+
+      case 'grade-breakdown':
+        headers = ['Grade', 'Student Count'];
+        rows = (analyticsData.gradeData || []).map(g => [
+          g.grade,
+          String(g.count)
+        ]);
+        filename = 'grade-breakdown';
+        break;
+
+      case 'student-info':
+        headers = ['Name', 'Grade', 'School', 'Phone', 'Email', 'Instagram', 'Mother Name', 'Mother Phone', 'Father Name', 'Father Phone'];
+        rows = (filteredStudents || []).map(s => [
+          `${s.first_name} ${s.last_name || ''}`.trim(),
+          s.grade || '',
+          s.high_school || '',
+          s.phone_number || '',
+          s.email || '',
+          s.instagram_handle ? `@${s.instagram_handle}` : '',
+          s.mother_first_name ? `${s.mother_first_name} ${s.mother_last_name || ''}`.trim() : (s.parent_name || ''),
+          s.mother_phone || s.parent_phone || '',
+          s.father_first_name ? `${s.father_first_name} ${s.father_last_name || ''}`.trim() : '',
+          s.father_phone || ''
+        ]);
+        filename = 'student-info';
+        break;
+
+      case 'student-table':
+        headers = ['Rank', 'Name', 'Grade', 'Total Attendance', 'Days Attended', 'Last Attended', 'Wed Streak', 'Sun Streak', 'Total Streak', 'Category'];
+        rows = (analyticsData.studentStats || []).map((s, i) => [
+          String(i + 1),
+          s.name,
+          s.grade,
+          String(s.totalAttendance),
+          String(s.weeksAttended),
+          s.lastAttended,
+          String(s.wednesdayStreak),
+          String(s.sundayStreak),
+          String(s.totalStreak),
+          s.category
+        ]);
+        filename = 'student-attendance-table';
+        break;
+
+      default:
+        headers = ['Date', 'Day', 'Unique Students', 'Total Check-ins'];
+        rows = currentData.map(day => [
+          day.date,
+          day.meetingDay,
+          String(day.uniqueAttendees),
+          String(day.totalAttendees)
+        ]);
+        filename = 'analytics-export';
+    }
+
+    // Sort by date descending if there's a date column
+    if (headers[0] === 'Date') {
+      rows.sort((a, b) => b[0].localeCompare(a[0]));
+    }
+
+    // Convert to CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const chartConfigs = {
     'unique-attendees': {
@@ -1426,7 +1586,7 @@ const SimpleAnalyticsDashboard = () => {
         {/* View Mode Selector */}
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="flex flex-wrap gap-2 justify-center">
+            <div className="flex flex-wrap gap-2 justify-center items-center">
               {Object.entries(chartConfigs).map(([key, config]) => (
                 <Button
                   key={key}
@@ -1437,6 +1597,15 @@ const SimpleAnalyticsDashboard = () => {
                   {config.title.split(' by ')[0]}
                 </Button>
               ))}
+              <div className="w-px h-6 bg-border mx-2" />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={exportToCSV}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
             </div>
           </CardContent>
         </Card>
