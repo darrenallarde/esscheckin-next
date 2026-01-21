@@ -27,6 +27,9 @@ export interface StudentPastoralData {
   mother_last_name: string | null;
   mother_phone: string | null;
 
+  // User type for leader identification
+  user_type: 'student' | 'student_leader';
+
   belonging_status: BelongingStatus;
 
   total_checkins_8weeks: number;

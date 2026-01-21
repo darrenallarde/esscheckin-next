@@ -38,11 +38,12 @@ import CurriculumModal from '@/components/curriculum/CurriculumModal';
 import QuickActionsTab from '@/components/pastoral/QuickActionsTab';
 import SermonTab from '@/components/pastoral/SermonTab';
 import AllStudentsTab from '@/components/pastoral/AllStudentsTab';
+import LeadersTab from '@/components/pastoral/LeadersTab';
 import { StudentPastoralData, BelongingDistribution, PastoralPriorities } from '@/types/pastoral';
 import { CurriculumWeek, AIRecommendation } from '@/types/curriculum';
-import { Heart, Zap, BookOpen, Users, Loader2 } from 'lucide-react';
+import { Heart, Zap, BookOpen, Users, Loader2, Crown } from 'lucide-react';
 
-type TabType = 'actions' | 'sermon' | 'students';
+type TabType = 'actions' | 'sermon' | 'students' | 'leaders';
 
 const PastoralDashboard = () => {
   const { user, userRole } = useAuth();
@@ -255,6 +256,7 @@ const PastoralDashboard = () => {
     { id: 'actions' as TabType, label: 'Quick Actions', icon: Zap, description: 'Who needs attention?' },
     { id: 'sermon' as TabType, label: 'Sermon', icon: BookOpen, description: 'This week\'s teaching' },
     { id: 'students' as TabType, label: 'All Students', icon: Users, description: 'View everyone' },
+    { id: 'leaders' as TabType, label: 'Leaders', icon: Crown, description: 'Student leaders' },
   ];
 
   return (
@@ -322,6 +324,14 @@ const PastoralDashboard = () => {
               distribution={distribution}
               recommendations={recommendations || []}
               grades={grades}
+              onRecommendationDismiss={() => refetchRecommendations()}
+            />
+          )}
+
+          {activeTab === 'leaders' && (
+            <LeadersTab
+              students={pastoralData}
+              recommendations={recommendations || []}
               onRecommendationDismiss={() => refetchRecommendations()}
             />
           )}
