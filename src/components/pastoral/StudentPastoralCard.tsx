@@ -8,6 +8,7 @@ import { StudentPastoralData, BelongingStatus } from '@/types/pastoral';
 import { AIRecommendation } from '@/types/curriculum';
 import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram, User, School, MessageSquare, Send, ChevronDown, ChevronUp, History, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useSendSms } from '@/hooks/useSendSms';
 import RecommendationDisplay from './RecommendationDisplay';
 import { StudentContextPanel } from './workflow';
 
@@ -29,6 +30,7 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
   const [messageText, setMessageText] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const { sendSms, isSending } = useSendSms();
 
   // Generate default message based on student's belonging status
   const getDefaultMessage = () => {
@@ -501,17 +503,49 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                   Copy
                 </Button>
                 <Button
-                  onClick={() => {
-                    toast({
-                      title: 'Coming soon!',
-                      description: 'Send functionality will be available soon.',
+                  onClick={async () => {
+                    if (!student.phone_number) {
+                      toast({
+                        title: 'No phone number',
+                        description: `${student.first_name} doesn't have a phone number on file.`,
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    if (!messageText.trim()) {
+                      toast({
+                        title: 'Empty message',
+                        description: 'Please enter a message to send.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    const result = await sendSms({
+                      to: student.phone_number,
+                      body: messageText,
+                      studentId: student.student_id,
                     });
+                    if (result.success) {
+                      toast({
+                        title: 'Message sent!',
+                        description: `SMS sent to ${student.first_name}.`,
+                      });
+                      setShowQuickAction(false);
+                      setMessageText('');
+                    } else {
+                      toast({
+                        title: 'Failed to send',
+                        description: result.error || 'Please try again.',
+                        variant: 'destructive',
+                      });
+                    }
                   }}
+                  disabled={isSending || !student.phone_number}
                   size="sm"
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white disabled:opacity-50"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Send
+                  {isSending ? 'Sending...' : 'Send SMS'}
                 </Button>
               </div>
             </div>
