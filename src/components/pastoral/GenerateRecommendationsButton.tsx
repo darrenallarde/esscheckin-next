@@ -12,6 +12,9 @@ import { StudentPastoralData } from '@/types/pastoral';
 import { generateRecommendation, generateFallbackRecommendation } from '@/utils/aiRecommendations';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+// Default organization ID from the SQL migration
+const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
+
 interface GenerateRecommendationsButtonProps {
   students: StudentPastoralData[];
   curriculum: CurriculumWeek | null;
@@ -84,8 +87,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
 
               toast({
                 title: 'Recommendations generated!',
-                description: `Successfully generated ${data.successful_count} recommendations${data.failed_count > 0 ? ` (${data.failed_count} failed)` : ''}.`,
-                duration: 5000
+                description: `Successfully generated ${data.successful_count} recommendations${data.failed_count > 0 ? ` (${data.failed_count} failed)` : ''}.`
               });
 
               onComplete();
@@ -147,6 +149,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
           const { error } = await supabase
             .from('ai_recommendations')
             .upsert({
+              organization_id: DEFAULT_ORG_ID,
               student_id: student.student_id,
               curriculum_week_id: curriculum.id,
               key_insight: recommendation.key_insight,
@@ -240,8 +243,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
 
           toast({
             title: 'Recommendations generated!',
-            description: `Successfully generated ${totalSuccess} recommendations${totalFailed > 0 ? ` (${totalFailed} failed)` : ''}.`,
-            duration: 5000
+            description: `Successfully generated ${totalSuccess} recommendations${totalFailed > 0 ? ` (${totalFailed} failed)` : ''}.`
           });
 
           onComplete();

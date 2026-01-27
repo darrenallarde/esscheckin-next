@@ -12,8 +12,9 @@ export interface Achievement {
   description: string;
   emoji: string;
   points: number;
-  type: string;
-  condition: () => boolean;
+  type: 'streak' | 'total' | 'special' | 'time';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  condition: (stats: any) => boolean;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 

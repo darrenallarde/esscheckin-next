@@ -22,12 +22,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NewStudentForm from "./NewStudentForm";
 import GameCheckInSuccessDB from "./GameCheckInSuccessDB";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { processCheckinRewards } from "@/utils/gamificationDB";
 
 // Zod schemas for form validation
@@ -264,14 +265,14 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
         });
 
         // Get the check-in ID and PIN from the result
-        const checkInId = result[0].check_in_id || result[0].id || 'temp-checkin-id';
+        const checkInId = result[0].check_in_id || 'temp-checkin-id';
         const profilePin = result[0].profile_pin;
         console.log('Check-in result:', result[0]);
         console.log('Check-in ID:', checkInId);
         console.log('Profile PIN:', profilePin);
 
         // If we don't have a proper check-in ID, we need to query for the latest check-in
-        let finalCheckInId = checkInId;
+        const finalCheckInId = checkInId;
         if (checkInId === 'temp-checkin-id') {
           console.warn('No check-in ID returned from checkin_student function. This will cause gamification issues.');
           // For now, pass the temp ID but log the issue
@@ -327,7 +328,7 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
       }
 
       if (result && result[0]?.success) {
-        const checkInId = result[0].check_in_id || result[0].id || 'temp-checkin-id';
+        const checkInId = result[0].check_in_id || 'temp-checkin-id';
         const profilePin = result[0].profile_pin;
 
         toast({

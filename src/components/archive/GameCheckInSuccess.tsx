@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Sparkles, Trophy, Zap, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import GameAchievement from "./GameAchievement";
-import ConfettiEffect from "./ConfettiEffect";
+import GameAchievement from "@/components/GameAchievement";
+import ConfettiEffect from "@/components/ConfettiEffect";
 import {
   calculateGameReward,
   getRankFromPoints,
@@ -203,7 +203,7 @@ const GameCheckInSuccess = ({ student, onNewCheckIn }: GameCheckInSuccessProps) 
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Confetti Effect */}
       <ConfettiEffect
-        active={showCelebration && (gameStats.isFirstTime || gameReward.achievements.length > 0 || gameReward.levelUp)}
+        active={showCelebration && (gameStats.isFirstTime || gameReward.achievements.length > 0 || !!gameReward.levelUp)}
         duration={4000}
       />
 

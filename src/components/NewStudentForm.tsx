@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +18,7 @@ const newStudentSchema = z.object({
   email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
-  isStudentLeader: z.boolean().default(false),
+  isStudentLeader: z.boolean(),
   grade: z.string().trim().optional().or(z.literal("")),
   highSchool: z.string().trim().optional().or(z.literal("")),
   // Address information
@@ -100,23 +101,23 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
         .rpc('register_student_and_checkin', {
           p_first_name: data.firstName,
           p_last_name: data.lastName,
-          p_phone_number: data.phoneNumber || null,
-          p_email: data.email || null,
+          p_phone_number: data.phoneNumber || undefined,
+          p_email: data.email || undefined,
           p_date_of_birth: data.dateOfBirth,
-          p_instagram_handle: data.instagramHandle || null,
+          p_instagram_handle: data.instagramHandle || undefined,
           p_user_type: data.isStudentLeader ? 'student_leader' : 'student',
-          p_grade: data.isStudentLeader ? null : data.grade,
-          p_high_school: data.isStudentLeader ? null : data.highSchool,
-          p_father_first_name: data.isStudentLeader ? null : data.fatherFirstName || null,
-          p_father_last_name: data.isStudentLeader ? null : data.fatherLastName || null,
-          p_father_phone: data.isStudentLeader ? null : data.fatherPhone || null,
-          p_mother_first_name: data.isStudentLeader ? null : data.motherFirstName || null,
-          p_mother_last_name: data.isStudentLeader ? null : data.motherLastName || null,
-          p_mother_phone: data.isStudentLeader ? null : data.motherPhone || null,
-          p_address: data.address || null,
-          p_city: data.city || null,
+          p_grade: data.isStudentLeader ? undefined : data.grade,
+          p_high_school: data.isStudentLeader ? undefined : data.highSchool,
+          p_father_first_name: data.isStudentLeader ? undefined : data.fatherFirstName || undefined,
+          p_father_last_name: data.isStudentLeader ? undefined : data.fatherLastName || undefined,
+          p_father_phone: data.isStudentLeader ? undefined : data.fatherPhone || undefined,
+          p_mother_first_name: data.isStudentLeader ? undefined : data.motherFirstName || undefined,
+          p_mother_last_name: data.isStudentLeader ? undefined : data.motherLastName || undefined,
+          p_mother_phone: data.isStudentLeader ? undefined : data.motherPhone || undefined,
+          p_address: data.address || undefined,
+          p_city: data.city || undefined,
           p_state: data.state || 'California',
-          p_zip: data.zip || null,
+          p_zip: data.zip || undefined,
         });
 
       if (error) {

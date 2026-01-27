@@ -182,7 +182,7 @@ const AllStudentsTab: React.FC<AllStudentsTabProps> = ({
           filteredStudents.map(student => (
             <div
               key={student.student_id}
-              ref={el => studentRefs.current[student.student_id] = el}
+              ref={el => { studentRefs.current[student.student_id] = el; }}
               className="transition-all duration-300"
             >
               <StudentPastoralCard

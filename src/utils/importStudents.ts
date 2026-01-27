@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Default organization ID from the SQL migration
+const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
+
 interface StudentRecord {
   firstName: string;
   lastName: string;
@@ -71,8 +74,9 @@ export const insertStudentsIntoDB = async (students: StudentRecord[]) => {
       const { data, error } = await supabase
         .from('students')
         .insert({
+          organization_id: DEFAULT_ORG_ID,
           first_name: student.firstName,
-          last_name: student.lastName || null,
+          last_name: student.lastName || '',
           phone_number: student.phone || null,
           grade: student.grade || null,
           user_type: 'student'

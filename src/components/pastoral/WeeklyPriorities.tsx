@@ -72,7 +72,7 @@ const WeeklyPriorities: React.FC<WeeklyPrioritiesProps> = ({ priorities, onStude
                   </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <TrendingUp className="w-3 h-3 rotate-180" />
-                    Declining: {student.previous_status} → {student.belonging_status}
+                    Declining attendance ({student.belonging_status})
                   </div>
                 </button>
               ))

@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { StudentContext } from '@/types/interactions';
-import InteractionTimeline from './InteractionTimeline';
-import LogInteractionForm from './LogInteractionForm';
-import { Pin, Plus, MessageSquare, Clock, Loader2, StickyNote, X } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+"use client";
+
+import React, { useState } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { StudentContext } from "@/types/interactions";
+import InteractionTimeline from "./InteractionTimeline";
+import LogInteractionForm from "./LogInteractionForm";
+import { Pin, Plus, MessageSquare, Clock, Loader2, StickyNote, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface StudentContextPanelProps {
   studentId: string;
@@ -25,18 +27,19 @@ const StudentContextPanel: React.FC<StudentContextPanelProps> = ({
   onInteractionLogged,
 }) => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showLogForm, setShowLogForm] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
-  const [newNote, setNewNote] = useState('');
+  const [newNote, setNewNote] = useState("");
   const [isPinned, setIsPinned] = useState(true);
-  const [isAddingNote, setIsAddingNote] = useState(false);
 
   // Fetch student context
   const { data: context, isLoading, error } = useQuery({
-    queryKey: ['student-context', studentId],
+    queryKey: ["student-context", studentId],
     queryFn: async () => {
+      const supabase = createClient();
       const { data, error } = await supabase
-        .rpc('get_student_context', { p_student_id: studentId });
+        .rpc("get_student_context", { p_student_id: studentId });
 
       if (error) throw error;
 
@@ -47,42 +50,45 @@ const StudentContextPanel: React.FC<StudentContextPanelProps> = ({
     staleTime: 1000 * 60, // 1 minute
   });
 
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-
-    setIsAddingNote(true);
-    try {
-      const { error } = await supabase.rpc('add_student_note', {
+  // Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ content, pinned }: { content: string; pinned: boolean }) => {
+      const supabase = createClient();
+      const { error } = await supabase.rpc("add_student_note", {
         p_student_id: studentId,
-        p_content: newNote.trim(),
-        p_is_pinned: isPinned,
+        p_content: content.trim(),
+        p_is_pinned: pinned,
       });
-
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast({
-        title: 'Note added',
-        description: isPinned ? 'Pinned note added to student context.' : 'Note saved.',
+        title: "Note added",
+        description: isPinned ? "Pinned note added to student context." : "Note saved.",
       });
-
-      setNewNote('');
+      setNewNote("");
       setShowAddNote(false);
-      queryClient.invalidateQueries({ queryKey: ['student-context', studentId] });
-    } catch (error) {
-      console.error('Error adding note:', error);
+      queryClient.invalidateQueries({ queryKey: ["student-context", studentId] });
+    },
+    onError: (error) => {
+      console.error("Error adding note:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to add note. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add note. Please try again.",
+        variant: "destructive",
       });
-    } finally {
-      setIsAddingNote(false);
-    }
+    },
+  });
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    addNoteMutation.mutate({ content: newNote, pinned: isPinned });
   };
 
   const handleInteractionSuccess = () => {
     setShowLogForm(false);
-    queryClient.invalidateQueries({ queryKey: ['student-context', studentId] });
+    queryClient.invalidateQueries({ queryKey: ["student-context", studentId] });
+    queryClient.invalidateQueries({ queryKey: ["ai-recommendations"] });
     onInteractionLogged?.();
   };
 
@@ -149,7 +155,7 @@ const StudentContextPanel: React.FC<StudentContextPanelProps> = ({
               >
                 <p className="text-gray-800">{note.content}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {note.leader_name && <>{note.leader_name} • </>}
+                  {note.leader_name && <>{note.leader_name} &bull; </>}
                   {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
                 </p>
               </div>
@@ -233,7 +239,7 @@ const StudentContextPanel: React.FC<StudentContextPanelProps> = ({
             className="w-full h-8 text-xs text-muted-foreground hover:text-foreground"
           >
             <StickyNote className="w-3 h-3 mr-1" />
-            Add a note about {studentName.split(' ')[0]}
+            Add a note about {studentName.split(" ")[0]}
           </Button>
         ) : (
           <Card>
@@ -269,13 +275,13 @@ const StudentContextPanel: React.FC<StudentContextPanelProps> = ({
                 <Button
                   size="sm"
                   onClick={handleAddNote}
-                  disabled={!newNote.trim() || isAddingNote}
+                  disabled={!newNote.trim() || addNoteMutation.isPending}
                   className="h-7 text-xs"
                 >
-                  {isAddingNote ? (
+                  {addNoteMutation.isPending ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    'Save Note'
+                    "Save Note"
                   )}
                 </Button>
               </div>

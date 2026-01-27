@@ -38,6 +38,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
     return { hasError: true };
@@ -89,7 +90,7 @@ class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Show error details in development */}
-              {import.meta.env.DEV && this.state.error && (
+              {process.env.NODE_ENV !== 'production' && this.state.error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
                   <div className="font-semibold text-red-900 text-sm">Error Details (Development Only):</div>
                   <div className="text-red-800 text-sm font-mono whitespace-pre-wrap">

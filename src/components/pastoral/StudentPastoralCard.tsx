@@ -190,7 +190,7 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
                   {student.first_name} {student.last_name}
                 </h3>
                 {student.is_declining && (
-                  <TrendingDown className="w-4 h-4 text-orange-500" title="Declining attendance" />
+                  <TrendingDown className="w-4 h-4 text-orange-500" />
                 )}
               </div>
 

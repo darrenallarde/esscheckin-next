@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+"use client";
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useLogInteraction } from "@/hooks/queries/use-ai-recommendations";
+import { useToast } from "@/hooks/use-toast";
 import {
   InteractionType,
   InteractionStatus,
   INTERACTION_TYPE_CONFIG,
-} from '@/types/interactions';
-import { MessageSquare, Phone, Instagram, Users, Mail, FileText, Loader2 } from 'lucide-react';
+} from "@/types/interactions";
+import { MessageSquare, Phone, Instagram, Users, Mail, FileText, Loader2 } from "lucide-react";
 
 interface LogInteractionFormProps {
   studentId: string;
@@ -24,13 +26,13 @@ interface LogInteractionFormProps {
 }
 
 const INTERACTION_TYPES: { type: InteractionType; icon: React.ReactNode }[] = [
-  { type: 'text', icon: <MessageSquare className="w-4 h-4" /> },
-  { type: 'call', icon: <Phone className="w-4 h-4" /> },
-  { type: 'instagram_dm', icon: <Instagram className="w-4 h-4" /> },
-  { type: 'in_person', icon: <Users className="w-4 h-4" /> },
-  { type: 'parent_contact', icon: <Phone className="w-4 h-4" /> },
-  { type: 'email', icon: <Mail className="w-4 h-4" /> },
-  { type: 'other', icon: <FileText className="w-4 h-4" /> },
+  { type: "text", icon: <MessageSquare className="w-4 h-4" /> },
+  { type: "call", icon: <Phone className="w-4 h-4" /> },
+  { type: "instagram_dm", icon: <Instagram className="w-4 h-4" /> },
+  { type: "in_person", icon: <Users className="w-4 h-4" /> },
+  { type: "parent_contact", icon: <Phone className="w-4 h-4" /> },
+  { type: "email", icon: <Mail className="w-4 h-4" /> },
+  { type: "other", icon: <FileText className="w-4 h-4" /> },
 ];
 
 const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
@@ -39,50 +41,47 @@ const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
   recommendationId,
   onSuccess,
   onCancel,
-  prefilledContent = '',
+  prefilledContent = "",
   prefilledType,
 }) => {
-  const [interactionType, setInteractionType] = useState<InteractionType>(prefilledType || 'text');
+  const [interactionType, setInteractionType] = useState<InteractionType>(prefilledType || "text");
   const [content, setContent] = useState(prefilledContent);
-  const [outcome, setOutcome] = useState('');
-  const [status, setStatus] = useState<InteractionStatus>('completed');
+  const [outcome, setOutcome] = useState("");
+  const [status, setStatus] = useState<InteractionStatus>("completed");
   const [needsFollowUp, setNeedsFollowUp] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const logInteraction = useLogInteraction();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.rpc('log_interaction', {
-        p_student_id: studentId,
-        p_interaction_type: interactionType,
-        p_content: content || null,
-        p_outcome: outcome || null,
-        p_status: needsFollowUp ? 'pending' : status,
-        p_recommendation_id: recommendationId || null,
-        p_follow_up_date: needsFollowUp
-          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          : null,
+      await logInteraction.mutateAsync({
+        studentId,
+        interactionType,
+        content: content || undefined,
+        outcome: outcome || undefined,
+        status: needsFollowUp ? "pending" : status,
+        recommendationId,
+        followUpDate: needsFollowUp
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+          : undefined,
       });
 
-      if (error) throw error;
-
       toast({
-        title: 'Interaction logged',
+        title: "Interaction logged",
         description: `${INTERACTION_TYPE_CONFIG[interactionType].label} with ${studentName} recorded.`,
       });
 
       onSuccess();
     } catch (error) {
-      console.error('Error logging interaction:', error);
+      console.error("Error logging interaction:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to log interaction. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to log interaction. Please try again.",
+        variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -102,15 +101,15 @@ const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
                 onClick={() => setInteractionType(type)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                   isSelected
-                    ? 'border-primary bg-primary/10'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? "border-primary bg-primary/10"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <span className={`p-1.5 rounded-full ${config.color}`}>
                   {icon}
                 </span>
                 <span className="text-xs font-medium truncate w-full text-center">
-                  {config.label.split(' ')[0]}
+                  {config.label.split(" ")[0]}
                 </span>
               </button>
             );
@@ -162,7 +161,7 @@ const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
       </div>
 
       {/* Outcome notes if completed */}
-      {status === 'completed' && (
+      {status === "completed" && (
         <div className="space-y-2">
           <Label htmlFor="outcome" className="text-sm font-medium">
             How did it go? <span className="text-muted-foreground">(optional)</span>
@@ -178,7 +177,7 @@ const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
       )}
 
       {/* Follow-up reminder */}
-      {status === 'pending' && (
+      {status === "pending" && (
         <div className="flex items-center space-x-2">
           <Checkbox
             id="followUp"
@@ -205,22 +204,22 @@ const LogInteractionForm: React.FC<LogInteractionFormProps> = ({
           variant="outline"
           onClick={onCancel}
           className="flex-1"
-          disabled={isSubmitting}
+          disabled={logInteraction.isPending}
         >
           Cancel
         </Button>
         <Button
           type="submit"
           className="flex-1"
-          disabled={isSubmitting}
+          disabled={logInteraction.isPending}
         >
-          {isSubmitting ? (
+          {logInteraction.isPending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Saving...
             </>
           ) : (
-            'Log Interaction'
+            "Log Interaction"
           )}
         </Button>
       </div>
