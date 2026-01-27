@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { RANKS, RankInfo } from "@/utils/gamificationDB";
+import { RANKS, RankInfo, getRankByCheckIns } from "@/utils/gamificationDB";
 
 export interface LeaderboardEntry {
   student_id: string;
   first_name: string;
   last_name: string;
+  total_check_ins: number;
   total_points: number;
   current_rank: string;
   rank_info: RankInfo;
@@ -15,36 +16,45 @@ export interface LeaderboardEntry {
 async function fetchLeaderboard(organizationId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
   const supabase = createClient();
 
-  // Join students with their game stats for this organization
-  const { data, error } = await supabase
+  // Get all check-ins for this organization (filtered by org_id on check_ins table)
+  const { data: checkIns, error: checkInsError } = await supabase
+    .from("check_ins")
+    .select("student_id")
+    .eq("organization_id", organizationId);
+
+  if (checkInsError) throw checkInsError;
+
+  // Count check-ins per student
+  const checkInCounts = new Map<string, number>();
+  (checkIns || []).forEach((ci) => {
+    checkInCounts.set(ci.student_id, (checkInCounts.get(ci.student_id) || 0) + 1);
+  });
+
+  // Get student details
+  const { data: students, error: studentsError } = await supabase
     .from("students")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      student_game_stats(total_points, current_rank)
-    `)
-    .eq("organization_id", organizationId)
-    .order("first_name")
-    .limit(limit * 2); // Fetch more to sort properly
+    .select("id, first_name, last_name")
+    .eq("organization_id", organizationId);
 
-  if (error) throw error;
+  if (studentsError) throw studentsError;
 
-  // Map and sort by points
-  const entries = (data || [])
+  // Map and sort by check-in count
+  const entries = (students || [])
     .map((student) => {
-      const gameStats = (student.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
+      const totalCheckIns = checkInCounts.get(student.id) || 0;
+      const rankInfo = getRankByCheckIns(totalCheckIns);
       return {
         student_id: student.id,
         first_name: student.first_name,
         last_name: student.last_name,
-        total_points: gameStats?.total_points || 0,
-        current_rank: gameStats?.current_rank || "Newcomer",
-        rank_info: RANKS.find((r) => r.title === (gameStats?.current_rank || "Newcomer")) || RANKS[0],
-        position: 0, // Will be set after sorting
+        total_check_ins: totalCheckIns,
+        total_points: totalCheckIns, // Points are based on check-in count
+        current_rank: rankInfo.title,
+        rank_info: rankInfo,
+        position: 0,
       };
     })
-    .sort((a, b) => b.total_points - a.total_points)
+    .sort((a, b) => b.total_check_ins - a.total_check_ins)
     .slice(0, limit)
     .map((entry, index) => ({ ...entry, position: index + 1 }));
 
@@ -69,23 +79,34 @@ export interface RankDistribution {
 async function fetchRankDistribution(organizationId: string): Promise<RankDistribution[]> {
   const supabase = createClient();
 
-  // Get count of students per rank for this organization
-  const { data, error } = await supabase
-    .from("students")
-    .select(`
-      id,
-      student_game_stats(current_rank)
-    `)
+  // Get all check-ins for this organization (filtered by org_id on check_ins table)
+  const { data: checkIns, error: checkInsError } = await supabase
+    .from("check_ins")
+    .select("student_id")
     .eq("organization_id", organizationId);
 
-  if (error) throw error;
+  if (checkInsError) throw checkInsError;
 
-  // Count students per rank
+  // Count check-ins per student
+  const checkInCounts = new Map<string, number>();
+  (checkIns || []).forEach((ci) => {
+    checkInCounts.set(ci.student_id, (checkInCounts.get(ci.student_id) || 0) + 1);
+  });
+
+  // Get all students for this organization
+  const { data: students, error: studentsError } = await supabase
+    .from("students")
+    .select("id")
+    .eq("organization_id", organizationId);
+
+  if (studentsError) throw studentsError;
+
+  // Count students per rank based on check-in counts
   const rankCounts: Record<string, number> = {};
-  (data || []).forEach((student) => {
-    const gameStats = (student.student_game_stats as Array<{ current_rank: string }>)?.[0];
-    const rank = gameStats?.current_rank || "Newcomer";
-    rankCounts[rank] = (rankCounts[rank] || 0) + 1;
+  (students || []).forEach((student) => {
+    const totalCheckIns = checkInCounts.get(student.id) || 0;
+    const rankInfo = getRankByCheckIns(totalCheckIns);
+    rankCounts[rankInfo.title] = (rankCounts[rankInfo.title] || 0) + 1;
   });
 
   // Map to RankDistribution with RANKS info

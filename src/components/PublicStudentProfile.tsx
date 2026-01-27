@@ -260,9 +260,9 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
   }
 
   const currentRank = gameProfile ? getRankInfo(gameProfile.current_rank) : getRankInfo('Newcomer');
-  const nextRank = gameProfile ? getNextRank(gameProfile.total_points) : null;
+  const nextRank = gameProfile ? getNextRank(gameProfile.total_check_ins) : null;
   const progressToNextRank = nextRank
-    ? ((gameProfile!.total_points - currentRank.minPoints) / (nextRank.minPoints - currentRank.minPoints)) * 100
+    ? ((gameProfile!.total_check_ins - currentRank.minCheckIns) / (nextRank.minCheckIns - currentRank.minCheckIns)) * 100
     : 100;
 
   return (
@@ -310,7 +310,7 @@ const PublicStudentProfile = ({ studentId, onBack }: PublicStudentProfileProps) 
               <div className="mt-6">
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span>Progress to {nextRank.emoji} {nextRank.title}</span>
-                  <span>{gameProfile?.total_points || 0} / {nextRank.minPoints}</span>
+                  <span>{gameProfile?.total_check_ins || 0} / {nextRank.minCheckIns}</span>
                 </div>
                 <Progress value={progressToNextRank} className="h-2 bg-white/20" />
               </div>
