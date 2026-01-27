@@ -8,12 +8,6 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator";
 import { Providers } from "./providers";
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 export default function ProtectedLayout({
   children,
 }: {
@@ -21,8 +15,6 @@ export default function ProtectedLayout({
 }) {
   const router = useRouter();
   const [user, setUser] = useState<{ email?: string } | null>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [currentOrganization, setCurrentOrganization] = useState<Organization | undefined>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,22 +27,7 @@ export default function ProtectedLayout({
         return;
       }
       setUser({ email: user.email });
-
-      // Get user's organizations
-      supabase
-        .rpc("get_user_organizations", { p_user_id: user.id })
-        .then(({ data: orgs }) => {
-          if (orgs && orgs.length > 0) {
-            const mappedOrgs = orgs.map((org: { organization_id: string; organization_name: string; organization_slug: string }) => ({
-              id: org.organization_id,
-              name: org.organization_name,
-              slug: org.organization_slug,
-            }));
-            setOrganizations(mappedOrgs);
-            setCurrentOrganization(mappedOrgs[0]);
-          }
-          setLoading(false);
-        });
+      setLoading(false);
     });
 
     // Listen for auth changes
@@ -83,8 +60,6 @@ export default function ProtectedLayout({
     <Providers>
       <SidebarProvider>
         <AppSidebar
-          organizations={organizations}
-          currentOrganization={currentOrganization}
           userEmail={user?.email}
           onSignOut={handleSignOut}
         />

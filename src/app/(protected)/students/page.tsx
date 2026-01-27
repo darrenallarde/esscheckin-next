@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,33 +10,21 @@ import { GroupDetailModal } from "@/components/groups/GroupDetailModal";
 import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
 import { AddStudentToGroupModal } from "@/components/groups/AddStudentToGroupModal";
 import { useGroups, Group, useGroupMembers } from "@/hooks/queries/use-groups";
-import { createClient } from "@/lib/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export default function StudentsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
 
-  const { data: groups, isLoading } = useGroups();
+  const { currentOrganization, userRole, isLoading: orgLoading } = useOrganization();
+  const organizationId = currentOrganization?.id || null;
+  const canManageLeaders = userRole === "owner" || userRole === "admin";
+
+  const { data: groups, isLoading: groupsLoading } = useGroups(organizationId);
   const { data: groupMembers } = useGroupMembers(selectedGroup?.id || null);
 
-  // Get organization ID on mount
-  useEffect(() => {
-    async function getOrgId() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: orgs } = await supabase.rpc("get_user_organizations", {
-          p_user_id: user.id,
-        });
-        if (orgs && orgs.length > 0) {
-          setOrganizationId(orgs[0].organization_id);
-        }
-      }
-    }
-    getOrgId();
-  }, []);
+  const isLoading = orgLoading || groupsLoading;
 
   const handleGroupClick = (group: Group) => {
     setSelectedGroup(group);
@@ -63,7 +51,7 @@ export default function StudentsPage() {
             Manage groups and track student engagement
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} disabled={!organizationId}>
           <Plus className="h-4 w-4 mr-2" />
           New Group
         </Button>
@@ -101,7 +89,7 @@ export default function StudentsPage() {
                 Create your first group to organize students and track their attendance
                 based on meeting schedules.
               </p>
-              <Button className="mt-4" onClick={() => setShowCreateModal(true)}>
+              <Button className="mt-4" onClick={() => setShowCreateModal(true)} disabled={!organizationId}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Group
               </Button>
@@ -116,7 +104,7 @@ export default function StudentsPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">All Students</CardTitle>
             <Button variant="outline" size="sm" asChild>
-              <a href="/students/all">View All →</a>
+              <a href="/students/all">View All</a>
             </Button>
           </CardHeader>
           <CardContent>
@@ -136,6 +124,8 @@ export default function StudentsPage() {
         onOpenChange={(open) => !open && setSelectedGroup(null)}
         onAddStudent={handleAddStudent}
         onEditSettings={handleEditSettings}
+        organizationId={organizationId || ""}
+        canManageLeaders={canManageLeaders}
       />
 
       {/* Create Group Modal */}
@@ -148,13 +138,14 @@ export default function StudentsPage() {
       )}
 
       {/* Add Student to Group Modal */}
-      {selectedGroup && (
+      {selectedGroup && organizationId && (
         <AddStudentToGroupModal
           open={showAddStudentModal}
           onOpenChange={setShowAddStudentModal}
           groupId={selectedGroup.id}
           groupName={selectedGroup.name}
           existingMemberIds={existingMemberIds}
+          organizationId={organizationId}
         />
       )}
     </div>

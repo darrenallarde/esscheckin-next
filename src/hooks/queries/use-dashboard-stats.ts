@@ -11,22 +11,24 @@ export interface DashboardStats {
   weeklyTrend: number; // percentage change from last week
 }
 
-async function fetchDashboardStats(): Promise<DashboardStats> {
+async function fetchDashboardStats(organizationId: string): Promise<DashboardStats> {
   const supabase = createClient();
 
-  // Get total students
+  // Get total students for this organization
   const { count: totalStudents, error: studentsError } = await supabase
     .from("students")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
 
   if (studentsError) throw studentsError;
 
-  // Get today's check-ins
+  // Get today's check-ins for this organization
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const { count: checkInsToday, error: todayError } = await supabase
     .from("check_ins")
     .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", today.toISOString());
 
   if (todayError) throw todayError;
@@ -37,6 +39,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
   const { count: checkInsYesterday } = await supabase
     .from("check_ins")
     .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", yesterday.toISOString())
     .lt("checked_in_at", today.toISOString());
 
@@ -46,6 +49,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
   const { count: weeklyCheckIns, error: weeklyError } = await supabase
     .from("check_ins")
     .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", weekAgo.toISOString());
 
   if (weeklyError) throw weeklyError;
@@ -56,6 +60,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
   const { count: previousWeekCheckIns } = await supabase
     .from("check_ins")
     .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", twoWeeksAgo.toISOString())
     .lt("checked_in_at", weekAgo.toISOString());
 
@@ -66,6 +71,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
   const { data: recentCheckIns, error: recentError } = await supabase
     .from("check_ins")
     .select("student_id")
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", thirtyDaysAgo.toISOString());
 
   if (recentError) throw recentError;
@@ -94,10 +100,11 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
   };
 }
 
-export function useDashboardStats() {
+export function useDashboardStats(organizationId: string | null) {
   return useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: fetchDashboardStats,
+    queryKey: ["dashboard-stats", organizationId],
+    queryFn: () => fetchDashboardStats(organizationId!),
+    enabled: !!organizationId,
   });
 }
 
@@ -108,7 +115,7 @@ export interface WeeklyAttendanceData {
   attendance: number;
 }
 
-async function fetchWeeklyAttendance(): Promise<WeeklyAttendanceData[]> {
+async function fetchWeeklyAttendance(organizationId: string): Promise<WeeklyAttendanceData[]> {
   const supabase = createClient();
   const weeks: WeeklyAttendanceData[] = [];
 
@@ -124,6 +131,7 @@ async function fetchWeeklyAttendance(): Promise<WeeklyAttendanceData[]> {
     const { count } = await supabase
       .from("check_ins")
       .select("*", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
       .gte("checked_in_at", weekStart.toISOString())
       .lt("checked_in_at", weekEnd.toISOString());
 
@@ -137,9 +145,10 @@ async function fetchWeeklyAttendance(): Promise<WeeklyAttendanceData[]> {
   return weeks;
 }
 
-export function useWeeklyAttendance() {
+export function useWeeklyAttendance(organizationId: string | null) {
   return useQuery({
-    queryKey: ["weekly-attendance"],
-    queryFn: fetchWeeklyAttendance,
+    queryKey: ["weekly-attendance", organizationId],
+    queryFn: () => fetchWeeklyAttendance(organizationId!),
+    enabled: !!organizationId,
   });
 }

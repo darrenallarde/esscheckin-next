@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { importStudentsFromCSV } from "@/utils/importStudents";
 import { useToast } from "@/hooks/use-toast";
 
-const StudentImporter = () => {
+interface StudentImporterProps {
+  organizationId: string;
+}
+
+const StudentImporter = ({ organizationId }: StudentImporterProps) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importResults, setImportResults] = useState<any>(null);
   const { toast } = useToast();
@@ -20,7 +24,7 @@ const StudentImporter = () => {
       const csvText = await response.text();
       
       // Import students
-      const results = await importStudentsFromCSV(csvText);
+      const results = await importStudentsFromCSV(csvText, organizationId);
       
       setImportResults(results);
       

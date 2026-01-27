@@ -45,10 +45,10 @@ export interface GroupMember {
   best_streak: number;
 }
 
-async function fetchGroups(): Promise<Group[]> {
+async function fetchGroups(organizationId: string): Promise<Group[]> {
   const supabase = createClient();
 
-  // Get groups with meeting times
+  // Get groups with meeting times for this organization
   const { data: groups, error } = await supabase
     .from("groups")
     .select(`
@@ -57,6 +57,7 @@ async function fetchGroups(): Promise<Group[]> {
       group_leaders(id, user_id, role),
       group_members(student_id)
     `)
+    .eq("organization_id", organizationId)
     .order("name");
 
   if (error) throw error;
@@ -68,6 +69,7 @@ async function fetchGroups(): Promise<Group[]> {
   const { data: recentCheckIns } = await supabase
     .from("check_ins")
     .select("student_id")
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", thirtyDaysAgo.toISOString());
 
   const activeStudentIds = new Set(recentCheckIns?.map((c) => c.student_id) || []);
@@ -93,10 +95,11 @@ async function fetchGroups(): Promise<Group[]> {
   });
 }
 
-export function useGroups() {
+export function useGroups(organizationId: string | null) {
   return useQuery({
-    queryKey: ["groups"],
-    queryFn: fetchGroups,
+    queryKey: ["groups", organizationId],
+    queryFn: () => fetchGroups(organizationId!),
+    enabled: !!organizationId,
   });
 }
 
@@ -124,6 +127,10 @@ async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
   // Get last check-in for each student
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const studentIds = members?.map((m) => (m.students as any)?.id).filter(Boolean) || [];
+
+  if (studentIds.length === 0) {
+    return [];
+  }
 
   const { data: checkIns } = await supabase
     .from("check_ins")
@@ -235,8 +242,8 @@ export function useCreateGroup() {
 
       return group;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.organization_id] });
     },
   });
 }
@@ -246,7 +253,7 @@ export function useAddStudentToGroup() {
   const supabase = createClient();
 
   return useMutation({
-    mutationFn: async ({ groupId, studentId }: { groupId: string; studentId: string }) => {
+    mutationFn: async ({ groupId, studentId, organizationId }: { groupId: string; studentId: string; organizationId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
 
       const { error } = await supabase
@@ -258,9 +265,10 @@ export function useAddStudentToGroup() {
         });
 
       if (error) throw error;
+      return { organizationId };
     },
-    onSuccess: (_, { groupId }) => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    onSuccess: (result, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", result.organizationId] });
       queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
     },
   });
@@ -271,7 +279,7 @@ export function useRemoveStudentFromGroup() {
   const supabase = createClient();
 
   return useMutation({
-    mutationFn: async ({ groupId, studentId }: { groupId: string; studentId: string }) => {
+    mutationFn: async ({ groupId, studentId, organizationId }: { groupId: string; studentId: string; organizationId: string }) => {
       const { error } = await supabase
         .from("group_members")
         .delete()
@@ -279,9 +287,10 @@ export function useRemoveStudentFromGroup() {
         .eq("student_id", studentId);
 
       if (error) throw error;
+      return { organizationId };
     },
-    onSuccess: (_, { groupId }) => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    onSuccess: (result, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", result.organizationId] });
       queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
     },
   });

@@ -21,11 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, AlertCircle, Activity, Settings, UserPlus, Search } from "lucide-react";
+import { Users, AlertCircle, Activity, Settings, UserPlus, Search, Shield } from "lucide-react";
 import { Group, useGroupMembers, DAY_NAMES, formatMeetingTime } from "@/hooks/queries/use-groups";
 import { StreakMeter } from "@/components/shared/StreakMeter";
 import { RANKS } from "@/utils/gamificationDB";
 import { formatDistanceToNow } from "date-fns";
+import { GroupLeadersList } from "./GroupLeadersList";
+import { AssignLeaderModal } from "./AssignLeaderModal";
 
 interface GroupDetailModalProps {
   group: Group | null;
@@ -33,6 +35,8 @@ interface GroupDetailModalProps {
   onOpenChange: (open: boolean) => void;
   onAddStudent: () => void;
   onEditSettings: () => void;
+  organizationId: string;
+  canManageLeaders?: boolean;
 }
 
 export function GroupDetailModal({
@@ -41,6 +45,8 @@ export function GroupDetailModal({
   onOpenChange,
   onAddStudent,
   onEditSettings,
+  organizationId,
+  canManageLeaders = false,
 }: GroupDetailModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: members, isLoading } = useGroupMembers(group?.id || null);
@@ -97,14 +103,18 @@ export function GroupDetailModal({
         </DialogHeader>
 
         <Tabs defaultValue="members" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="members" className="gap-2">
               <Users className="h-4 w-4" />
               Members ({members?.length || 0})
             </TabsTrigger>
+            <TabsTrigger value="leaders" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Leaders
+            </TabsTrigger>
             <TabsTrigger value="attention" className="gap-2">
               <AlertCircle className="h-4 w-4" />
-              Needs Attention ({membersNeedingAttention?.length || 0})
+              Attention ({membersNeedingAttention?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="activity" className="gap-2">
               <Activity className="h-4 w-4" />
@@ -193,6 +203,21 @@ export function GroupDetailModal({
                   </TableBody>
                 </Table>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="leaders" className="flex-1 overflow-auto">
+            <div className="py-3">
+              {canManageLeaders && (
+                <div className="flex justify-end mb-4">
+                  <AssignLeaderModal
+                    groupId={group.id}
+                    groupName={group.name}
+                    organizationId={organizationId}
+                  />
+                </div>
+              )}
+              <GroupLeadersList groupId={group.id} canManage={canManageLeaders} />
             </div>
           </TabsContent>
 

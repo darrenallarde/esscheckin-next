@@ -2,20 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { PastoralRecommendation } from "@/components/pastoral/PastoralQueue";
 
-async function fetchPastoralRecommendations(limit?: number): Promise<PastoralRecommendation[]> {
+async function fetchPastoralRecommendations(organizationId: string, limit?: number): Promise<PastoralRecommendation[]> {
   const supabase = createClient();
 
-  // Get students who haven't checked in recently (30+ days = high, 14+ = medium, 7+ = low)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-  // Get all students with their last check-in
+  // Get all students with their last check-in for this organization
   const { data: students, error: studentsError } = await supabase
     .from("students")
     .select(`
@@ -24,14 +14,20 @@ async function fetchPastoralRecommendations(limit?: number): Promise<PastoralRec
       last_name,
       created_at
     `)
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
   if (studentsError) throw studentsError;
+
+  if (!students || students.length === 0) {
+    return [];
+  }
 
   // Get last check-in for each student
   const { data: checkIns, error: checkInsError } = await supabase
     .from("check_ins")
     .select("student_id, checked_in_at")
+    .eq("organization_id", organizationId)
     .order("checked_in_at", { ascending: false });
 
   if (checkInsError) throw checkInsError;
@@ -95,9 +91,10 @@ async function fetchPastoralRecommendations(limit?: number): Promise<PastoralRec
   return limit ? recommendations.slice(0, limit) : recommendations;
 }
 
-export function usePastoralRecommendations(limit?: number) {
+export function usePastoralRecommendations(organizationId: string | null, limit?: number) {
   return useQuery({
-    queryKey: ["pastoral-recommendations", limit],
-    queryFn: () => fetchPastoralRecommendations(limit),
+    queryKey: ["pastoral-recommendations", organizationId, limit],
+    queryFn: () => fetchPastoralRecommendations(organizationId!, limit),
+    enabled: !!organizationId,
   });
 }

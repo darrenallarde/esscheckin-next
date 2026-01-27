@@ -9,16 +9,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { FileText, Calendar } from 'lucide-react';
 
-// Default organization ID from the SQL migration
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
-
 interface CurriculumModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  organizationId: string;
 }
 
-const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, onSuccess }) => {
+const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, onSuccess, organizationId }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [weekDate, setWeekDate] = useState(new Date().toISOString().split('T')[0]);
   const [sermonContent, setSermonContent] = useState('');
@@ -43,7 +41,7 @@ const CurriculumModal: React.FC<CurriculumModalProps> = ({ open, onOpenChange, o
       const topicTitle = firstLine.length > 60 ? firstLine.substring(0, 60) + '...' : firstLine;
 
       const formData = {
-        organization_id: DEFAULT_ORG_ID,
+        organization_id: organizationId,
         week_date: weekDate,
         series_name: 'Weekly Teaching',
         topic_title: topicTitle || 'Teaching',

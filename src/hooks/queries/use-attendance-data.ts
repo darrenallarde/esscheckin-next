@@ -16,6 +16,7 @@ export interface DateRange {
 }
 
 async function fetchAttendanceData(
+  organizationId: string,
   dateRange: DateRange
 ): Promise<AttendanceDataPoint[]> {
   const supabase = createClient();
@@ -23,6 +24,7 @@ async function fetchAttendanceData(
   const { data: checkIns, error } = await supabase
     .from("check_ins")
     .select("checked_in_at")
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", dateRange.start.toISOString())
     .lte("checked_in_at", dateRange.end.toISOString())
     .order("checked_in_at", { ascending: true });
@@ -66,10 +68,11 @@ async function fetchAttendanceData(
   return result;
 }
 
-export function useAttendanceData(dateRange: DateRange) {
+export function useAttendanceData(organizationId: string | null, dateRange: DateRange) {
   return useQuery({
-    queryKey: ["attendance-data", dateRange.start.toISOString(), dateRange.end.toISOString()],
-    queryFn: () => fetchAttendanceData(dateRange),
+    queryKey: ["attendance-data", organizationId, dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchAttendanceData(organizationId!, dateRange),
+    enabled: !!organizationId,
   });
 }
 
@@ -80,12 +83,13 @@ export interface DayBreakdownData {
   percentage: number;
 }
 
-async function fetchDayBreakdown(dateRange: DateRange): Promise<DayBreakdownData[]> {
+async function fetchDayBreakdown(organizationId: string, dateRange: DateRange): Promise<DayBreakdownData[]> {
   const supabase = createClient();
 
   const { data: checkIns, error } = await supabase
     .from("check_ins")
     .select("checked_in_at")
+    .eq("organization_id", organizationId)
     .gte("checked_in_at", dateRange.start.toISOString())
     .lte("checked_in_at", dateRange.end.toISOString());
 
@@ -119,10 +123,11 @@ async function fetchDayBreakdown(dateRange: DateRange): Promise<DayBreakdownData
   ];
 }
 
-export function useDayBreakdown(dateRange: DateRange) {
+export function useDayBreakdown(organizationId: string | null, dateRange: DateRange) {
   return useQuery({
-    queryKey: ["day-breakdown", dateRange.start.toISOString(), dateRange.end.toISOString()],
-    queryFn: () => fetchDayBreakdown(dateRange),
+    queryKey: ["day-breakdown", organizationId, dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchDayBreakdown(organizationId!, dateRange),
+    enabled: !!organizationId,
   });
 }
 

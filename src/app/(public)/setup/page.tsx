@@ -1,23 +1,16 @@
 "use client";
-/* eslint-disable react-hooks/exhaustive-deps */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sprout, Shield, Loader2 } from "lucide-react";
-
-// Default organization ID from the SQL migration
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
+import { Sprout, Shield, Loader2, Mail } from "lucide-react";
 
 export default function SetupPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [hasExistingOwner, setHasExistingOwner] = useState(false);
 
   useEffect(() => {
     checkSetupStatus();
@@ -47,61 +40,40 @@ export default function SetupPage() {
       return;
     }
 
-    // Check if the default org has any owners
-    const { data: members, error: membersError } = await supabase
-      .from("organization_members")
-      .select("id, role")
-      .eq("organization_id", DEFAULT_ORG_ID)
-      .eq("role", "owner")
-      .eq("status", "active");
+    // Check for any pending invitations for this user
+    const { data: pendingInvites } = await supabase
+      .from("organization_invitations")
+      .select("id, organization_id")
+      .eq("email", user.email)
+      .is("accepted_at", null)
+      .gt("expires_at", new Date().toISOString());
 
-    if (membersError) {
-      console.error("Error checking org members:", membersError);
-      setError("Failed to check organization status. The organization tables may not exist yet.");
-      setIsLoading(false);
-      return;
-    }
-
-    setHasExistingOwner(members && members.length > 0);
-    setIsLoading(false);
-  };
-
-  const claimOwnership = async () => {
-    setIsClaiming(true);
-    setError(null);
-
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("Not authenticated");
-      setIsClaiming(false);
-      return;
-    }
-
-    try {
-      // Add user as owner of the default organization
-      const { error: insertError } = await supabase
-        .from("organization_members")
-        .insert({
-          organization_id: DEFAULT_ORG_ID,
+    if (pendingInvites && pendingInvites.length > 0) {
+      // User has pending invitations - they should re-auth to trigger auto-accept
+      // Or we could accept them here directly
+      for (const invite of pendingInvites) {
+        await supabase.from("organization_members").upsert({
+          organization_id: invite.organization_id,
           user_id: user.id,
-          role: "owner",
+          role: "viewer", // Default role if somehow role wasn't set
           status: "active",
           accepted_at: new Date().toISOString(),
+        }, {
+          onConflict: "organization_id,user_id",
         });
 
-      if (insertError) {
-        throw insertError;
+        await supabase
+          .from("organization_invitations")
+          .update({ accepted_at: new Date().toISOString() })
+          .eq("id", invite.id);
       }
 
-      // Redirect to dashboard
+      // Redirect to dashboard after accepting invites
       router.push("/dashboard");
-    } catch (err) {
-      console.error("Error claiming ownership:", err);
-      setError(err instanceof Error ? err.message : "Failed to set up organization");
-      setIsClaiming(false);
+      return;
     }
+
+    setIsLoading(false);
   };
 
   if (isLoading) {
@@ -120,7 +92,7 @@ export default function SetupPage() {
           <Sprout className="h-10 w-10 text-primary-foreground" />
         </div>
         <h1 className="text-3xl font-bold text-foreground">ESS Check-in</h1>
-        <p className="text-muted-foreground mt-2">Organization Setup</p>
+        <p className="text-muted-foreground mt-2">Organization Access</p>
       </div>
 
       <Card className="w-full max-w-md shadow-card">
@@ -130,55 +102,50 @@ export default function SetupPage() {
               <Shield className="h-6 w-6 text-secondary" />
             </div>
           </div>
-          <CardTitle>
-            {hasExistingOwner ? "Request Access" : "Claim Ownership"}
-          </CardTitle>
+          <CardTitle>No Organization Access</CardTitle>
           <CardDescription>
-            {hasExistingOwner
-              ? "This organization already has an owner. Contact them to get access."
-              : "You're the first user! Set yourself up as the organization owner."}
+            You need to be invited to an organization to use ESS Check-in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
           {userEmail && (
             <p className="text-sm text-center text-muted-foreground">
               Signed in as <strong>{userEmail}</strong>
             </p>
           )}
 
-          {hasExistingOwner ? (
-            <div className="text-center text-sm text-muted-foreground">
-              <p>The organization owner needs to invite you from the Team settings.</p>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/auth")}
-                className="mt-4"
-              >
-                Back to Sign In
-              </Button>
+          <div className="bg-muted/50 rounded-lg p-4 text-center space-y-3">
+            <Mail className="h-8 w-8 mx-auto text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">Need access?</p>
+              <p>
+                Contact your organization administrator and ask them to invite
+                you from the Team settings page.
+              </p>
+              <p className="mt-2">
+                Once invited, you'll receive an email with instructions to join.
+              </p>
             </div>
-          ) : (
+          </div>
+
+          <div className="flex flex-col gap-2 pt-4">
             <Button
-              onClick={claimOwnership}
-              disabled={isClaiming}
-              className="w-full"
+              variant="outline"
+              onClick={() => router.push("/auth")}
             >
-              {isClaiming ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting up...
-                </>
-              ) : (
-                "Become Organization Owner"
-              )}
+              Sign in with a different account
             </Button>
-          )}
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                router.push("/auth");
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

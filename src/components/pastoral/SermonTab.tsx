@@ -12,6 +12,7 @@ interface SermonTabProps {
   students: StudentPastoralData[];
   onEditCurriculum: () => void;
   onRecommendationsComplete: () => void;
+  organizationId: string;
 }
 
 const SermonTab: React.FC<SermonTabProps> = ({
@@ -19,6 +20,7 @@ const SermonTab: React.FC<SermonTabProps> = ({
   students,
   onEditCurriculum,
   onRecommendationsComplete,
+  organizationId,
 }) => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -68,6 +70,7 @@ const SermonTab: React.FC<SermonTabProps> = ({
                 students={students}
                 curriculum={curriculum}
                 onComplete={onRecommendationsComplete}
+                organizationId={organizationId}
               />
             </CardContent>
           </Card>

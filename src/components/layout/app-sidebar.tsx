@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Sprout,
   Heart,
+  Shield,
 } from "lucide-react";
 
 import {
@@ -33,16 +34,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { useOrganization } from "@/hooks/useOrganization";
 
 interface AppSidebarProps {
-  organizations?: Organization[];
-  currentOrganization?: Organization;
   userEmail?: string;
   onSignOut?: () => void;
 }
@@ -76,12 +70,11 @@ const navItems = [
 ];
 
 export function AppSidebar({
-  organizations = [],
-  currentOrganization,
   userEmail,
   onSignOut,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const { currentOrganization, organizations, isSuperAdmin, switchOrganization } = useOrganization();
 
   const isActive = (url: string) => {
     return pathname === url || pathname.startsWith(url + "/");
@@ -105,8 +98,12 @@ export function AppSidebar({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   {organizations.map((org) => (
-                    <DropdownMenuItem key={org.id} asChild>
-                      <Link href={`/dashboard?org=${org.slug}`}>{org.name}</Link>
+                    <DropdownMenuItem
+                      key={org.id}
+                      onClick={() => switchOrganization(org)}
+                      className={currentOrganization?.id === org.id ? "bg-accent" : ""}
+                    >
+                      {org.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -163,6 +160,21 @@ export function AppSidebar({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {/* Admin link for super_admins */}
+              {isSuperAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/admin")}
+                    tooltip="Admin"
+                  >
+                    <Link href="/admin">
+                      <Shield />
+                      <span>Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -178,6 +190,9 @@ export function AppSidebar({
           </Avatar>
           <div className="flex flex-1 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm">{userEmail || "User"}</span>
+            {isSuperAdmin && (
+              <span className="text-xs text-sidebar-foreground/50">Super Admin</span>
+            )}
           </div>
           <button
             onClick={onSignOut}

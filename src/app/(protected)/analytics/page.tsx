@@ -20,16 +20,20 @@ import {
   useRankDistribution,
   useAchievementsSummary,
 } from "@/hooks/queries/use-gamification";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export default function AnalyticsPage() {
   const [selectedWeeks, setSelectedWeeks] = useState(8);
   const dateRange = getDateRangeFromPreset(selectedWeeks);
 
-  const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceData(dateRange);
-  const { data: dayBreakdown, isLoading: dayLoading } = useDayBreakdown(dateRange);
-  const { data: rankDistribution, isLoading: rankLoading } = useRankDistribution();
-  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(50);
-  const { data: achievements, isLoading: achievementsLoading } = useAchievementsSummary();
+  const { currentOrganization, isLoading: orgLoading } = useOrganization();
+  const organizationId = currentOrganization?.id || null;
+
+  const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceData(organizationId, dateRange);
+  const { data: dayBreakdown, isLoading: dayLoading } = useDayBreakdown(organizationId, dateRange);
+  const { data: rankDistribution, isLoading: rankLoading } = useRankDistribution(organizationId);
+  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 50);
+  const { data: achievements, isLoading: achievementsLoading } = useAchievementsSummary(organizationId);
 
   const handleExport = () => {
     // TODO: Implement CSV export
@@ -59,12 +63,12 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Main Attendance Chart - Full Width */}
-      <AttendanceTrendChart data={attendanceData ?? []} loading={attendanceLoading} />
+      <AttendanceTrendChart data={attendanceData ?? []} loading={orgLoading || attendanceLoading} />
 
       {/* Two Column Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <DayBreakdownChart data={dayBreakdown ?? []} loading={dayLoading} />
-        <EngagementFunnel data={rankDistribution ?? []} loading={rankLoading} />
+        <DayBreakdownChart data={dayBreakdown ?? []} loading={orgLoading || dayLoading} />
+        <EngagementFunnel data={rankDistribution ?? []} loading={orgLoading || rankLoading} />
       </div>
 
       {/* Gamification Section */}
@@ -85,11 +89,11 @@ export default function AnalyticsPage() {
           </div>
 
           <TabsContent value="leaderboard" className="mt-0">
-            <LeaderboardTable data={leaderboard ?? []} loading={leaderboardLoading} />
+            <LeaderboardTable data={leaderboard ?? []} loading={orgLoading || leaderboardLoading} />
           </TabsContent>
 
           <TabsContent value="achievements" className="mt-0">
-            <AchievementGrid data={achievements ?? []} loading={achievementsLoading} />
+            <AchievementGrid data={achievements ?? []} loading={orgLoading || achievementsLoading} />
           </TabsContent>
         </Tabs>
       </div>

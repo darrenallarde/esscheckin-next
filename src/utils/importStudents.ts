@@ -1,8 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Default organization ID from the SQL migration
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
-
 interface StudentRecord {
   firstName: string;
   lastName: string;
@@ -64,17 +61,17 @@ export const getUniqueStudents = (records: StudentRecord[]): StudentRecord[] => 
   return Array.from(uniqueMap.values());
 };
 
-export const insertStudentsIntoDB = async (students: StudentRecord[]) => {
+export const insertStudentsIntoDB = async (students: StudentRecord[], organizationId: string) => {
   const results = [];
-  
+
   console.log(`Inserting ${students.length} unique students into database...`);
-  
+
   for (const student of students) {
     try {
       const { data, error } = await supabase
         .from('students')
         .insert({
-          organization_id: DEFAULT_ORG_ID,
+          organization_id: organizationId,
           first_name: student.firstName,
           last_name: student.lastName || '',
           phone_number: student.phone || null,
@@ -112,19 +109,19 @@ export const insertStudentsIntoDB = async (students: StudentRecord[]) => {
   return results;
 };
 
-export const importStudentsFromCSV = async (csvText: string) => {
+export const importStudentsFromCSV = async (csvText: string, organizationId: string) => {
   console.log('Starting student import process...');
-  
+
   // Step 1: Parse CSV data
   const allRecords = parseCSVData(csvText);
   console.log(`Parsed ${allRecords.length} total records from CSV`);
-  
+
   // Step 2: Get unique students
   const uniqueStudents = getUniqueStudents(allRecords);
   console.log(`Found ${uniqueStudents.length} unique students`);
-  
+
   // Step 3: Insert into database
-  const results = await insertStudentsIntoDB(uniqueStudents);
+  const results = await insertStudentsIntoDB(uniqueStudents, organizationId);
   
   // Step 4: Summary
   const successful = results.filter(r => r.success).length;

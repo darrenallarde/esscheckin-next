@@ -9,12 +9,18 @@ import { EncouragingMessage } from "@/components/shared/EncouragingMessage";
 import { useDashboardStats, useWeeklyAttendance } from "@/hooks/queries/use-dashboard-stats";
 import { useLeaderboard } from "@/hooks/queries/use-gamification";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
+import { useOrganization } from "@/hooks/useOrganization";
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyAttendance();
-  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(5);
-  const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(5);
+  const { currentOrganization, isLoading: orgLoading } = useOrganization();
+  const organizationId = currentOrganization?.id || null;
+
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(organizationId);
+  const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyAttendance(organizationId);
+  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 5);
+  const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(organizationId, 5);
+
+  const isLoading = orgLoading || statsLoading;
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -36,7 +42,7 @@ export default function DashboardPage() {
           value={stats?.totalStudents ?? 0}
           subtitle="Active in your organization"
           icon={Users}
-          loading={statsLoading}
+          loading={isLoading}
         />
         <StatCard
           title="Check-ins Today"
@@ -44,7 +50,7 @@ export default function DashboardPage() {
           subtitle="Students checked in today"
           icon={CalendarCheck}
           trend={stats?.todayTrend}
-          loading={statsLoading}
+          loading={isLoading}
         />
         <StatCard
           title="Daily Average"
@@ -52,14 +58,14 @@ export default function DashboardPage() {
           subtitle="Average over last 7 days"
           icon={TrendingUp}
           trend={stats?.weeklyTrend}
-          loading={statsLoading}
+          loading={isLoading}
         />
         <StatCard
           title="Needs Attention"
           value={stats?.needsAttention ?? 0}
           subtitle="Students missing 30+ days"
           icon={AlertCircle}
-          loading={statsLoading}
+          loading={isLoading}
         />
       </div>
 
@@ -69,7 +75,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-3">
           <PastoralQueue
             data={recommendations ?? []}
-            loading={recsLoading}
+            loading={orgLoading || recsLoading}
             viewAllHref="/pastoral"
           />
         </div>
@@ -78,12 +84,12 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <MiniTrendChart
             data={weeklyData ?? []}
-            loading={weeklyLoading}
+            loading={orgLoading || weeklyLoading}
             title="Weekly Attendance Trend"
           />
           <LeaderboardPreview
             data={leaderboard ?? []}
-            loading={leaderboardLoading}
+            loading={orgLoading || leaderboardLoading}
             viewAllHref="/analytics"
           />
         </div>

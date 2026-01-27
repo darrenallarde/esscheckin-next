@@ -23,6 +23,7 @@ interface AddStudentToGroupModalProps {
   groupId: string;
   groupName: string;
   existingMemberIds: string[];
+  organizationId: string;
 }
 
 export function AddStudentToGroupModal({
@@ -31,17 +32,18 @@ export function AddStudentToGroupModal({
   groupId,
   groupName,
   existingMemberIds,
+  organizationId,
 }: AddStudentToGroupModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
 
-  const { data: searchResults, isLoading } = useSearchStudents(searchQuery);
+  const { data: searchResults, isLoading } = useSearchStudents(organizationId, searchQuery);
   const addStudent = useAddStudentToGroup();
 
   const handleAddStudent = async (studentId: string) => {
     setAddingId(studentId);
     try {
-      await addStudent.mutateAsync({ groupId, studentId });
+      await addStudent.mutateAsync({ groupId, studentId, organizationId });
     } catch (error) {
       console.error("Failed to add student:", error);
     } finally {

@@ -6,7 +6,11 @@ import { importCheckinsFromCSV, createStudentAndCheckin } from "@/utils/importCh
 import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, UserPlus } from "lucide-react";
 
-const CheckinImporter = () => {
+interface CheckinImporterProps {
+  organizationId: string;
+}
+
+const CheckinImporter = ({ organizationId }: CheckinImporterProps) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importResults, setImportResults] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -71,7 +75,7 @@ const CheckinImporter = () => {
     setCreatingStudent(studentData.student);
 
     try {
-      const result = await createStudentAndCheckin(studentData.studentData);
+      const result = await createStudentAndCheckin(studentData.studentData, organizationId);
 
       if (result.success) {
         toast({

@@ -12,19 +12,18 @@ import { StudentPastoralData } from '@/types/pastoral';
 import { generateRecommendation, generateFallbackRecommendation } from '@/utils/aiRecommendations';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Default organization ID from the SQL migration
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
-
 interface GenerateRecommendationsButtonProps {
   students: StudentPastoralData[];
   curriculum: CurriculumWeek | null;
   onComplete: () => void;
+  organizationId: string;
 }
 
 const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps> = ({
   students,
   curriculum,
-  onComplete
+  onComplete,
+  organizationId
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -149,7 +148,7 @@ const GenerateRecommendationsButton: React.FC<GenerateRecommendationsButtonProps
           const { error } = await supabase
             .from('ai_recommendations')
             .upsert({
-              organization_id: DEFAULT_ORG_ID,
+              organization_id: organizationId,
               student_id: student.student_id,
               curriculum_week_id: curriculum.id,
               key_insight: recommendation.key_insight,

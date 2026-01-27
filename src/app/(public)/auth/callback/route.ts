@@ -33,10 +33,39 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Check if user is a member of any organization
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
+        // Auto-accept any pending invitations for this user's email
+        const { data: invitations } = await supabase
+          .from("organization_invitations")
+          .select("*")
+          .eq("email", user.email)
+          .is("accepted_at", null)
+          .gt("expires_at", new Date().toISOString());
+
+        // Accept each invitation by adding user to organization
+        for (const invite of invitations || []) {
+          // Add user to organization_members
+          await supabase.from("organization_members").upsert({
+            organization_id: invite.organization_id,
+            user_id: user.id,
+            role: invite.role,
+            status: "active",
+            invited_by: invite.invited_by,
+            accepted_at: new Date().toISOString(),
+          }, {
+            onConflict: "organization_id,user_id",
+          });
+
+          // Mark invitation as accepted
+          await supabase
+            .from("organization_invitations")
+            .update({ accepted_at: new Date().toISOString() })
+            .eq("id", invite.id);
+        }
+
+        // Check if user is a member of any organization
         const { data: orgs } = await supabase.rpc("get_user_organizations", {
           p_user_id: user.id,
         });

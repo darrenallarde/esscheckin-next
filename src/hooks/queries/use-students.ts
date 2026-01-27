@@ -18,10 +18,10 @@ export interface Student {
   groups: Array<{ id: string; name: string; color: string | null }>;
 }
 
-async function fetchStudents(): Promise<Student[]> {
+async function fetchStudents(organizationId: string): Promise<Student[]> {
   const supabase = createClient();
 
-  // Get all students with game stats and group memberships
+  // Get all students with game stats and group memberships for this organization
   const { data: students, error } = await supabase
     .from("students")
     .select(`
@@ -38,12 +38,17 @@ async function fetchStudents(): Promise<Student[]> {
         groups(id, name, color)
       )
     `)
+    .eq("organization_id", organizationId)
     .order("first_name");
 
   if (error) throw error;
 
   // Get check-in counts and last check-in for each student
   const studentIds = students?.map((s) => s.id) || [];
+
+  if (studentIds.length === 0) {
+    return [];
+  }
 
   const { data: checkInData } = await supabase
     .from("check_ins")
@@ -95,15 +100,16 @@ async function fetchStudents(): Promise<Student[]> {
   });
 }
 
-export function useStudents() {
+export function useStudents(organizationId: string | null) {
   return useQuery({
-    queryKey: ["students"],
-    queryFn: fetchStudents,
+    queryKey: ["students", organizationId],
+    queryFn: () => fetchStudents(organizationId!),
+    enabled: !!organizationId,
   });
 }
 
 // Search students (for adding to groups)
-async function searchStudents(query: string): Promise<Student[]> {
+async function searchStudents(organizationId: string, query: string): Promise<Student[]> {
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -119,6 +125,7 @@ async function searchStudents(query: string): Promise<Student[]> {
       user_type,
       student_game_stats(total_points, current_rank)
     `)
+    .eq("organization_id", organizationId)
     .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
     .limit(10);
 
@@ -145,10 +152,10 @@ async function searchStudents(query: string): Promise<Student[]> {
   });
 }
 
-export function useSearchStudents(query: string) {
+export function useSearchStudents(organizationId: string | null, query: string) {
   return useQuery({
-    queryKey: ["search-students", query],
-    queryFn: () => searchStudents(query),
-    enabled: query.length >= 2,
+    queryKey: ["search-students", organizationId, query],
+    queryFn: () => searchStudents(organizationId!, query),
+    enabled: !!organizationId && query.length >= 2,
   });
 }
