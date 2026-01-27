@@ -32,24 +32,34 @@ export interface RankInfo {
   title: string;
   emoji: string;
   color: string;
-  minPoints: number;
+  minCheckIns: number;
 }
 
 export const RANKS: RankInfo[] = [
-  { title: "Newcomer", emoji: "🌱", color: "#22c55e", minPoints: 0 },
-  { title: "Regular", emoji: "⭐", color: "#3b82f6", minPoints: 100 },
-  { title: "Committed", emoji: "🔥", color: "#f59e0b", minPoints: 300 },
-  { title: "Devoted", emoji: "💎", color: "#8b5cf6", minPoints: 600 },
-  { title: "Champion", emoji: "🏆", color: "#ef4444", minPoints: 1000 },
-  { title: "Legend", emoji: "👑", color: "#d946ef", minPoints: 2000 },
+  { title: "Newcomer", emoji: "🌱", color: "#22c55e", minCheckIns: 0 },
+  { title: "Regular", emoji: "⭐", color: "#3b82f6", minCheckIns: 25 },
+  { title: "Committed", emoji: "🔥", color: "#f59e0b", minCheckIns: 50 },
+  { title: "Devoted", emoji: "💎", color: "#8b5cf6", minCheckIns: 100 },
+  { title: "Champion", emoji: "🏆", color: "#ef4444", minCheckIns: 200 },
+  { title: "Legend", emoji: "👑", color: "#d946ef", minCheckIns: 300 },
 ];
 
 export function getRankInfo(rankTitle: string): RankInfo {
   return RANKS.find(rank => rank.title === rankTitle) || RANKS[0];
 }
 
-export function getNextRank(currentPoints: number): RankInfo | null {
-  return RANKS.find(rank => rank.minPoints > currentPoints) || null;
+export function getRankByCheckIns(checkInCount: number): RankInfo {
+  // Find the highest rank that the check-in count qualifies for
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (checkInCount >= RANKS[i].minCheckIns) {
+      return RANKS[i];
+    }
+  }
+  return RANKS[0];
+}
+
+export function getNextRank(currentCheckIns: number): RankInfo | null {
+  return RANKS.find(rank => rank.minCheckIns > currentCheckIns) || null;
 }
 
 export async function getStudentGameProfile(studentId: string): Promise<StudentGameProfile | null> {
