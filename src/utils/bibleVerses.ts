@@ -6,6 +6,17 @@ export interface BibleVerse {
   theme: 'goodness' | 'jesus' | 'prayer' | 'faith' | 'love';
 }
 
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  emoji: string;
+  points: number;
+  type: string;
+  condition: () => boolean;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
 export const BIBLE_VERSES: BibleVerse[] = [
   // God's Goodness
   {

@@ -1,5 +1,5 @@
 // Database-powered gamification system
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { Achievement, BibleVerse, getRandomVerse } from "@/utils/bibleVerses";
 
 export interface StudentGameProfile {
@@ -53,6 +53,7 @@ export function getNextRank(currentPoints: number): RankInfo | null {
 }
 
 export async function getStudentGameProfile(studentId: string): Promise<StudentGameProfile | null> {
+  const supabase = createClient();
   try {
     console.log('Calling get_student_game_profile RPC with studentId:', studentId);
     const { data, error } = await supabase
@@ -102,6 +103,7 @@ export async function processCheckinRewards(
   studentId: string,
   checkInId: string
 ): Promise<CheckinReward | null> {
+  const supabase = createClient();
   try {
     // Process the check-in rewards using the database function
     const { data, error } = await supabase
@@ -142,6 +144,7 @@ export async function calculateStudentStreaks(studentId: string): Promise<{
   sunday_streak: number;
   total_streak: number;
 }> {
+  const supabase = createClient();
   try {
     // Get all check-ins for this student
     const { data: checkIns, error } = await supabase
@@ -168,7 +171,7 @@ export async function calculateStudentStreaks(studentId: string): Promise<{
     const calculateStreak = (targetDays: number[]) => {
       let streak = 0;
       const today = new Date();
-      let currentWeekStart = new Date(today);
+      const currentWeekStart = new Date(today);
       currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
       currentWeekStart.setHours(0, 0, 0, 0);
 
@@ -197,7 +200,7 @@ export async function calculateStudentStreaks(studentId: string): Promise<{
     const calculateTotalStreak = () => {
       let streak = 0;
       const today = new Date();
-      let currentWeekStart = new Date(today);
+      const currentWeekStart = new Date(today);
       currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
       currentWeekStart.setHours(0, 0, 0, 0);
 
@@ -235,6 +238,7 @@ export async function calculateStudentStreaks(studentId: string): Promise<{
 }
 
 export async function getStudentAchievements(studentId: string): Promise<Achievement[]> {
+  const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from('student_achievements')
@@ -253,8 +257,8 @@ export async function getStudentAchievements(studentId: string): Promise<Achieve
       description: achievement.achievement_description,
       emoji: achievement.achievement_emoji,
       points: achievement.points_awarded,
-      type: 'special', // We'll need to map this properly
-      condition: () => true, // Not used in display
+      type: 'special',
+      condition: () => true,
       rarity: achievement.rarity as 'common' | 'rare' | 'epic' | 'legendary',
     })) || [];
   } catch (error) {
@@ -263,70 +267,27 @@ export async function getStudentAchievements(studentId: string): Promise<Achieve
   }
 }
 
-export async function getLeaderboard(limit: number = 10): Promise<StudentGameProfile[]> {
-  try {
-    const { data, error } = await supabase
-      .from('student_game_stats')
-      .select(`
-        student_id,
-        total_points,
-        current_rank,
-        students (
-          first_name,
-          last_name,
-          user_type
-        )
-      `)
-      .order('total_points', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('Error fetching leaderboard:', error);
-      return [];
-    }
-
-    return data?.map(entry => ({
-      student_id: entry.student_id,
-      first_name: entry.students?.first_name || '',
-      last_name: entry.students?.last_name || '',
-      user_type: entry.students?.user_type || 'student',
-      total_points: entry.total_points,
-      current_rank: entry.current_rank,
-      achievements_count: 0, // Would need separate query
-      recent_achievements: [],
-      total_check_ins: 0, // Would need separate query
-      last_check_in: null,
-      wednesday_streak: 0,
-      sunday_streak: 0,
-      total_streak: 0,
-    })) || [];
-  } catch (error) {
-    console.error('Error in getLeaderboard:', error);
-    return [];
-  }
-}
-
 export function getEncouragingMessage(profile: StudentGameProfile): string {
   const messages = {
     firstTime: [
-      "Welcome to the family! 🎉",
-      "Your journey begins now! ✨",
-      "So glad you're here! 💙",
+      "Welcome to the family!",
+      "Your journey begins now!",
+      "So glad you're here!",
     ],
     streak: [
-      `Amazing ${profile.total_streak}-week streak! 🔥`,
-      "You're on fire! Keep it up! ⚡",
-      "Consistency is key - you're nailing it! 🌟",
+      `Amazing ${profile.total_streak}-week streak!`,
+      "You're on fire! Keep it up!",
+      "Consistency is key - you're nailing it!",
     ],
     regular: [
-      "Great to see you again! 😊",
-      "Your dedication shows! 💪",
-      "Keep building those habits! 🚀",
+      "Great to see you again!",
+      "Your dedication shows!",
+      "Keep building those habits!",
     ],
     leader: [
-      "Leading by example! 👑",
-      "Your leadership inspires others! ✨",
-      "Thank you for serving! 🙏",
+      "Leading by example!",
+      "Your leadership inspires others!",
+      "Thank you for serving!",
     ],
   };
 

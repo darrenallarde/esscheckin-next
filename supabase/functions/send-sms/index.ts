@@ -15,9 +15,9 @@ serve(async (req) => {
   try {
     const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
     const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
+    const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
 
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_MESSAGING_SERVICE_SID) {
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
       throw new Error("Missing Twilio configuration");
     }
 
@@ -48,7 +48,7 @@ serve(async (req) => {
       },
       body: new URLSearchParams({
         To: cleanTo,
-        MessagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
+        From: TWILIO_PHONE_NUMBER,
         Body: body,
       }),
     });
@@ -80,7 +80,7 @@ serve(async (req) => {
         student_id: studentId || null,
         direction: "outbound",
         body: body,
-        from_number: twilioData.from || "messaging_service",
+        from_number: twilioData.from || TWILIO_PHONE_NUMBER,
         to_number: cleanTo,
         twilio_sid: twilioData.sid,
         status: twilioData.status,

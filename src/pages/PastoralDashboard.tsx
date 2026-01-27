@@ -93,7 +93,7 @@ const PastoralDashboard = () => {
   });
 
   // Fetch pastoral analytics data
-  const { data: pastoralData, isLoading, error } = useQuery({
+  const { data: pastoralData, isLoading, error, refetch: refetchPastoralData } = useQuery({
     queryKey: ['pastoral-analytics'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_pastoral_analytics');
@@ -325,6 +325,7 @@ const PastoralDashboard = () => {
               recommendations={recommendations || []}
               grades={grades}
               onRecommendationDismiss={() => refetchRecommendations()}
+              onLeaderToggle={() => refetchPastoralData()}
             />
           )}
 
@@ -333,6 +334,7 @@ const PastoralDashboard = () => {
               students={pastoralData}
               recommendations={recommendations || []}
               onRecommendationDismiss={() => refetchRecommendations()}
+              onLeaderToggle={() => refetchPastoralData()}
             />
           )}
         </div>

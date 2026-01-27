@@ -15,6 +15,7 @@ interface AllStudentsTabProps {
   recommendations: AIRecommendation[];
   grades: string[];
   onRecommendationDismiss: () => void;
+  onLeaderToggle?: () => void;
 }
 
 const AllStudentsTab: React.FC<AllStudentsTabProps> = ({
@@ -23,6 +24,7 @@ const AllStudentsTab: React.FC<AllStudentsTabProps> = ({
   recommendations,
   grades,
   onRecommendationDismiss,
+  onLeaderToggle,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BelongingStatus | 'all'>('all');
@@ -190,6 +192,7 @@ const AllStudentsTab: React.FC<AllStudentsTabProps> = ({
                   console.log('Student clicked:', student);
                 }}
                 onRecommendationDismiss={onRecommendationDismiss}
+                onLeaderToggle={onLeaderToggle}
               />
             </div>
           ))

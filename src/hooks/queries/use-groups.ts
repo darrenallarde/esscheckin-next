@@ -1,0 +1,326 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+
+export interface MeetingTime {
+  id: string;
+  group_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
+
+export interface GroupLeader {
+  id: string;
+  user_id: string;
+  role: "leader" | "co-leader";
+  user_email?: string;
+}
+
+export interface Group {
+  id: string;
+  organization_id: string;
+  campus_id: string | null;
+  name: string;
+  description: string | null;
+  color: string | null;
+  created_by: string | null;
+  created_at: string;
+  meeting_times: MeetingTime[];
+  leaders: GroupLeader[];
+  member_count: number;
+  needs_attention_count: number;
+}
+
+export interface GroupMember {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  grade: string | null;
+  current_rank: string;
+  total_points: number;
+  last_check_in: string | null;
+  current_streak: number;
+  best_streak: number;
+}
+
+async function fetchGroups(): Promise<Group[]> {
+  const supabase = createClient();
+
+  // Get groups with meeting times
+  const { data: groups, error } = await supabase
+    .from("groups")
+    .select(`
+      *,
+      group_meeting_times(*),
+      group_leaders(id, user_id, role),
+      group_members(student_id)
+    `)
+    .order("name");
+
+  if (error) throw error;
+
+  // Get students who need attention (30+ days absent)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const { data: recentCheckIns } = await supabase
+    .from("check_ins")
+    .select("student_id")
+    .gte("checked_in_at", thirtyDaysAgo.toISOString());
+
+  const activeStudentIds = new Set(recentCheckIns?.map((c) => c.student_id) || []);
+
+  return (groups || []).map((group) => {
+    const memberIds = (group.group_members || []).map((m: { student_id: string }) => m.student_id);
+    const needsAttention = memberIds.filter((id: string) => !activeStudentIds.has(id)).length;
+
+    return {
+      id: group.id,
+      organization_id: group.organization_id,
+      campus_id: group.campus_id,
+      name: group.name,
+      description: group.description,
+      color: group.color,
+      created_by: group.created_by,
+      created_at: group.created_at,
+      meeting_times: group.group_meeting_times || [],
+      leaders: group.group_leaders || [],
+      member_count: memberIds.length,
+      needs_attention_count: needsAttention,
+    };
+  });
+}
+
+export function useGroups() {
+  return useQuery({
+    queryKey: ["groups"],
+    queryFn: fetchGroups,
+  });
+}
+
+async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
+  const supabase = createClient();
+
+  // Get group members with student details
+  const { data: members, error } = await supabase
+    .from("group_members")
+    .select(`
+      id,
+      student_id,
+      students(
+        id,
+        first_name,
+        last_name,
+        grade,
+        student_game_stats(total_points, current_rank)
+      )
+    `)
+    .eq("group_id", groupId);
+
+  if (error) throw error;
+
+  // Get last check-in for each student
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const studentIds = members?.map((m) => (m.students as any)?.id).filter(Boolean) || [];
+
+  const { data: checkIns } = await supabase
+    .from("check_ins")
+    .select("student_id, checked_in_at")
+    .in("student_id", studentIds)
+    .order("checked_in_at", { ascending: false });
+
+  const lastCheckInMap = new Map<string, string>();
+  (checkIns || []).forEach((ci) => {
+    if (!lastCheckInMap.has(ci.student_id)) {
+      lastCheckInMap.set(ci.student_id, ci.checked_in_at);
+    }
+  });
+
+  // Get streaks for each student in this group
+  const streakPromises = studentIds.map((studentId) =>
+    supabase.rpc("get_student_group_streak", {
+      p_student_id: studentId,
+      p_group_id: groupId,
+    })
+  );
+
+  const streakResults = await Promise.all(streakPromises);
+  const streakMap = new Map<string, { current_streak: number; best_streak: number }>();
+  studentIds.forEach((studentId, index) => {
+    const result = streakResults[index];
+    if (result.data && result.data[0]) {
+      streakMap.set(studentId, {
+        current_streak: result.data[0].current_streak || 0,
+        best_streak: result.data[0].best_streak || 0,
+      });
+    }
+  });
+
+  return (members || []).map((member) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const student = member.students as any;
+    const gameStats = student?.student_game_stats?.[0];
+    const streak = streakMap.get(student?.id) || { current_streak: 0, best_streak: 0 };
+
+    return {
+      id: member.id,
+      student_id: student?.id || member.student_id,
+      first_name: student?.first_name || "",
+      last_name: student?.last_name || "",
+      grade: student?.grade || null,
+      current_rank: gameStats?.current_rank || "Newcomer",
+      total_points: gameStats?.total_points || 0,
+      last_check_in: lastCheckInMap.get(student?.id) || null,
+      current_streak: streak.current_streak,
+      best_streak: streak.best_streak,
+    };
+  }).filter((m) => m.student_id);
+}
+
+export function useGroupMembers(groupId: string | null) {
+  return useQuery({
+    queryKey: ["group-members", groupId],
+    queryFn: () => fetchGroupMembers(groupId!),
+    enabled: !!groupId,
+  });
+}
+
+// Mutations
+export function useCreateGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      description?: string;
+      color?: string;
+      organization_id: string;
+      meeting_times: Array<{ day_of_week: number; start_time: string; end_time: string }>;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Create group
+      const { data: group, error: groupError } = await supabase
+        .from("groups")
+        .insert({
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          organization_id: data.organization_id,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Create meeting times
+      if (data.meeting_times.length > 0) {
+        const { error: meetingError } = await supabase
+          .from("group_meeting_times")
+          .insert(
+            data.meeting_times.map((mt) => ({
+              group_id: group.id,
+              day_of_week: mt.day_of_week,
+              start_time: mt.start_time,
+              end_time: mt.end_time,
+            }))
+          );
+
+        if (meetingError) throw meetingError;
+      }
+
+      return group;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+}
+
+export function useAddStudentToGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, studentId }: { groupId: string; studentId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from("group_members")
+        .insert({
+          group_id: groupId,
+          student_id: studentId,
+          added_by: user?.id,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+    },
+  });
+}
+
+export function useRemoveStudentFromGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, studentId }: { groupId: string; studentId: string }) => {
+      const { error } = await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("student_id", studentId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+    },
+  });
+}
+
+// Day names helper
+export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+export function formatMeetingTime(time: string): string {
+  const [hours, minutes] = time.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+}
+
+export function getNextMeetingText(meetingTimes: MeetingTime[]): string {
+  if (!meetingTimes || meetingTimes.length === 0) return "No meetings scheduled";
+
+  const activeTimes = meetingTimes.filter((mt) => mt.is_active);
+  if (activeTimes.length === 0) return "No active meetings";
+
+  const today = new Date().getDay();
+
+  // Sort meeting times by day, starting from today
+  const sortedTimes = [...activeTimes].sort((a, b) => {
+    const aDaysUntil = (a.day_of_week - today + 7) % 7 || 7;
+    const bDaysUntil = (b.day_of_week - today + 7) % 7 || 7;
+    return aDaysUntil - bDaysUntil;
+  });
+
+  const nextMeeting = sortedTimes[0];
+  const daysUntil = (nextMeeting.day_of_week - today + 7) % 7;
+
+  if (daysUntil === 0) {
+    return `Today at ${formatMeetingTime(nextMeeting.start_time)}`;
+  } else if (daysUntil === 1) {
+    return `Tomorrow at ${formatMeetingTime(nextMeeting.start_time)}`;
+  } else {
+    return `${DAY_NAMES[nextMeeting.day_of_week]} at ${formatMeetingTime(nextMeeting.start_time)}`;
+  }
+}

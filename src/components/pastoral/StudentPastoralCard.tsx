@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StudentPastoralData, BelongingStatus } from '@/types/pastoral';
 import { AIRecommendation } from '@/types/curriculum';
-import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram, User, School, MessageSquare, Send, ChevronDown, ChevronUp, History, X } from 'lucide-react';
+import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram, User, School, MessageSquare, Send, ChevronDown, ChevronUp, History, X, Crown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useSendSms } from '@/hooks/useSendSms';
+import { supabase } from '@/integrations/supabase/client';
 import RecommendationDisplay from './RecommendationDisplay';
 import { StudentContextPanel } from './workflow';
 
@@ -17,20 +18,53 @@ interface StudentPastoralCardProps {
   recommendation?: AIRecommendation | null;
   onClick?: () => void;
   onRecommendationDismiss?: () => void;
+  onLeaderToggle?: () => void;
 }
 
 const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
   student,
   recommendation,
   onClick,
-  onRecommendationDismiss
+  onRecommendationDismiss,
+  onLeaderToggle
 }) => {
   const [copiedAction, setCopiedAction] = useState(false);
   const [showQuickAction, setShowQuickAction] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isTogglingLeader, setIsTogglingLeader] = useState(false);
   const { sendSms, isSending } = useSendSms();
+
+  const isLeader = student.user_type === 'student_leader';
+
+  const handleToggleLeader = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsTogglingLeader(true);
+
+    const newType = isLeader ? 'student' : 'student_leader';
+
+    const { error } = await supabase
+      .from('students')
+      .update({ user_type: newType })
+      .eq('id', student.student_id);
+
+    if (error) {
+      toast({
+        title: 'Failed to update',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: isLeader ? 'Leader removed' : 'Leader added',
+        description: `${student.first_name} is ${isLeader ? 'no longer' : 'now'} a student leader.`,
+      });
+      onLeaderToggle?.();
+    }
+
+    setIsTogglingLeader(false);
+  };
 
   // Generate default message based on student's belonging status
   const getDefaultMessage = () => {
@@ -237,10 +271,34 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
             </div>
           </div>
 
-          {/* Status badge */}
-          <Badge className={`${config.color} text-white flex-shrink-0`}>
-            {config.icon} {student.belonging_status}
-          </Badge>
+          {/* Status badges and leader toggle */}
+          <div className="flex flex-col items-end gap-2">
+            <Badge className={`${config.color} text-white flex-shrink-0`}>
+              {config.icon} {student.belonging_status}
+            </Badge>
+
+            {/* Leader toggle */}
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleToggleLeader}
+                    disabled={isTogglingLeader}
+                    className={`p-1.5 rounded-full transition-all ${
+                      isLeader
+                        ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                        : 'bg-gray-200 text-gray-500 hover:bg-yellow-100 hover:text-yellow-600'
+                    } ${isTogglingLeader ? 'opacity-50' : ''}`}
+                  >
+                    <Crown className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isLeader ? 'Remove as leader' : 'Make leader'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {/* Last 8 weeks attendance pattern */}

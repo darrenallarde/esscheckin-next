@@ -17,31 +17,61 @@ import {
   Star,
   Users,
   TrendingUp,
-  Calendar
+  Calendar,
+  UserMinus
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useSendSms } from '@/hooks/useSendSms';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeadersTabProps {
   students: StudentPastoralData[];
   recommendations: AIRecommendation[];
   onRecommendationDismiss?: () => void;
+  onLeaderToggle?: () => void;
 }
 
 const LeadersTab: React.FC<LeadersTabProps> = ({
   students,
   recommendations,
-  onRecommendationDismiss
+  onRecommendationDismiss,
+  onLeaderToggle
 }) => {
   const [expandedLeader, setExpandedLeader] = useState<string | null>(null);
   const [messageText, setMessageText] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [removingLeader, setRemovingLeader] = useState<string | null>(null);
   const { sendSms, isSending } = useSendSms();
 
   // Filter to only student leaders
   const leaders = useMemo(() => {
     return students.filter(s => s.user_type === 'student_leader');
   }, [students]);
+
+  const handleRemoveLeader = async (leader: StudentPastoralData) => {
+    setRemovingLeader(leader.student_id);
+
+    const { error } = await supabase
+      .from('students')
+      .update({ user_type: 'student' })
+      .eq('id', leader.student_id);
+
+    if (error) {
+      toast({
+        title: 'Failed to remove leader',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Leader removed',
+        description: `${leader.first_name} is no longer a student leader.`,
+      });
+      onLeaderToggle?.();
+    }
+
+    setRemovingLeader(null);
+  };
 
   const formatLastSeen = (days: number) => {
     if (days === 0) return 'Today';
@@ -286,6 +316,16 @@ const LeadersTab: React.FC<LeadersTabProps> = ({
                     ) : (
                       <Copy className="w-4 h-4" />
                     )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveLeader(leader)}
+                    disabled={removingLeader === leader.student_id}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    title="Remove leader status"
+                  >
+                    <UserMinus className="w-4 h-4" />
                   </Button>
                 </div>
 

@@ -864,109 +864,145 @@ const SimpleAnalyticsDashboard = () => {
     },
     'wed-vs-sunday': {
       title: 'Weekly Attendance by Day',
-      subtitle: 'Stacked view showing Wednesday and Sunday attendance per week',
+      subtitle: 'Stacked view showing Wednesday and Sunday attendance per week (Students + Leaders)',
       component: (
         <div className="space-y-6">
           {/* Create combined data grouped by week */}
           {(() => {
             // Group data by week
             const weekMap = new Map();
-            
+
             [...(analyticsData.wednesdayData || []), ...(analyticsData.sundayData || [])]
               .forEach(day => {
                 const date = new Date(day.date);
                 const weekStart = new Date(date);
                 weekStart.setDate(date.getDate() - date.getDay()); // Get Sunday of that week
                 const weekKey = weekStart.toISOString().split('T')[0];
-                
+
                 if (!weekMap.has(weekKey)) {
                   weekMap.set(weekKey, {
+                    weekKey: weekKey, // Store ISO date for sorting
                     week: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                     wednesday: 0,
                     sunday: 0,
-                    wednesdayStudents: [],
-                    sundayStudents: []
+                    wednesdayStudents: 0,
+                    wednesdayLeaders: 0,
+                    sundayStudents: 0,
+                    sundayLeaders: 0,
+                    wednesdayStudentNames: [],
+                    wednesdayLeaderNames: [],
+                    sundayStudentNames: [],
+                    sundayLeaderNames: []
                   });
                 }
-                
+
                 const weekData = weekMap.get(weekKey);
                 if (day.meetingDay === 'Wednesday') {
                   weekData.wednesday = day.uniqueAttendees;
-                  weekData.wednesdayStudents = day.studentNames || [];
+                  weekData.wednesdayLeaders = day.studentLeaders || 0;
+                  weekData.wednesdayStudents = day.uniqueAttendees - (day.studentLeaders || 0);
+                  weekData.wednesdayStudentNames = (day.studentNames || []).filter(name =>
+                    !(day.studentLeaderNames || []).includes(name)
+                  );
+                  weekData.wednesdayLeaderNames = day.studentLeaderNames || [];
                 } else if (day.meetingDay === 'Sunday') {
                   weekData.sunday = day.uniqueAttendees;
-                  weekData.sundayStudents = day.studentNames || [];
+                  weekData.sundayLeaders = day.studentLeaders || 0;
+                  weekData.sundayStudents = day.uniqueAttendees - (day.studentLeaders || 0);
+                  weekData.sundayStudentNames = (day.studentNames || []).filter(name =>
+                    !(day.studentLeaderNames || []).includes(name)
+                  );
+                  weekData.sundayLeaderNames = day.studentLeaderNames || [];
                 }
               });
-            
-            const combinedData = Array.from(weekMap.values()).sort((a, b) => 
-              new Date(a.week).getTime() - new Date(b.week).getTime()
+
+            // Sort by actual date (weekKey is ISO format YYYY-MM-DD)
+            const combinedData = Array.from(weekMap.values()).sort((a, b) =>
+              a.weekKey.localeCompare(b.weekKey)
             );
 
             return (
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={combinedData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
+                  <XAxis
                     dataKey="week"
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
                   <YAxis label={{ value: 'Unique Students', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-xs relative z-50"
+                          <div className="bg-background border border-border rounded-lg p-3 shadow-lg max-w-sm relative z-50"
                                style={{ pointerEvents: 'auto' }}>
                             <p className="font-medium mb-2">Week of {label}</p>
-                            {payload.map((entry, index) => (
-                              <div key={index} className="mb-2">
-                                <p style={{ color: entry.color }}>
-                                  {entry.dataKey === 'wednesday' ? 'Wednesday' : 'Sunday'}: {entry.value}
+                            <p className="text-sm mb-2">Total: {data.wednesday + data.sunday}</p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Wednesday Column */}
+                              <div>
+                                <p className="font-medium text-sm" style={{ color: 'hsl(149, 64%, 24%)' }}>
+                                  Wed: {data.wednesday}
                                 </p>
-                                {entry.dataKey === 'wednesday' && data.wednesdayStudents?.length > 0 && (
+                                {data.wednesdayStudentNames?.length > 0 && (
                                   <div className="mt-1">
-                                    <p className="font-medium text-xs">Wed Students:</p>
-                                    <div className="max-h-20 overflow-y-auto pr-2" 
-                                         style={{ scrollbarWidth: 'thin' }}
-                                         onWheel={(e) => e.stopPropagation()}>
-                                      {data.wednesdayStudents.map((name, i) => {
-                                        const student = analyticsData?.studentStats?.find(s => 
-                                          `${s.name}` === name
-                                        );
-                                        return (
-                                          <p key={i} className="text-xs text-muted-foreground">
-                                            • {name} {student?.grade && `(${student.grade})`}
-                                          </p>
-                                        );
-                                      })}
+                                    <p className="text-xs text-muted-foreground">Students ({data.wednesdayStudents}):</p>
+                                    <div className="max-h-16 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                      {data.wednesdayStudentNames.slice(0, 5).map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                      {data.wednesdayStudentNames.length > 5 && (
+                                        <p className="text-xs text-muted-foreground">+{data.wednesdayStudentNames.length - 5} more</p>
+                                      )}
                                     </div>
                                   </div>
                                 )}
-                                {entry.dataKey === 'sunday' && data.sundayStudents?.length > 0 && (
+                                {data.wednesdayLeaderNames?.length > 0 && (
                                   <div className="mt-1">
-                                    <p className="font-medium text-xs">Sun Students:</p>
-                                    <div className="max-h-20 overflow-y-auto pr-2" 
-                                         style={{ scrollbarWidth: 'thin' }}
-                                         onWheel={(e) => e.stopPropagation()}>
-                                      {data.sundayStudents.map((name, i) => {
-                                        const student = analyticsData?.studentStats?.find(s => 
-                                          `${s.name}` === name
-                                        );
-                                        return (
-                                          <p key={i} className="text-xs text-muted-foreground">
-                                            • {name} {student?.grade && `(${student.grade})`}
-                                          </p>
-                                        );
-                                      })}
+                                    <p className="text-xs" style={{ color: 'hsl(280, 70%, 50%)' }}>Leaders ({data.wednesdayLeaders}):</p>
+                                    <div className="max-h-16 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                      {data.wednesdayLeaderNames.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
                                     </div>
                                   </div>
                                 )}
                               </div>
-                            ))}
+
+                              {/* Sunday Column */}
+                              <div>
+                                <p className="font-medium text-sm" style={{ color: 'hsl(84, 81%, 44%)' }}>
+                                  Sun: {data.sunday}
+                                </p>
+                                {data.sundayStudentNames?.length > 0 && (
+                                  <div className="mt-1">
+                                    <p className="text-xs text-muted-foreground">Students ({data.sundayStudents}):</p>
+                                    <div className="max-h-16 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                      {data.sundayStudentNames.slice(0, 5).map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                      {data.sundayStudentNames.length > 5 && (
+                                        <p className="text-xs text-muted-foreground">+{data.sundayStudentNames.length - 5} more</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {data.sundayLeaderNames?.length > 0 && (
+                                  <div className="mt-1">
+                                    <p className="text-xs" style={{ color: 'hsl(280, 70%, 50%)' }}>Leaders ({data.sundayLeaders}):</p>
+                                    <div className="max-h-16 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                      {data.sundayLeaderNames.map((name, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">• {name}</p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         );
                       }
@@ -974,8 +1010,10 @@ const SimpleAnalyticsDashboard = () => {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="wednesday" stackId="attendance" fill="hsl(149, 64%, 24%)" name="Wednesday" />
-                  <Bar dataKey="sunday" stackId="attendance" fill="hsl(84, 81%, 44%)" name="Sunday" />
+                  <Bar dataKey="wednesdayStudents" stackId="attendance" fill="hsl(149, 64%, 24%)" name="Wed Students" />
+                  <Bar dataKey="wednesdayLeaders" stackId="attendance" fill="hsl(149, 64%, 40%)" name="Wed Leaders" />
+                  <Bar dataKey="sundayStudents" stackId="attendance" fill="hsl(84, 81%, 44%)" name="Sun Students" />
+                  <Bar dataKey="sundayLeaders" stackId="attendance" fill="hsl(84, 81%, 60%)" name="Sun Leaders" />
                 </BarChart>
               </ResponsiveContainer>
             );
