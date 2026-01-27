@@ -2,6 +2,14 @@
 
 A student check-in application for Echo Students built with Next.js 14 and Supabase.
 
+## Project History
+
+- **Original**: `darrenallarde/esscheckin` - Vite + React app (legacy)
+- **Current**: `darrenallarde/esscheckin-next` - Next.js 14 migration (this repo)
+- **Deployed to**: Vercel (needs to be connected to this repo)
+
+The migration from Vite to Next.js was done to leverage App Router, server components, and better SEO.
+
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
@@ -17,68 +25,101 @@ A student check-in application for Echo Students built with Next.js 14 and Supab
 **PRODUCTION Project**: `hhjvsvezinrbxeropeyl`
 - Dashboard: https://supabase.com/dashboard/project/hhjvsvezinrbxeropeyl
 - This is the live database with real student data
+- All migrations should be applied here
 
 **Staging Project**: `vilpdnwkfsmvqsiktqdf` (testing only - do not use for production work)
 
-### MCP Integration
+### Database Tables (as of Jan 2026)
 
-Supabase MCP is configured in `.mcp.json` (gitignored). After restarting Claude Code, you should have access to:
-- `list_tables` - List all tables in the database
-- `execute_sql` - Run read-only SQL queries
-- `get_schemas` - Get table schemas
-- `list_projects` - List Supabase projects
+Core:
+- `organizations`, `organization_members`, `organization_invitations`
+- `students`, `check_ins`
+- `student_game_stats`, `student_achievements`, `game_transactions`
+- `curriculum_weeks`, `ai_recommendations`, `interactions`
 
-To verify MCP is working, run: `claude mcp list`
+Groups System (Phase 3):
+- `campuses` - Future multi-campus support
+- `groups` - Student groups (MS Boys, HS Girls, etc.)
+- `group_meeting_times` - Meeting schedule per group
+- `group_leaders` - Leaders assigned to groups
+- `group_members` - Students in groups
+
+RPC Functions:
+- `get_student_group_streak(student_id, group_id)` - Per-group streak calculation
+- `get_user_organizations(user_id)` - User's org memberships
+- `get_student_game_profile(student_id)` - Gamification profile
 
 ## Project Structure
 
 ```
 src/
 ├── app/
-│   ├── (public)/          # Public routes (auth, landing, setup)
-│   │   ├── auth/          # Auth pages and callback
-│   │   ├── setup/         # Initial setup wizard
-│   │   └── page.tsx       # Landing/check-in page
-│   └── (protected)/       # Authenticated routes
-│       ├── dashboard/     # Main dashboard
-│       ├── students/      # Student management
-│       ├── attendance/    # Attendance tracking
-│       ├── curriculum/    # Curriculum management
-│       └── settings/      # Account, team, import settings
+│   ├── (public)/           # Public routes
+│   │   ├── auth/           # Auth pages and callback
+│   │   ├── setup/          # Initial setup wizard
+│   │   └── page.tsx        # Landing/check-in page (JRPG themed)
+│   └── (protected)/        # Authenticated routes
+│       ├── dashboard/      # Main dashboard with stats
+│       ├── students/       # Group-based student management
+│       ├── pastoral/       # Kanban workflow (placeholder)
+│       ├── analytics/      # Charts and leaderboards
+│       ├── curriculum/     # Weekly content
+│       └── settings/       # Tabbed settings page
 ├── components/
-│   ├── checkin/           # Check-in related components
-│   ├── layout/            # App sidebar, navigation
-│   └── ui/                # shadcn/ui components
-├── hooks/                 # Custom React hooks
-├── lib/
-│   └── supabase/          # Supabase client (server.ts, client.ts)
-├── types/                 # TypeScript types
-└── utils/                 # Utility functions (gamification, bible verses)
+│   ├── analytics/          # StatCard, Charts, Leaderboard
+│   ├── checkin/            # JRPG check-in flow
+│   ├── groups/             # GroupCard, modals
+│   ├── layout/             # AppSidebar
+│   ├── pastoral/           # PastoralQueue
+│   ├── shared/             # StreakMeter, DrillDownModal
+│   └── ui/                 # shadcn/ui components
+├── hooks/
+│   └── queries/            # React Query hooks
+├── lib/supabase/           # Supabase clients
+├── utils/                  # gamificationDB, bibleVerses
+└── types/
 ```
+
+## Navigation Structure
+
+```
+Dashboard → /dashboard (stats, trend chart, leaderboard, pastoral queue)
+Students  → /students (group cards with drill-down)
+Pastoral  → /pastoral (Kanban workflow - Phase 4)
+Analytics → /analytics (all charts consolidated)
+Curriculum → /curriculum (Phase 5)
+Settings  → /settings (tabbed: Account, Team, Import)
+```
+
+## Implementation Status
+
+### Completed
+- [x] Phase 1: Dashboard refresh (stat cards, trend chart, leaderboard, pastoral queue)
+- [x] Phase 2: Analytics page (attendance charts, engagement funnel, achievements)
+- [x] Phase 3: Groups system (database + UI for group management)
+
+### Pending
+- [ ] Phase 4: Pastoral Kanban workflow
+- [ ] Phase 5: Curriculum management & polish
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in:
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon/public key
-- `ANTHROPIC_API_KEY` (optional) - For AI pastoral insights
+Required in `.env.local` (and Vercel):
+```
+NEXT_PUBLIC_SUPABASE_URL=https://hhjvsvezinrbxeropeyl.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
 
 ## Development
 
 ```bash
-npm run dev    # Start dev server
+npm run dev    # Start dev server at localhost:3000
 npm run build  # Build for production
 npm run lint   # Run ESLint
 ```
 
-## Current State
+## Deployment
 
-- Basic Next.js app with Supabase integration
-- Auth flow implemented
-- Dashboard with debug info for troubleshooting RLS/org membership
-- Check-in form with modifications in progress
-
-## Git Status (as of session start)
-
-- Modified: `.gitignore` (added MCP config to ignore)
-- Modified: `src/components/checkin/CheckInForm.tsx`
+1. Push to `main` branch on GitHub
+2. Vercel auto-deploys from `darrenallarde/esscheckin-next`
+3. Ensure env vars are set in Vercel project settings
