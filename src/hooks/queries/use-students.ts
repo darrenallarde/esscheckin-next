@@ -159,3 +159,62 @@ export function useSearchStudents(organizationId: string | null, query: string) 
     enabled: !!organizationId && query.length >= 2,
   });
 }
+
+// Fetch all students with group membership info (for bulk assignment UI)
+async function fetchAllStudentsForAssignment(organizationId: string): Promise<Student[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("students")
+    .select(`
+      id,
+      first_name,
+      last_name,
+      phone_number,
+      email,
+      grade,
+      high_school,
+      user_type,
+      student_game_stats(total_points, current_rank),
+      group_members(
+        groups(id, name, color)
+      )
+    `)
+    .eq("organization_id", organizationId)
+    .order("first_name");
+
+  if (error) throw error;
+
+  return (data || []).map((student) => {
+    const gameStats = (student.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const groups = (student.group_members as any[])
+      ?.map((gm) => gm.groups)
+      .filter(Boolean) || [];
+
+    return {
+      id: student.id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      phone_number: student.phone_number,
+      email: student.email,
+      grade: student.grade,
+      high_school: student.high_school,
+      user_type: student.user_type,
+      total_points: gameStats?.total_points || 0,
+      current_rank: gameStats?.current_rank || "Newcomer",
+      last_check_in: null,
+      days_since_last_check_in: null,
+      total_check_ins: 0,
+      groups,
+    };
+  });
+}
+
+export function useAllStudentsForAssignment(organizationId: string | null) {
+  return useQuery({
+    queryKey: ["students-for-assignment", organizationId],
+    queryFn: () => fetchAllStudentsForAssignment(organizationId!),
+    enabled: !!organizationId,
+  });
+}

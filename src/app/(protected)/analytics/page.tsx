@@ -3,17 +3,22 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, Trophy, Award } from "lucide-react";
+import { Download, Trophy, Award, Loader2 } from "lucide-react";
 import { DateRangePicker } from "@/components/analytics/DateRangePicker";
 import { AttendanceTrendChart } from "@/components/analytics/AttendanceTrendChart";
 import { DayBreakdownChart } from "@/components/analytics/DayBreakdownChart";
 import { EngagementFunnel } from "@/components/analytics/EngagementFunnel";
 import { LeaderboardTable } from "@/components/analytics/LeaderboardTable";
 import { AchievementGrid } from "@/components/analytics/AchievementGrid";
+import { NewStudentGrowthChart } from "@/components/analytics/NewStudentGrowthChart";
+import { RetentionChart } from "@/components/analytics/RetentionChart";
 import {
   useAttendanceData,
   useDayBreakdown,
+  useNewStudentGrowth,
+  useRetentionData,
   getDateRangeFromPreset,
+  exportAttendanceCSV,
 } from "@/hooks/queries/use-attendance-data";
 import {
   useLeaderboard,
@@ -24,6 +29,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 
 export default function AnalyticsPage() {
   const [selectedWeeks, setSelectedWeeks] = useState(8);
+  const [isExporting, setIsExporting] = useState(false);
   const dateRange = getDateRangeFromPreset(selectedWeeks);
 
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
@@ -34,10 +40,31 @@ export default function AnalyticsPage() {
   const { data: rankDistribution, isLoading: rankLoading } = useRankDistribution(organizationId);
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 50);
   const { data: achievements, isLoading: achievementsLoading } = useAchievementsSummary(organizationId);
+  const { data: newStudentData, isLoading: newStudentLoading } = useNewStudentGrowth(organizationId, dateRange);
+  const { data: retentionData, isLoading: retentionLoading } = useRetentionData(organizationId, dateRange);
 
-  const handleExport = () => {
-    // TODO: Implement CSV export
-    console.log("Export not yet implemented");
+  const handleExport = async () => {
+    if (!organizationId) return;
+
+    setIsExporting(true);
+    try {
+      const csvContent = await exportAttendanceCSV(organizationId, dateRange);
+
+      // Create and download the file
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `attendance-export-${dateRange.start.toISOString().split("T")[0]}-to-${dateRange.end.toISOString().split("T")[0]}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Export failed:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -55,9 +82,13 @@ export default function AnalyticsPage() {
             selectedWeeks={selectedWeeks}
             onSelect={setSelectedWeeks}
           />
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting || !organizationId}>
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Export CSV
           </Button>
         </div>
       </div>
@@ -65,7 +96,13 @@ export default function AnalyticsPage() {
       {/* Main Attendance Chart - Full Width */}
       <AttendanceTrendChart data={attendanceData ?? []} loading={orgLoading || attendanceLoading} />
 
-      {/* Two Column Grid */}
+      {/* Two Column Grid - Growth Charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <NewStudentGrowthChart data={newStudentData ?? []} loading={orgLoading || newStudentLoading} />
+        <RetentionChart data={retentionData ?? []} loading={orgLoading || retentionLoading} />
+      </div>
+
+      {/* Two Column Grid - Breakdown Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <DayBreakdownChart data={dayBreakdown ?? []} loading={orgLoading || dayLoading} />
         <EngagementFunnel data={rankDistribution ?? []} loading={orgLoading || rankLoading} />

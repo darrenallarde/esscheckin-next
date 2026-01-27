@@ -8,6 +8,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, AlertCircle, Activity, Settings, UserPlus, Search, Shield } from "lucide-react";
-import { Group, useGroupMembers, DAY_NAMES, formatMeetingTime } from "@/hooks/queries/use-groups";
+import { Users, AlertCircle, Activity, Settings, UserPlus, Search, Shield, MoreHorizontal, UserMinus, Loader2 } from "lucide-react";
+import { Group, useGroupMembers, useRemoveStudentFromGroup, DAY_NAMES, formatMeetingTime, GroupMember } from "@/hooks/queries/use-groups";
 import { StreakMeter } from "@/components/shared/StreakMeter";
 import { RANKS } from "@/utils/gamificationDB";
 import { formatDistanceToNow } from "date-fns";
@@ -49,9 +65,25 @@ export function GroupDetailModal({
   canManageLeaders = false,
 }: GroupDetailModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
   const { data: members, isLoading } = useGroupMembers(group?.id || null);
+  const removeStudent = useRemoveStudentFromGroup();
 
   if (!group) return null;
+
+  const handleRemoveStudent = async () => {
+    if (!memberToRemove) return;
+    try {
+      await removeStudent.mutateAsync({
+        groupId: group.id,
+        studentId: memberToRemove.student_id,
+        organizationId,
+      });
+      setMemberToRemove(null);
+    } catch (error) {
+      console.error("Failed to remove student:", error);
+    }
+  };
 
   const filteredMembers = members?.filter(
     (m) =>
@@ -97,6 +129,11 @@ export function GroupDetailModal({
             {group.meeting_times.filter((mt) => mt.is_active).map((mt) => (
               <Badge key={mt.id} variant="secondary">
                 {DAY_NAMES[mt.day_of_week]} {formatMeetingTime(mt.start_time)} - {formatMeetingTime(mt.end_time)}
+                {mt.frequency && mt.frequency !== "weekly" && (
+                  <span className="ml-1 text-xs opacity-75">
+                    ({mt.frequency === "bi-weekly" ? "Bi-weekly" : "Monthly"})
+                  </span>
+                )}
               </Badge>
             ))}
           </div>
@@ -155,6 +192,7 @@ export function GroupDetailModal({
                       <TableHead>Rank</TableHead>
                       <TableHead>Streak</TableHead>
                       <TableHead>Last Seen</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -190,12 +228,30 @@ export function GroupDetailModal({
                               ? formatDistanceToNow(new Date(member.last_check_in), { addSuffix: true })
                               : "Never"}
                           </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setMemberToRemove(member)}
+                                >
+                                  <UserMinus className="h-4 w-4 mr-2" />
+                                  Remove from group
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
                     {filteredMembers?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           {searchQuery ? "No members match your search" : "No members in this group yet"}
                         </TableCell>
                       </TableRow>
@@ -283,6 +339,36 @@ export function GroupDetailModal({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Remove Student Confirmation Dialog */}
+      <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove student from group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {memberToRemove?.first_name} {memberToRemove?.last_name} from {group.name}?
+              This action can be undone by adding them back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeStudent.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveStudent}
+              disabled={removeStudent.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeStudent.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Removing...
+                </>
+              ) : (
+                "Remove"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

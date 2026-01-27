@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
+export type MeetingFrequency = "weekly" | "bi-weekly" | "monthly";
+
 export interface MeetingTime {
   id: string;
   group_id: string;
@@ -8,7 +10,14 @@ export interface MeetingTime {
   start_time: string;
   end_time: string;
   is_active: boolean;
+  frequency: MeetingFrequency;
 }
+
+export const FREQUENCY_OPTIONS: { value: MeetingFrequency; label: string }[] = [
+  { value: "weekly", label: "Weekly" },
+  { value: "bi-weekly", label: "Bi-weekly" },
+  { value: "monthly", label: "Monthly" },
+];
 
 export interface GroupLeader {
   id: string;
@@ -205,7 +214,7 @@ export function useCreateGroup() {
       description?: string;
       color?: string;
       organization_id: string;
-      meeting_times: Array<{ day_of_week: number; start_time: string; end_time: string }>;
+      meeting_times: Array<{ day_of_week: number; start_time: string; end_time: string; frequency?: MeetingFrequency }>;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -234,6 +243,7 @@ export function useCreateGroup() {
               day_of_week: mt.day_of_week,
               start_time: mt.start_time,
               end_time: mt.end_time,
+              frequency: mt.frequency || "weekly",
             }))
           );
 
@@ -292,6 +302,33 @@ export function useRemoveStudentFromGroup() {
     onSuccess: (result, { groupId }) => {
       queryClient.invalidateQueries({ queryKey: ["groups", result.organizationId] });
       queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+    },
+  });
+}
+
+export function useBulkAddStudentsToGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, studentIds, organizationId }: { groupId: string; studentIds: string[]; organizationId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from("group_members")
+        .insert(studentIds.map(studentId => ({
+          group_id: groupId,
+          student_id: studentId,
+          added_by: user?.id,
+        })));
+
+      if (error) throw error;
+      return { organizationId };
+    },
+    onSuccess: (result, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", result.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["students", result.organizationId] });
     },
   });
 }

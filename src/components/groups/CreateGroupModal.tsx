@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Loader2 } from "lucide-react";
-import { useCreateGroup, DAY_NAMES } from "@/hooks/queries/use-groups";
+import { useCreateGroup, DAY_NAMES, FREQUENCY_OPTIONS, MeetingFrequency } from "@/hooks/queries/use-groups";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -26,6 +26,7 @@ interface MeetingTimeInput {
   day_of_week: number;
   start_time: string;
   end_time: string;
+  frequency: MeetingFrequency;
 }
 
 const COLORS = [
@@ -48,7 +49,7 @@ export function CreateGroupModal({
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const [meetingTimes, setMeetingTimes] = useState<MeetingTimeInput[]>([
-    { day_of_week: 3, start_time: "19:00", end_time: "20:30" }, // Wednesday default
+    { day_of_week: 3, start_time: "19:00", end_time: "20:30", frequency: "weekly" }, // Wednesday default
   ]);
 
   const createGroup = useCreateGroup();
@@ -56,7 +57,7 @@ export function CreateGroupModal({
   const handleAddMeetingTime = () => {
     setMeetingTimes([
       ...meetingTimes,
-      { day_of_week: 0, start_time: "10:00", end_time: "11:30" },
+      { day_of_week: 0, start_time: "10:00", end_time: "11:30", frequency: "weekly" },
     ]);
   };
 
@@ -92,7 +93,7 @@ export function CreateGroupModal({
       setName("");
       setDescription("");
       setColor(COLORS[0]);
-      setMeetingTimes([{ day_of_week: 3, start_time: "19:00", end_time: "20:30" }]);
+      setMeetingTimes([{ day_of_week: 3, start_time: "19:00", end_time: "20:30", frequency: "weekly" }]);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to create group:", error);
@@ -171,10 +172,10 @@ export function CreateGroupModal({
                 {meetingTimes.map((mt, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50"
+                    className="flex flex-wrap items-center gap-2 p-2 rounded-lg border bg-muted/50"
                   >
                     <select
-                      className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
+                      className="flex-1 min-w-[100px] rounded-md border bg-background px-2 py-1 text-sm"
                       value={mt.day_of_week}
                       onChange={(e) =>
                         handleMeetingTimeChange(index, "day_of_week", parseInt(e.target.value))
@@ -203,6 +204,19 @@ export function CreateGroupModal({
                         handleMeetingTimeChange(index, "end_time", e.target.value)
                       }
                     />
+                    <select
+                      className="rounded-md border bg-background px-2 py-1 text-sm"
+                      value={mt.frequency}
+                      onChange={(e) =>
+                        handleMeetingTimeChange(index, "frequency", e.target.value)
+                      }
+                    >
+                      {FREQUENCY_OPTIONS.map((freq) => (
+                        <option key={freq.value} value={freq.value}>
+                          {freq.label}
+                        </option>
+                      ))}
+                    </select>
                     {meetingTimes.length > 1 && (
                       <Button
                         type="button"
@@ -222,7 +236,7 @@ export function CreateGroupModal({
             {/* Preview */}
             <div className="pt-2">
               <Label className="text-muted-foreground">Preview</Label>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <div
                   className="h-4 w-4 rounded-full"
                   style={{ backgroundColor: color }}
@@ -230,7 +244,7 @@ export function CreateGroupModal({
                 <span className="font-medium">{name || "Group Name"}</span>
                 {meetingTimes.map((mt, i) => (
                   <Badge key={i} variant="secondary">
-                    {DAY_NAMES[mt.day_of_week]}
+                    {DAY_NAMES[mt.day_of_week]} ({mt.frequency === "bi-weekly" ? "Bi-wk" : mt.frequency === "monthly" ? "Monthly" : "Wk"})
                   </Badge>
                 ))}
               </div>
