@@ -112,7 +112,7 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
       }
 
       const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin', { search_term: cleanedSearch });
+        .rpc('search_student_for_checkin', { p_search_term: cleanedSearch });
 
       if (error) {
         throw error;
@@ -163,7 +163,7 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
     setIsSearching(true);
     try {
       const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin', { search_term: data.searchTerm });
+        .rpc('search_student_for_checkin', { p_search_term: data.searchTerm });
 
       if (error) {
         throw error;

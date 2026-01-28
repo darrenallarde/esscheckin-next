@@ -181,7 +181,7 @@ async function searchStudents(searchTerm: string): Promise<SearchStudentResult[]
   }
 
   const { data, error } = await supabase.rpc("search_student_for_checkin", {
-    search_term: cleanedSearch,
+    p_search_term: cleanedSearch,
   });
 
   if (error) throw error;

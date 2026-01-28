@@ -116,7 +116,7 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
 
       const { data: results, error } = await supabase
         .rpc('search_student_for_checkin', {
-          search_term: cleanedSearch,
+          p_search_term: cleanedSearch,
           ...(organizationId && { p_organization_id: organizationId })
         });
 
@@ -184,7 +184,7 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
     try {
       const { data: results, error } = await supabase
         .rpc('search_student_for_checkin', {
-          search_term: data.searchTerm,
+          p_search_term: data.searchTerm,
           ...(organizationId && { p_organization_id: organizationId })
         });
 
