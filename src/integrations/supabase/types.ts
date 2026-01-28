@@ -1153,6 +1153,14 @@ export type Database = {
           user_role: Database["public"]["Enums"]["org_role"]
         }[]
       }
+      get_student_email: {
+        Args: { p_student_id: string }
+        Returns: string
+      }
+      update_student_email: {
+        Args: { p_student_id: string; p_email: string }
+        Returns: boolean
+      }
       resend_organization_invitation: {
         Args: { p_invitation_id: string }
         Returns: {
