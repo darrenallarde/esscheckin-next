@@ -13,20 +13,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useStudents } from "@/hooks/queries/use-students";
+import { useStudents, Student } from "@/hooks/queries/use-students";
 import { useGroups } from "@/hooks/queries/use-groups";
 import { useOrganization } from "@/hooks/useOrganization";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { PersonProfileModal } from "@/components/people/PersonProfileModal";
+import { SendSmsModal } from "@/components/people/SendSmsModal";
+import { BelongingStatus } from "@/types/pastoral";
 
 type ActivityFilter = "all" | "active" | "inactive" | "never" | "attention";
 
 const GRADES = ["6", "7", "8", "9", "10", "11", "12"];
 
+// Helper to calculate belonging status from days since last check-in
+function getBelongingStatus(daysSinceLastCheckIn: number | null): BelongingStatus {
+  if (daysSinceLastCheckIn === null) return "Missing";
+  if (daysSinceLastCheckIn >= 60) return "Missing";
+  if (daysSinceLastCheckIn >= 30) return "On the Fringe";
+  if (daysSinceLastCheckIn <= 7) return "Core"; // Simplified - would need 8-week data for Ultra-Core
+  return "Connected";
+}
+
 export default function PeoplePage() {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
+  const [belongingFilter, setBelongingFilter] = useState<BelongingStatus | "all">("all");
+  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [smsModalOpen, setSmsModalOpen] = useState(false);
 
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
@@ -35,6 +53,31 @@ export default function PeoplePage() {
   const { data: groups } = useGroups(organizationId);
 
   const isLoading = orgLoading || studentsLoading;
+
+  // Handle status query param from BelongingSpectrum clicks
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      const validStatuses: BelongingStatus[] = ["Ultra-Core", "Core", "Connected", "On the Fringe", "Missing"];
+      if (validStatuses.includes(statusParam as BelongingStatus)) {
+        setBelongingFilter(statusParam as BelongingStatus);
+        // Clear the activity filter when using belonging filter
+        setActivityFilter("all");
+      }
+    }
+  }, [searchParams]);
+
+  // Open person profile modal
+  const handlePersonClick = (person: Student) => {
+    setSelectedPerson(person);
+    setProfileModalOpen(true);
+  };
+
+  // Open SMS modal from profile
+  const handleSendText = (person: Student) => {
+    setSelectedPerson(person);
+    setSmsModalOpen(true);
+  };
 
   // Filter students
   const filteredStudents = useMemo(() => {
@@ -84,17 +127,30 @@ export default function PeoplePage() {
         }
       }
 
+      // Belonging status filter (from BelongingSpectrum)
+      if (belongingFilter !== "all") {
+        const status = getBelongingStatus(student.days_since_last_check_in);
+        if (status !== belongingFilter) return false;
+      }
+
       return true;
     });
-  }, [students, search, gradeFilter, groupFilter, activityFilter]);
+  }, [students, search, gradeFilter, groupFilter, activityFilter, belongingFilter]);
 
-  const hasActiveFilters = gradeFilter !== "all" || groupFilter !== "all" || activityFilter !== "all";
+  const hasActiveFilters = gradeFilter !== "all" || groupFilter !== "all" || activityFilter !== "all" || belongingFilter !== "all";
 
   const clearFilters = () => {
     setGradeFilter("all");
     setGroupFilter("all");
     setActivityFilter("all");
+    setBelongingFilter("all");
     setSearch("");
+    // Clear the URL param too
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("status");
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   // Get unique grades from actual data
@@ -214,6 +270,28 @@ export default function PeoplePage() {
             </Button>
           )}
         </div>
+
+        {/* Active Belonging Filter Badge */}
+        {belongingFilter !== "all" && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Showing:</span>
+            <Badge
+              variant="secondary"
+              className="cursor-pointer"
+              onClick={() => {
+                setBelongingFilter("all");
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("status");
+                  window.history.replaceState({}, "", url.toString());
+                }
+              }}
+            >
+              {belongingFilter}
+              <X className="h-3 w-3 ml-1" />
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Results Count */}
@@ -243,18 +321,20 @@ export default function PeoplePage() {
               {filteredStudents.map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between py-3 gap-4"
+                  className="flex items-center justify-between py-3 gap-4 cursor-pointer hover:bg-muted/50 -mx-4 px-4 transition-colors"
+                  onClick={() => handlePersonClick(student)}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate">
                         {student.first_name} {student.last_name}
                       </p>
-                      {student.grade && (
-                        <Badge variant="secondary" className="shrink-0">
-                          {student.grade}
-                        </Badge>
-                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {[
+                          student.grade && `Grade ${student.grade}`,
+                          student.high_school
+                        ].filter(Boolean).join(" · ")}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {student.groups && student.groups.length > 0 ? (
@@ -328,6 +408,21 @@ export default function PeoplePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Person Profile Modal */}
+      <PersonProfileModal
+        person={selectedPerson}
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        onSendText={handleSendText}
+      />
+
+      {/* Send SMS Modal */}
+      <SendSmsModal
+        person={selectedPerson}
+        open={smsModalOpen}
+        onOpenChange={setSmsModalOpen}
+      />
     </div>
   );
 }
