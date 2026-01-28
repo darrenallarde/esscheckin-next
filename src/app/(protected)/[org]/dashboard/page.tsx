@@ -6,11 +6,14 @@ import { MiniTrendChart } from "@/components/analytics/MiniTrendChart";
 import { LeaderboardPreview } from "@/components/analytics/LeaderboardPreview";
 import { PastoralQueue } from "@/components/pastoral/PastoralQueue";
 import { EncouragingMessage } from "@/components/shared/EncouragingMessage";
+import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { useDashboardStats, useWeeklyAttendance } from "@/hooks/queries/use-dashboard-stats";
 import { useLeaderboard } from "@/hooks/queries/use-gamification";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
+import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
+import { BelongingStatus } from "@/types/pastoral";
 
 export default function DashboardPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
@@ -21,8 +24,17 @@ export default function DashboardPage() {
   const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyAttendance(organizationId);
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 5);
   const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(organizationId, 5);
+  const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
 
   const isLoading = orgLoading || statsLoading;
+
+  // Handle belonging spectrum filter click (could navigate to People page with filter)
+  const handleBelongingFilterChange = (status: BelongingStatus | "all") => {
+    if (status !== "all") {
+      // Navigate to People page with filter applied
+      window.location.href = orgPath(orgSlug, `/people?status=${encodeURIComponent(status)}`);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -70,6 +82,15 @@ export default function DashboardPage() {
           loading={isLoading}
         />
       </div>
+
+      {/* Belonging Spectrum - Prominent placement */}
+      {!belongingLoading && belongingData && (
+        <BelongingSpectrum
+          distribution={belongingData.distribution}
+          totalStudents={belongingData.totalStudents}
+          onFilterChange={handleBelongingFilterChange}
+        />
+      )}
 
       {/* Main Content - Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-5">
