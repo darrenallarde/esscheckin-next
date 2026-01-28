@@ -1,7 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// NPC Router responses - brief, helpful, routes to humans fast
+// ============================================
+// INTERIM MODE - Shared Twilio Number
+// ============================================
+// Set to false when dedicated number is approved
+// to enable full NPC routing and conversation features
+const INTERIM_MODE = true;
+
+// Interim responses - simple, generic, no confusion for Seedling users
+const INTERIM_RESPONSES = {
+  help: "Thanks for reaching out! For support, please contact your ministry leader directly.",
+  generic: "Message received. If this requires a response, a team member will follow up.",
+};
+
+// Full NPC responses (used when INTERIM_MODE = false)
 const NPC_RESPONSES = {
   welcome: `Hey! 👋 Text your group code to connect, or tell me which ministry you're looking for.`,
   connected: (orgName: string) => `Connected to ${orgName}! A leader will text you back soon. 🙌`,
@@ -70,19 +83,54 @@ serve(async (req) => {
     const body = (formData.get("Body") as string || "").trim();
     const messageSid = formData.get("MessageSid") as string;
 
-    console.log("Received SMS:", { from, to, bodyPreview: body?.substring(0, 50), messageSid });
+    console.log("Received SMS:", { from, to, bodyPreview: body?.substring(0, 50), messageSid, interimMode: INTERIM_MODE });
 
     if (!from || !body) {
       console.error("Missing required fields from Twilio webhook");
       return twimlResponse(null);
     }
 
-    const phoneDigits = phoneMatch(from);
     const upperBody = body.toUpperCase();
 
-    // ========================================
+    // ============================================
+    // INTERIM MODE: Simple handling for shared number
+    // ============================================
+    if (INTERIM_MODE) {
+      // Handle HELP command
+      if (upperBody === "HELP") {
+        return twimlResponse(INTERIM_RESPONSES.help);
+      }
+
+      // Try to find student by phone number
+      const student = await findStudentByPhone(supabase, from);
+
+      // Store the message (with student context if found)
+      await storeMessage(supabase, {
+        from,
+        to,
+        body,
+        messageSid,
+        studentId: student?.id || null,
+        organizationId: student?.organization_id || null,
+        groupId: null,
+        direction: "inbound",
+        isLobbyMessage: !!student, // If student exists but no routing, it's a lobby message
+      });
+
+      // If unknown phone, add to waiting room (silently)
+      if (!student) {
+        await addToWaitingRoom(supabase, from, null, body);
+      }
+
+      // Return generic acknowledgment
+      return twimlResponse(INTERIM_RESPONSES.generic);
+    }
+
+    // ============================================
+    // FULL MODE: NPC Router (when dedicated number is active)
+    // ============================================
+
     // STEP 1: Check for commands
-    // ========================================
     if (upperBody === "EXIT") {
       await endSession(supabase, from);
       return twimlResponse(NPC_RESPONSES.exited);
@@ -103,9 +151,7 @@ serve(async (req) => {
       return twimlResponse(result.message);
     }
 
-    // ========================================
     // STEP 2: Try auto-routing for replies
-    // ========================================
     const recentConvo = await findRecentConversation(supabase, from);
     if (recentConvo) {
       console.log("Auto-routing reply to recent conversation:", recentConvo);
@@ -124,19 +170,14 @@ serve(async (req) => {
       return twimlResponse(null);
     }
 
-    // ========================================
     // STEP 3: Check for active session
-    // ========================================
     const session = await getActiveSession(supabase, from);
 
     if (session) {
-      // Session exists - handle based on status
       if (session.status === "pending_group") {
-        // User needs to select a group
         const result = await handleGroupSelection(supabase, from, body, session);
         return twimlResponse(result.message);
       } else if (session.status === "active") {
-        // Active session - route message to the group
         const student = await findStudentByPhone(supabase, from);
         await storeMessage(supabase, {
           from,
@@ -150,19 +191,15 @@ serve(async (req) => {
           isLobbyMessage: !session.group_id,
         });
         await updateSessionActivity(supabase, session.session_id);
-        // No response - message delivered
         return twimlResponse(null);
       }
     }
 
-    // ========================================
     // STEP 4: Check if known student
-    // ========================================
     const studentGroups = await findStudentGroups(supabase, from);
 
     if (studentGroups && studentGroups.length > 0) {
       if (studentGroups.length === 1) {
-        // Auto-route to single group
         const sg = studentGroups[0];
         await createSession(supabase, from, sg.org_id, sg.group_id, "active");
         await storeMessage(supabase, {
@@ -176,11 +213,8 @@ serve(async (req) => {
           direction: "inbound",
           isLobbyMessage: false,
         });
-        // Silent delivery
         return twimlResponse(null);
       } else {
-        // Multiple groups - prompt for selection
-        // Create pending session with first org (they're likely all same org)
         await createSession(supabase, from, studentGroups[0].org_id, null, "pending_group");
         await storeGroupSelectionContext(supabase, from, studentGroups);
         return twimlResponse(NPC_RESPONSES.multipleGroups(studentGroups));
@@ -190,7 +224,6 @@ serve(async (req) => {
     // Check if student exists but not in any group (lobby case)
     const student = await findStudentByPhone(supabase, from);
     if (student) {
-      // Student exists but no groups - route to lobby
       await storeMessage(supabase, {
         from,
         to,
@@ -205,35 +238,26 @@ serve(async (req) => {
       return twimlResponse(NPC_RESPONSES.lobbyMessage);
     }
 
-    // ========================================
     // STEP 5: Check if message is an org/group code
-    // ========================================
     const codeResult = await tryParseCode(supabase, body);
 
     if (codeResult.type === "org") {
-      // Valid org code - create session and check for groups
       const orgGroups = await listOrgGroups(supabase, codeResult.orgId!);
 
       if (orgGroups.length === 0) {
-        // No groups - go to waiting room
         await addToWaitingRoom(supabase, from, codeResult.orgId!, body);
         return twimlResponse(NPC_RESPONSES.waitingRoom(codeResult.orgName!));
       } else if (orgGroups.length === 1) {
-        // Single group - auto-select
         await createSession(supabase, from, codeResult.orgId!, orgGroups[0].group_id, "active");
         await addToWaitingRoom(supabase, from, codeResult.orgId!, body);
         return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!));
       } else {
-        // Multiple groups - prompt selection
         await createSession(supabase, from, codeResult.orgId!, null, "pending_group");
         return twimlResponse(NPC_RESPONSES.connectedWithGroups(codeResult.orgName!, orgGroups));
       }
     }
 
-    // ========================================
     // STEP 6: Unknown contact - welcome message
-    // ========================================
-    // Store in global waiting room
     await addToWaitingRoom(supabase, from, null, body);
     await storeMessage(supabase, {
       from,
@@ -320,7 +344,6 @@ async function createSession(
   groupId: string | null,
   status: "pending_group" | "active"
 ): Promise<void> {
-  // End any existing sessions first
   await endSession(supabase, phone);
 
   const { error } = await supabase.from("sms_sessions").insert({
@@ -392,7 +415,6 @@ async function tryParseCode(
 ): Promise<{ type: "org" | "group" | "none"; orgId?: string; orgName?: string; groupId?: string; groupName?: string }> {
   const code = text.trim().toLowerCase();
 
-  // Try as org code first
   const { data: orgData } = await supabase.rpc("find_org_by_code", { p_code: code });
   if (orgData?.[0]) {
     return { type: "org", orgId: orgData[0].org_id, orgName: orgData[0].org_name || orgData[0].org_slug };
@@ -426,7 +448,6 @@ async function handleGroupSelection(
   const groups = await listOrgGroups(supabase, session.organization_id);
   const trimmedInput = input.trim();
 
-  // Try as number selection
   const num = parseInt(trimmedInput, 10);
   if (!isNaN(num) && num >= 1 && num <= groups.length) {
     const selected = groups[num - 1];
@@ -434,7 +455,6 @@ async function handleGroupSelection(
     return { message: NPC_RESPONSES.groupSelected(selected.name) };
   }
 
-  // Try as group code
   const lowerInput = trimmedInput.toLowerCase();
   const matchingGroup = groups.find(g => g.code?.toLowerCase() === lowerInput);
   if (matchingGroup) {
@@ -491,7 +511,6 @@ async function addToWaitingRoom(
   orgId: string | null,
   firstMessage: string
 ): Promise<void> {
-  // Check if already in waiting room
   const { data: existing } = await supabase
     .from("sms_waiting_room")
     .select("id, message_count")
@@ -500,17 +519,15 @@ async function addToWaitingRoom(
     .maybeSingle();
 
   if (existing) {
-    // Update existing entry
     await supabase
       .from("sms_waiting_room")
       .update({
         message_count: (existing.message_count || 1) + 1,
         last_contact_at: new Date().toISOString(),
-        organization_id: orgId || undefined, // Update org if we now know it
+        organization_id: orgId || undefined,
       })
       .eq("id", existing.id);
   } else {
-    // Create new entry
     await supabase.from("sms_waiting_room").insert({
       phone_number: phone,
       organization_id: orgId,
@@ -552,13 +569,11 @@ async function storeMessage(
   }
 }
 
-// Store context for multi-group selection (uses session metadata pattern)
+// Store context for multi-group selection
 async function storeGroupSelectionContext(
   supabase: ReturnType<typeof createClient>,
   phone: string,
   groups: { student_id: string; org_id: string; org_name: string; group_id: string; group_name: string; group_code: string | null }[]
 ): Promise<void> {
-  // For now, we just rely on the database query each time
-  // Could optimize with session metadata table later if needed
   console.log("Group selection context for", phone, ":", groups.length, "groups");
 }
