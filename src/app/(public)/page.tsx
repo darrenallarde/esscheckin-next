@@ -96,7 +96,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-xl md:text-2xl text-white/70 mb-8 max-w-md mx-auto lg:mx-0">
-                The check-in app that actually tells you who&apos;s drifting away.
+                See who&apos;s drifting before they&apos;re gone.
               </p>
 
               {/* Social proof */}
@@ -107,7 +107,7 @@ export default function LandingPage() {
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-xs font-bold text-white">C</div>
                 </div>
                 <span className="text-sm">
-                  <span className="text-white font-semibold">230+ students</span> checked in this week
+                  <span className="text-white font-semibold">230+ students</span> being shepherded
                 </span>
               </div>
             </div>
@@ -226,16 +226,16 @@ export default function LandingPage() {
           {/* Quick value props - mobile visible, compact */}
           <div className="mt-12 lg:mt-16 grid grid-cols-3 gap-4 max-w-2xl mx-auto text-center">
             <div className="p-4">
-              <div className="text-2xl mb-2">📱</div>
-              <p className="text-white/70 text-sm font-medium">No app needed</p>
+              <div className="text-2xl mb-2">👀</div>
+              <p className="text-white/70 text-sm font-medium">Spot the wanderers</p>
             </div>
             <div className="p-4">
-              <div className="text-2xl mb-2">👀</div>
-              <p className="text-white/70 text-sm font-medium">See who&apos;s missing</p>
+              <div className="text-2xl mb-2">💡</div>
+              <p className="text-white/70 text-sm font-medium">Insights, not data</p>
             </div>
             <div className="p-4">
               <div className="text-2xl mb-2">🤖</div>
-              <p className="text-white/70 text-sm font-medium">AI nudges</p>
+              <p className="text-white/70 text-sm font-medium">AI-powered nudges</p>
             </div>
           </div>
         </main>
