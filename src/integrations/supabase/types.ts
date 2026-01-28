@@ -7,9 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
       ai_recommendations: {
@@ -91,29 +88,7 @@ export type Database = {
           status?: string | null
           student_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "ai_recommendations_curriculum_week_id_fkey"
-            columns: ["curriculum_week_id"]
-            isOneToOne: false
-            referencedRelation: "curriculum_weeks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_recommendations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_recommendations_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       campuses: {
         Row: {
@@ -149,15 +124,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "campuses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       check_ins: {
         Row: {
@@ -178,22 +145,7 @@ export type Database = {
           organization_id?: string
           student_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "check_ins_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "check_ins_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       curriculum_weeks: {
         Row: {
@@ -268,15 +220,7 @@ export type Database = {
           updated_at?: string | null
           week_date?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "curriculum_weeks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       game_transactions: {
         Row: {
@@ -312,29 +256,7 @@ export type Database = {
           student_id?: string
           transaction_type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "game_transactions_check_in_id_fkey"
-            columns: ["check_in_id"]
-            isOneToOne: false
-            referencedRelation: "check_ins"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_transactions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_transactions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       group_leaders: {
         Row: {
@@ -358,15 +280,7 @@ export type Database = {
           role?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "group_leaders_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       group_meeting_times: {
         Row: {
@@ -399,15 +313,7 @@ export type Database = {
           is_active?: boolean | null
           start_time?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "group_meeting_times_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       group_members: {
         Row: {
@@ -431,22 +337,7 @@ export type Database = {
           id?: string
           student_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       groups: {
         Row: {
@@ -482,22 +373,7 @@ export type Database = {
           organization_id?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "groups_campus_id_fkey"
-            columns: ["campus_id"]
-            isOneToOne: false
-            referencedRelation: "campuses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "groups_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       interactions: {
         Row: {
@@ -542,22 +418,7 @@ export type Database = {
           status?: string
           student_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "interactions_recommendation_id_fkey"
-            columns: ["recommendation_id"]
-            isOneToOne: false
-            referencedRelation: "ai_recommendations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "interactions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       organization_invitations: {
         Row: {
@@ -567,9 +428,9 @@ export type Database = {
           expires_at: string
           id: string
           invited_by: string
-          invitation_token: string
           organization_id: string
           role: Database["public"]["Enums"]["org_role"]
+          token: string
         }
         Insert: {
           accepted_at?: string | null
@@ -578,9 +439,9 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by: string
-          invitation_token?: string
           organization_id: string
           role?: Database["public"]["Enums"]["org_role"]
+          token?: string
         }
         Update: {
           accepted_at?: string | null
@@ -589,19 +450,11 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string
-          invitation_token?: string
           organization_id?: string
           role?: Database["public"]["Enums"]["org_role"]
+          token?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "organization_invitations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       organization_members: {
         Row: {
@@ -640,15 +493,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "organization_members_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       organizations: {
         Row: {
@@ -699,15 +544,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "organizations_parent_organization_id_fkey"
-            columns: ["parent_organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sms_messages: {
         Row: {
@@ -749,15 +586,7 @@ export type Database = {
           twilio_sid?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sms_messages_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       student_achievements: {
         Row: {
@@ -796,22 +625,7 @@ export type Database = {
           student_id?: string
           unlocked_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "student_achievements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_achievements_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       student_game_stats: {
         Row: {
@@ -844,22 +658,7 @@ export type Database = {
           total_points?: number
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "student_game_stats_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_game_stats_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: true
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       student_notes: {
         Row: {
@@ -892,15 +691,7 @@ export type Database = {
           student_id?: string
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "student_notes_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       student_profiles_extended: {
         Row: {
@@ -948,15 +739,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "student_profiles_extended_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: true
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       students: {
         Row: {
@@ -1046,15 +829,7 @@ export type Database = {
           user_type?: string | null
           zip?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "students_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1109,6 +884,56 @@ export type Database = {
         Args: { p_user_email: string; p_user_id: string }
         Returns: number
       }
+      accept_recommendation: {
+        Args: { p_recommendation_id: string }
+        Returns: undefined
+      }
+      add_student_note: {
+        Args: { p_content: string; p_is_pinned?: boolean; p_student_id: string }
+        Returns: string
+      }
+      assign_group_leader: {
+        Args: { p_group_id: string; p_role?: string; p_user_id: string }
+        Returns: string
+      }
+      award_points: {
+        Args: {
+          p_check_in_id?: string
+          p_description?: string
+          p_metadata?: Json
+          p_points: number
+          p_student_id: string
+          p_transaction_type: string
+        }
+        Returns: {
+          new_rank: string
+          new_total_points: number
+          points_awarded: number
+          rank_changed: boolean
+        }[]
+      }
+      calculate_rank: { Args: { p_points: number }; Returns: string }
+      checkin_student: {
+        Args: { p_organization_id?: string; p_student_id: string }
+        Returns: {
+          check_in_id: string
+          first_name: string
+          message: string
+          profile_pin: string
+          success: boolean
+          user_type: string
+        }[]
+      }
+      create_organization: {
+        Args: {
+          p_ministry_type?: string
+          p_name: string
+          p_slug?: string
+          p_theme_id?: string
+          p_timezone?: string
+        }
+        Returns: Json
+      }
       create_organization_invitation: {
         Args: {
           p_email: string
@@ -1116,89 +941,14 @@ export type Database = {
           p_role?: string
         }
         Returns: {
-          success: boolean
-          message: string
           invitation_id: string
           invitation_token: string
-        }[]
-      }
-      get_invitation_by_token: {
-        Args: { p_token: string }
-        Returns: {
-          email: string
-          organization_name: string
-          role: string
-        }[]
-      }
-      get_pending_invitations: {
-        Args: { p_organization_id: string }
-        Returns: {
-          created_at: string
-          email: string
-          expires_at: string
-          invitation_id: string
-          invited_by_email: string
-          role: string
-        }[]
-      }
-      get_user_organizations: {
-        Args: { p_user_id: string }
-        Returns: {
-          checkin_style: string
-          display_name: string
-          organization_id: string
-          organization_name: string
-          organization_slug: string
-          theme_id: string
-          user_role: Database["public"]["Enums"]["org_role"]
-        }[]
-      }
-      get_student_email: {
-        Args: { p_student_id: string }
-        Returns: string
-      }
-      update_student_email: {
-        Args: { p_student_id: string; p_email: string }
-        Returns: boolean
-      }
-      resend_organization_invitation: {
-        Args: { p_invitation_id: string }
-        Returns: {
-          success: boolean
-          message: string
-          invitation_token: string
-        }[]
-      }
-      remove_organization_member: {
-        Args: { p_organization_id: string; p_user_id: string }
-        Returns: {
           message: string
           success: boolean
         }[]
       }
-      update_member_role: {
-        Args: {
-          p_new_role: string
-          p_organization_id: string
-          p_user_id: string
-        }
-        Returns: {
-          message: string
-          success: boolean
-        }[]
-      }
-      get_organization_members: {
-        Args: { p_organization_id: string }
-        Returns: {
-          accepted_at: string
-          email: string
-          invited_at: string
-          member_id: string
-          role: string
-          status: string
-          user_id: string
-        }[]
-      }
+      find_student_by_phone: { Args: { p_phone: string }; Returns: string }
+      generate_profile_pin: { Args: Record<string, never>; Returns: string }
       get_all_organizations: {
         Args: Record<string, never>
         Returns: {
@@ -1214,27 +964,285 @@ export type Database = {
           timezone: string
         }[]
       }
-      is_super_admin: { Args: { p_user_id?: string }; Returns: boolean }
-      checkin_student: {
-        Args: { p_organization_id?: string; p_student_id: string }
+      get_default_organization: {
+        Args: Record<string, never>
         Returns: {
-          check_in_id: string
-          first_name: string
-          message: string
-          profile_pin: string
-          success: boolean
-          user_type: string
+          id: string
+          name: string
+          settings: Json
+          slug: string
         }[]
       }
-      search_student_for_checkin: {
-        Args: { p_organization_id?: string; p_search_term: string }
+      get_my_queue: {
+        Args: Record<string, never>
         Returns: {
+          days_since_last_seen: number
+          student_id: string
+          student_name: string
+          student_status: string
+          task_created_at: string
+          task_description: string
+          task_id: string
+          task_type: string
+          urgency: number
+        }[]
+      }
+      get_or_create_extended_profile: {
+        Args: { p_student_id: string }
+        Returns: {
+          current_challenges: string[] | null
+          current_phase: string | null
+          faith_background: string | null
+          family_context: string | null
+          gender: string | null
+          interests: string[] | null
+          learning_style: string | null
+          phase_description: string | null
+          recent_spiritual_notes: string | null
+          spiritual_maturity: string | null
+          student_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+      }
+      get_or_create_student_game_stats: {
+        Args: { p_student_id: string }
+        Returns: {
+          created_at: string
+          current_rank: string
+          last_points_update: string
+          student_id: string
+          total_points: number
+          updated_at: string
+        }[]
+      }
+      get_org_role: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: Database["public"]["Enums"]["org_role"]
+      }
+      get_organization_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          id: string
+          name: string
+          settings: Json
+          slug: string
+        }[]
+      }
+      get_organization_members: {
+        Args: { p_organization_id: string }
+        Returns: {
+          accepted_at: string
+          email: string
+          invited_at: string
+          member_id: string
+          role: string
+          status: string
+          user_id: string
+        }[]
+      }
+      get_pastoral_analytics: {
+        Args: Record<string, never>
+        Returns: {
+          action_message: string
+          action_priority: number
+          attendance_pattern: Json
+          belonging_status: string
+          checkins_last_4weeks: number
+          days_since_last_seen: number
+          email: string
+          father_first_name: string
+          father_last_name: string
+          father_phone: string
           first_name: string
           grade: string
           high_school: string
+          instagram_handle: string
+          is_declining: boolean
+          last_checkin_date: string
           last_name: string
+          mother_first_name: string
+          mother_last_name: string
+          mother_phone: string
+          parent_name: string
+          parent_phone: string
+          phone_number: string
+          recommended_action: string
           student_id: string
+          sunday_count: number
+          total_checkins_8weeks: number
           user_type: string
+          wednesday_count: number
+        }[]
+      }
+      get_pending_invitations: {
+        Args: { p_organization_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          invitation_id: string
+          invited_by_email: string
+          role: string
+        }[]
+      }
+      get_student_by_id: {
+        Args: { p_organization_id?: string; p_student_id: string }
+        Returns: {
+          created_at: string
+          date_of_birth: string
+          email: string
+          father_first_name: string
+          father_last_name: string
+          father_phone: string
+          first_name: string
+          grade: string
+          high_school: string
+          id: string
+          instagram_handle: string
+          last_name: string
+          mother_first_name: string
+          mother_last_name: string
+          mother_phone: string
+          organization_id: string
+          phone_number: string
+          user_type: string
+        }[]
+      }
+      get_student_context: {
+        Args: { p_student_id: string }
+        Returns: {
+          interaction_stats: Json
+          pending_tasks: Json
+          pinned_notes: Json
+          recent_interactions: Json
+        }[]
+      }
+      get_student_email: { Args: { p_student_id: string }; Returns: string }
+      get_student_game_profile: {
+        Args: { p_student_id: string }
+        Returns: {
+          achievements_count: number
+          current_rank: string
+          first_name: string
+          last_check_in: string
+          last_name: string
+          recent_achievements: Json
+          student_id: string
+          sunday_streak: number
+          total_check_ins: number
+          total_points: number
+          total_streak: number
+          user_type: string
+          wednesday_streak: number
+        }[]
+      }
+      get_student_group_streak: {
+        Args: { p_group_id: string; p_student_id: string }
+        Returns: {
+          best_streak: number
+          current_streak: number
+          last_attended: string
+        }[]
+      }
+      get_student_recommendation_history: {
+        Args: { p_student_id: string }
+        Returns: {
+          action_bullets: string[]
+          completed_by: string
+          context_paragraph: string
+          curriculum_series: string
+          curriculum_topic: string
+          days_since_last_seen: number
+          dismissed_at: string
+          engagement_status: string
+          generated_at: string
+          is_dismissed: boolean
+          key_insight: string
+          marked_complete_at: string
+          notes: string
+          recommendation_id: string
+        }[]
+      }
+      get_user_organizations: {
+        Args: { p_user_id: string }
+        Returns: {
+          checkin_style: string
+          display_name: string
+          organization_id: string
+          organization_name: string
+          organization_slug: string
+          theme_id: string
+          user_role: Database["public"]["Enums"]["org_role"]
+        }[]
+      }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
+      has_org_role: {
+        Args: {
+          p_org_id: string
+          p_role: Database["public"]["Enums"]["org_role"]
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      import_historical_checkin: {
+        Args: { p_checkin_timestamp: string; p_student_id: string }
+        Returns: {
+          check_in_id: string
+          message: string
+          success: boolean
+        }[]
+      }
+      is_org_admin: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_super_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      log_interaction: {
+        Args: {
+          p_content?: string
+          p_follow_up_date?: string
+          p_interaction_type: string
+          p_outcome?: string
+          p_recommendation_id?: string
+          p_status?: string
+          p_student_id: string
+        }
+        Returns: string
+      }
+      mark_recommendation_complete: {
+        Args: {
+          p_notes?: string
+          p_recommendation_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      process_checkin_rewards: {
+        Args: { p_check_in_id: string; p_student_id: string }
+        Returns: Json
+      }
+      register_student: {
+        Args: {
+          p_email?: string
+          p_first_name: string
+          p_grade?: string
+          p_high_school?: string
+          p_last_name: string
+          p_organization_id?: string
+          p_parent_name?: string
+          p_parent_phone?: string
+          p_phone_number: string
+        }
+        Returns: {
+          message: string
+          student_id: string
+          success: boolean
         }[]
       }
       register_student_and_checkin: {
@@ -1269,22 +1277,106 @@ export type Database = {
           success: boolean
         }[]
       }
-      get_student_game_profile: {
-        Args: { p_student_id: string }
+      remove_group_leader: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      remove_organization_member: {
+        Args: { p_organization_id: string; p_user_id: string }
         Returns: {
-          achievements_count: number
-          current_rank: string
+          message: string
+          success: boolean
+        }[]
+      }
+      resend_organization_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          invitation_token: string
+          message: string
+          success: boolean
+        }[]
+      }
+      search_student_for_checkin: {
+        Args: { p_organization_id?: string; p_search_term: string }
+        Returns: {
           first_name: string
-          last_check_in: string
+          grade: string
+          high_school: string
           last_name: string
-          recent_achievements: Json
           student_id: string
-          sunday_streak: number
-          total_check_ins: number
-          total_points: number
-          total_streak: number
           user_type: string
-          wednesday_streak: number
+        }[]
+      }
+      set_current_curriculum: {
+        Args: { p_curriculum_id: string }
+        Returns: boolean
+      }
+      trigger_recommendation_generation: { Args: Record<string, never>; Returns: undefined }
+      unlock_achievement: {
+        Args: {
+          p_achievement_description: string
+          p_achievement_emoji: string
+          p_achievement_id: string
+          p_achievement_title: string
+          p_points_awarded: number
+          p_rarity?: string
+          p_student_id: string
+        }
+        Returns: boolean
+      }
+      update_member_role: {
+        Args: {
+          p_new_role: string
+          p_organization_id: string
+          p_user_id: string
+        }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      update_recommendation_status: {
+        Args: {
+          p_notes?: string
+          p_recommendation_id: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      update_student_email: {
+        Args: { p_email: string; p_student_id: string }
+        Returns: boolean
+      }
+      update_student_profile: {
+        Args: {
+          p_date_of_birth?: string
+          p_email?: string
+          p_father_first_name?: string
+          p_father_last_name?: string
+          p_father_phone?: string
+          p_first_name: string
+          p_grade?: string
+          p_high_school?: string
+          p_instagram_handle?: string
+          p_last_name: string
+          p_mother_first_name?: string
+          p_mother_last_name?: string
+          p_mother_phone?: string
+          p_phone_number?: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
+      verify_profile_pin: {
+        Args: { p_pin: string; p_student_id: string }
+        Returns: Json
+      }
+      get_invitation_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          organization_name: string
+          role: string
         }[]
       }
     }
