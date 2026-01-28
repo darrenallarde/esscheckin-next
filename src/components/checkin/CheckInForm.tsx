@@ -26,6 +26,7 @@ type NameEmailSearchData = z.infer<typeof nameEmailSearchSchema>;
 
 interface CheckInFormProps {
   onCheckInComplete?: () => void;
+  organizationId?: string;
 }
 
 interface Student {
@@ -51,7 +52,7 @@ type ViewState =
   | { type: 'new-student' }
   | { type: 'success', student: Student, checkInId: string, profilePin?: string };
 
-const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
+const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {}) => {
   const { toast } = useToast();
   const [viewState, setViewState] = useState<ViewState>({ type: 'phone-search' });
   const [isSearching, setIsSearching] = useState(false);
@@ -91,7 +92,10 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
       console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 
       const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin', { search_term: cleanedSearch });
+        .rpc('search_student_for_checkin', {
+          search_term: cleanedSearch,
+          ...(organizationId && { p_organization_id: organizationId })
+        });
 
       console.log('Search results:', results);
       console.log('Search error:', error);
@@ -143,7 +147,10 @@ const CheckInForm = ({ onCheckInComplete }: CheckInFormProps = {}) => {
     const supabase = createClient();
     try {
       const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin', { search_term: data.searchTerm });
+        .rpc('search_student_for_checkin', {
+          search_term: data.searchTerm,
+          ...(organizationId && { p_organization_id: organizationId })
+        });
 
       if (error) {
         throw error;

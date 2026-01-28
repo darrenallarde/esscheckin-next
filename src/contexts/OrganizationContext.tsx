@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { extractOrgSlugFromPath, extractRouteFromPath } from "@/lib/navigation";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
@@ -13,6 +14,9 @@ export interface Organization {
   slug: string;
   status?: string;
   timezone?: string;
+  displayName?: string | null;
+  themeId?: string | null;
+  checkinStyle?: string | null;
 }
 
 interface OrganizationContextType {
@@ -27,7 +31,7 @@ interface OrganizationContextType {
 
 const OrganizationContext = React.createContext<OrganizationContextType | undefined>(undefined);
 
-const STORAGE_KEY = "ess-current-org-slug";
+const STORAGE_KEY = "seedling-current-org-slug";
 
 export function useOrganization(): OrganizationContextType {
   const context = React.useContext(OrganizationContext);
@@ -48,10 +52,13 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
   const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const params = useParams();
   const supabase = React.useMemo(() => createClient(), []);
+
+  // Get org slug from URL path (e.g., /echo-students/dashboard -> 'echo-students')
+  const orgSlugFromPath = params.org as string | undefined || extractOrgSlugFromPath(pathname);
 
   // Fetch organizations and determine current org
   const fetchOrganizations = React.useCallback(async () => {
@@ -91,16 +98,21 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
         organization_name: string;
         organization_slug: string;
         user_role: OrgRole;
+        display_name: string | null;
+        theme_id: string | null;
+        checkin_style: string | null;
       }) => ({
         id: org.organization_id,
         name: org.organization_name,
         slug: org.organization_slug,
+        displayName: org.display_name,
+        themeId: org.theme_id,
+        checkinStyle: org.checkin_style,
       }));
 
       setOrganizations(mappedOrgs);
 
-      // Determine which org to select
-      const orgSlugFromUrl = searchParams.get("org");
+      // Determine which org to select based on URL path
       const savedSlug = typeof window !== "undefined"
         ? localStorage.getItem(STORAGE_KEY)
         : null;
@@ -108,10 +120,10 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       let selectedOrg: Organization | null = null;
       let selectedRole: OrgRole | null = null;
 
-      // Priority: URL param > localStorage > first org
-      if (orgSlugFromUrl) {
-        selectedOrg = mappedOrgs.find((o) => o.slug === orgSlugFromUrl) || null;
-        const orgData = orgs.find((o: { organization_slug: string }) => o.organization_slug === orgSlugFromUrl);
+      // Priority: URL path > localStorage > first org
+      if (orgSlugFromPath) {
+        selectedOrg = mappedOrgs.find((o) => o.slug === orgSlugFromPath) || null;
+        const orgData = orgs.find((o: { organization_slug: string }) => o.organization_slug === orgSlugFromPath);
         selectedRole = orgData?.user_role || null;
       }
 
@@ -139,7 +151,7 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       console.error("Error in fetchOrganizations:", error);
       setIsLoading(false);
     }
-  }, [supabase, searchParams]);
+  }, [supabase, orgSlugFromPath]);
 
   React.useEffect(() => {
     fetchOrganizations();
@@ -186,11 +198,10 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       localStorage.setItem(STORAGE_KEY, org.slug);
     }
 
-    // Update URL with org param
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("org", org.slug);
-    router.push(`${pathname}?${params.toString()}`);
-  }, [searchParams, router, pathname]);
+    // Navigate to same route in new org (path-based routing)
+    const currentRoute = extractRouteFromPath(pathname);
+    router.push(`/${org.slug}${currentRoute || '/dashboard'}`);
+  }, [router, pathname]);
 
   const refreshOrganizations = React.useCallback(async () => {
     await fetchOrganizations();

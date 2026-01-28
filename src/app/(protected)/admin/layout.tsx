@@ -14,7 +14,8 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!isLoading && !isSuperAdmin) {
-      router.push("/dashboard");
+      // Redirect to setup which will route to user's org
+      router.push("/setup");
     }
   }, [isSuperAdmin, isLoading, router]);
 

@@ -55,9 +55,10 @@ export function useAllOrganizations() {
 
 export interface CreateOrganizationInput {
   name: string;
-  owner_email: string;
   slug?: string;
   timezone?: string;
+  ministryType?: string;
+  themeId?: string;
 }
 
 export function useCreateOrganization() {
@@ -68,9 +69,10 @@ export function useCreateOrganization() {
     mutationFn: async (input: CreateOrganizationInput) => {
       const { data, error } = await supabase.rpc("create_organization", {
         p_name: input.name,
-        p_owner_email: input.owner_email,
         p_slug: input.slug || null,
         p_timezone: input.timezone || "America/Los_Angeles",
+        p_ministry_type: input.ministryType || "student",
+        p_theme_id: input.themeId || "default",
       });
 
       if (error) throw error;

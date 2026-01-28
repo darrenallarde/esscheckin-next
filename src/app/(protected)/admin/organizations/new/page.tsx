@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Users, Church, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateOrganization } from "@/hooks/queries/use-admin";
+import { THEMES } from "@/lib/themes";
 
 const TIMEZONES = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -27,14 +28,30 @@ const TIMEZONES = [
   { value: "America/Anchorage", label: "Alaska (AKST)" },
 ];
 
+const MINISTRY_TYPES = [
+  {
+    value: "student",
+    label: "Student Ministry",
+    description: "Youth groups, Sunday school, campus ministry",
+    icon: Users,
+  },
+  {
+    value: "church",
+    label: "Church / General",
+    description: "Small groups, congregation, general ministry",
+    icon: Church,
+  },
+];
+
 export default function NewOrganizationPage() {
   const router = useRouter();
   const createOrg = useCreateOrganization();
 
   const [name, setName] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState("");
   const [slug, setSlug] = useState("");
   const [timezone, setTimezone] = useState("America/Los_Angeles");
+  const [ministryType, setMinistryType] = useState<string>("student");
+  const [themeId, setThemeId] = useState<string>("default");
 
   // Auto-generate slug from name
   const handleNameChange = (value: string) => {
@@ -58,18 +75,20 @@ export default function NewOrganizationPage() {
     try {
       await createOrg.mutateAsync({
         name,
-        owner_email: ownerEmail,
         slug: slug || undefined,
         timezone,
+        ministryType,
+        themeId,
       });
 
-      router.push("/admin/organizations");
+      // Redirect to the new org's team settings to add members
+      router.push(`/${slug || generateSlug(name)}/settings/team`);
     } catch (error) {
       console.error("Failed to create organization:", error);
     }
   };
 
-  const isValid = name.trim() && ownerEmail.trim() && ownerEmail.includes("@");
+  const isValid = name.trim().length > 0;
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -93,8 +112,7 @@ export default function NewOrganizationPage() {
         <CardHeader>
           <CardTitle>Organization Details</CardTitle>
           <CardDescription>
-            Enter the basic information for the new organization. The owner will receive an
-            invitation to set up their account.
+            Enter the basic information for the new organization. You can add team members after creation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,7 +121,7 @@ export default function NewOrganizationPage() {
               <Label htmlFor="name">Organization Name *</Label>
               <Input
                 id="name"
-                placeholder="e.g., Echo Students"
+                placeholder="e.g., Grace Youth Ministry"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 required
@@ -111,27 +129,12 @@ export default function NewOrganizationPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ownerEmail">Owner Email *</Label>
-              <Input
-                id="ownerEmail"
-                type="email"
-                placeholder="e.g., pastor@church.org"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                required
-              />
-              <p className="text-sm text-muted-foreground">
-                This person will be the organization owner and can invite other team members.
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="slug">URL Slug</Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">esscheckin.com/</span>
+                <span className="text-sm text-muted-foreground">seedlinginsights.com/</span>
                 <Input
                   id="slug"
-                  placeholder="echo-students"
+                  placeholder="grace-youth"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   className="flex-1"
@@ -140,6 +143,60 @@ export default function NewOrganizationPage() {
               <p className="text-sm text-muted-foreground">
                 Leave blank to auto-generate from the organization name.
               </p>
+            </div>
+
+            {/* Ministry Type */}
+            <div className="space-y-3">
+              <Label>Ministry Type</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {MINISTRY_TYPES.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setMinistryType(type.value)}
+                    className={`relative flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-accent ${
+                      ministryType === type.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border"
+                    }`}
+                  >
+                    {ministryType === type.value && (
+                      <div className="absolute right-2 top-2">
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+                    <type.icon className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{type.label}</p>
+                      <p className="text-sm text-muted-foreground">{type.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Theme Selection */}
+            <div className="space-y-3">
+              <Label>Theme</Label>
+              <div className="grid gap-2 grid-cols-3 sm:grid-cols-6">
+                {Object.entries(THEMES).map(([id, theme]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setThemeId(id)}
+                    className={`relative flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors hover:bg-accent ${
+                      themeId === id ? "border-primary ring-2 ring-primary/20" : "border-border"
+                    }`}
+                    title={theme.description}
+                  >
+                    <div
+                      className="h-6 w-6 rounded-full"
+                      style={{ backgroundColor: theme.primary }}
+                    />
+                    <span className="text-xs font-medium">{theme.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">

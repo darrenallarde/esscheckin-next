@@ -32,6 +32,7 @@ interface PendingInvitesListProps {
   invitations: PendingInvitation[];
   loading?: boolean;
   organizationId: string;
+  organizationName: string;
 }
 
 const ROLE_LABELS: Record<OrgRole, string> = {
@@ -45,16 +46,23 @@ export function PendingInvitesList({
   invitations,
   loading,
   organizationId,
+  organizationName,
 }: PendingInvitesListProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const resendInvitation = useResendInvitation();
   const cancelInvitation = useCancelInvitation();
 
-  const handleResend = async (invitationId: string) => {
-    setProcessingId(invitationId);
+  const handleResend = async (invitation: PendingInvitation) => {
+    setProcessingId(invitation.invitation_id);
     try {
-      await resendInvitation.mutateAsync({ invitationId, organizationId });
+      await resendInvitation.mutateAsync({
+        invitationId: invitation.invitation_id,
+        organizationId,
+        organizationName,
+        email: invitation.email,
+        role: invitation.role,
+      });
     } catch (error) {
       console.error("Failed to resend invitation:", error);
     } finally {
@@ -161,7 +169,7 @@ export function PendingInvitesList({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => handleResend(invitation.invitation_id)}
+                      onClick={() => handleResend(invitation)}
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Resend

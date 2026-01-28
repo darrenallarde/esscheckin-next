@@ -11,6 +11,8 @@ import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
 import { AddStudentToGroupModal } from "@/components/groups/AddStudentToGroupModal";
 import { useGroups, Group, useGroupMembers } from "@/hooks/queries/use-groups";
 import { useOrganization } from "@/hooks/useOrganization";
+import { orgPath } from "@/lib/navigation";
+import Link from "next/link";
 
 export default function StudentsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -19,6 +21,7 @@ export default function StudentsPage() {
 
   const { currentOrganization, userRole, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
+  const orgSlug = currentOrganization?.slug;
   const canManageLeaders = userRole === "owner" || userRole === "admin";
 
   const { data: groups, isLoading: groupsLoading } = useGroups(organizationId);
@@ -46,9 +49,9 @@ export default function StudentsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Students</h1>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">People</h1>
           <p className="text-muted-foreground mt-1">
-            Manage groups and track student engagement
+            Manage groups and track engagement
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} disabled={!organizationId}>
@@ -104,7 +107,7 @@ export default function StudentsPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">All Students</CardTitle>
             <Button variant="outline" size="sm" asChild>
-              <a href="/students/all">View All</a>
+              <Link href={orgPath(orgSlug, "/students/all")}>View All</Link>
             </Button>
           </CardHeader>
           <CardContent>

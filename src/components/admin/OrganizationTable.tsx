@@ -79,7 +79,7 @@ export function OrganizationTable({ data, loading }: OrganizationTableProps) {
               <TableHead>Organization</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead className="text-center">Members</TableHead>
-              <TableHead className="text-center">Students</TableHead>
+              <TableHead className="text-center">People</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="w-10"></TableHead>

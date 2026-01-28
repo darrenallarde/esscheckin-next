@@ -49,6 +49,7 @@ export default function TeamSettingsPage() {
         </div>
         <InviteTeamModal
           organizationId={currentOrganization.id}
+          organizationName={currentOrganization.display_name || currentOrganization.name}
           currentUserRole={userRole}
         />
       </div>
@@ -84,6 +85,7 @@ export default function TeamSettingsPage() {
             invitations={invitations || []}
             loading={invitationsLoading}
             organizationId={currentOrganization.id}
+            organizationName={currentOrganization.display_name || currentOrganization.name}
           />
         </CardContent>
       </Card>

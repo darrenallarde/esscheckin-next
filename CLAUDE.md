@@ -22,12 +22,25 @@ The migration from Vite to Next.js was done to leverage App Router, server compo
 
 ## Supabase Configuration
 
-**PRODUCTION Project**: `hhjvsvezinrbxeropeyl`
-- Dashboard: https://supabase.com/dashboard/project/hhjvsvezinrbxeropeyl
-- This is the live database with real student data
-- All migrations should be applied here
+**CRITICAL: Always apply migrations to BOTH environments!**
 
-**Staging Project**: `vilpdnwkfsmvqsiktqdf` (testing only - do not use for production work)
+| Environment | Project ID | Purpose |
+|-------------|------------|---------|
+| **STAGING** | `vilpdnwkfsmvqsiktqdf` | Local dev (`npm run dev`) - test here first |
+| **PRODUCTION** | `hhjvsvezinrbxeropeyl` | Vercel deployment - real student data |
+
+### Migration Workflow (MUST FOLLOW)
+
+When applying ANY database migration:
+1. **Apply to STAGING first**: `mcp__supabase__apply_migration` with `project_id: vilpdnwkfsmvqsiktqdf`
+2. **Test locally** at `localhost:3000`
+3. **Then apply to PRODUCTION**: `mcp__supabase__apply_migration` with `project_id: hhjvsvezinrbxeropeyl`
+
+**Never apply to production only. Local development uses staging.**
+
+Dashboards:
+- Staging: https://supabase.com/dashboard/project/vilpdnwkfsmvqsiktqdf
+- Production: https://supabase.com/dashboard/project/hhjvsvezinrbxeropeyl
 
 ### Database Tables (as of Jan 2026)
 
@@ -46,8 +59,11 @@ Groups System (Phase 3):
 
 RPC Functions:
 - `get_student_group_streak(student_id, group_id)` - Per-group streak calculation
-- `get_user_organizations(user_id)` - User's org memberships
+- `get_user_organizations(user_id)` - User's org memberships (returns display_name, theme_id, checkin_style)
 - `get_student_game_profile(student_id)` - Gamification profile
+- `get_all_organizations()` - Super admin: list all orgs
+- `create_organization(name, owner_email, slug, timezone)` - Super admin: create new org
+- `is_super_admin(user_id)` - Check if user is super admin
 
 ## Project Structure
 

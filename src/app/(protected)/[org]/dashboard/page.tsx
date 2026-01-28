@@ -10,10 +10,12 @@ import { useDashboardStats, useWeeklyAttendance } from "@/hooks/queries/use-dash
 import { useLeaderboard } from "@/hooks/queries/use-gamification";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
 import { useOrganization } from "@/hooks/useOrganization";
+import { orgPath } from "@/lib/navigation";
 
 export default function DashboardPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
+  const orgSlug = currentOrganization?.slug;
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats(organizationId);
   const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyAttendance(organizationId);
@@ -76,7 +78,7 @@ export default function DashboardPage() {
           <PastoralQueue
             data={recommendations ?? []}
             loading={orgLoading || recsLoading}
-            viewAllHref="/pastoral"
+            viewAllHref={orgPath(orgSlug, "/pastoral")}
           />
         </div>
 
@@ -90,7 +92,7 @@ export default function DashboardPage() {
           <LeaderboardPreview
             data={leaderboard ?? []}
             loading={orgLoading || leaderboardLoading}
-            viewAllHref="/analytics"
+            viewAllHref={orgPath(orgSlug, "/analytics")}
           />
         </div>
       </div>

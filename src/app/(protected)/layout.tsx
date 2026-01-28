@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Providers } from "./providers";
+import { PLATFORM_NAME } from "@/lib/copy";
 
 export default function ProtectedLayout({
   children,
@@ -67,7 +68,7 @@ export default function ProtectedLayout({
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-6" />
-            <span className="font-semibold">ESS Check-in</span>
+            <span className="font-semibold">{PLATFORM_NAME}</span>
           </header>
           <div className="flex flex-1 flex-col">{children}</div>
         </SidebarInset>

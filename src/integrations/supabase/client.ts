@@ -1,17 +1,19 @@
-// Uses config file that ships with the build
+// Uses environment variables for Supabase configuration
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-import { ACTIVE_CONFIG } from '@/config/supabase.config';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(
-  ACTIVE_CONFIG.url,
-  ACTIVE_CONFIG.anonKey,
+  supabaseUrl,
+  supabaseAnonKey,
   {
     auth: {
-      storage: localStorage,
+      storage: typeof window !== 'undefined' ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
     }

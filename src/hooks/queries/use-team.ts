@@ -95,6 +95,7 @@ export function usePendingInvitations(organizationId: string | null) {
 
 export interface InviteInput {
   organizationId: string;
+  organizationName: string;
   email: string;
   role: OrgRole;
 }
@@ -105,6 +106,7 @@ export function useInviteTeamMember() {
 
   return useMutation({
     mutationFn: async (input: InviteInput) => {
+      // Create the invitation record
       const { data, error } = await supabase.rpc("create_organization_invitation", {
         p_organization_id: input.organizationId,
         p_email: input.email,
@@ -114,6 +116,26 @@ export function useInviteTeamMember() {
       if (error) throw error;
       if (!data || !data[0]?.success) {
         throw new Error(data?.[0]?.message || "Failed to send invitation");
+      }
+
+      // Get current user's email for the inviter name
+      const { data: userData } = await supabase.auth.getUser();
+      const inviterEmail = userData?.user?.email || "";
+
+      // Send invitation email via Edge Function
+      try {
+        await supabase.functions.invoke("send-invitation-email", {
+          body: {
+            to: input.email,
+            organizationName: input.organizationName,
+            inviterName: inviterEmail,
+            role: input.role,
+            loginUrl: `${window.location.origin}/auth`,
+          },
+        });
+      } catch (emailError) {
+        // Log but don't fail the invitation if email fails
+        console.error("Failed to send invitation email:", emailError);
       }
 
       return data[0];
@@ -195,9 +217,15 @@ export function useResendInvitation() {
     mutationFn: async ({
       invitationId,
       organizationId,
+      organizationName,
+      email,
+      role,
     }: {
       invitationId: string;
       organizationId: string;
+      organizationName: string;
+      email: string;
+      role: string;
     }) => {
       const { data, error } = await supabase.rpc("resend_organization_invitation", {
         p_invitation_id: invitationId,
@@ -206,6 +234,25 @@ export function useResendInvitation() {
       if (error) throw error;
       if (!data || !data[0]?.success) {
         throw new Error(data?.[0]?.message || "Failed to resend invitation");
+      }
+
+      // Get current user's email for the inviter name
+      const { data: userData } = await supabase.auth.getUser();
+      const inviterEmail = userData?.user?.email || "";
+
+      // Resend invitation email via Edge Function
+      try {
+        await supabase.functions.invoke("send-invitation-email", {
+          body: {
+            to: email,
+            organizationName: organizationName,
+            inviterName: inviterEmail,
+            role: role,
+            loginUrl: `${window.location.origin}/auth`,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send invitation email:", emailError);
       }
 
       return { ...data[0], organizationId };

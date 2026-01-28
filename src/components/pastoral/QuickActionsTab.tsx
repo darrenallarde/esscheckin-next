@@ -26,6 +26,7 @@ interface QuickActionsTabProps {
   students: StudentPastoralData[];
   recommendations: AIRecommendation[];
   curriculum: CurriculumWeek | null;
+  organizationName?: string;
 }
 
 type AudienceFilter = 'students' | 'parents';
@@ -115,7 +116,8 @@ type ViewMode = 'list' | 'gallery';
 const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
   students,
   recommendations,
-  curriculum
+  curriculum,
+  organizationName = 'our ministry'
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>('students');
@@ -210,7 +212,7 @@ const QuickActionsTab: React.FC<QuickActionsTabProps> = ({
         if (student.belonging_status === 'Missing' || student.belonging_status === 'On the Fringe') {
           parentPrimary = {
             label: 'Check In',
-            message: `${greeting} This is [Your Name] from ESS Youth. We've missed seeing ${student.first_name} and wanted to check in. Is everything okay? We'd love to have them back!`
+            message: `${greeting} This is [Your Name] from ${organizationName}. We've missed seeing ${student.first_name} and wanted to check in. Is everything okay? We'd love to have them back!`
           };
         }
 

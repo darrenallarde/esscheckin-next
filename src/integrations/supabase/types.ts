@@ -1324,6 +1324,9 @@ export type Database = {
           organization_name: string
           organization_slug: string
           user_role: Database["public"]["Enums"]["org_role"]
+          display_name: string | null
+          theme_id: string | null
+          checkin_style: string | null
         }[]
       }
       get_user_role: { Args: { _user_id: string }; Returns: string }

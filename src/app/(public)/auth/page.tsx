@@ -87,7 +87,8 @@ function AuthForm() {
           title: "Success!",
           description: "You're now logged in.",
         });
-        router.push("/dashboard");
+        // Redirect to setup which will route to user's org
+        router.push("/setup");
       }
     } catch {
       toast({
@@ -215,8 +216,8 @@ export default function AuthPage() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
           <Sprout className="h-10 w-10 text-primary-foreground" />
         </div>
-        <h1 className="text-3xl font-bold text-foreground">ESS Check-in</h1>
-        <p className="text-muted-foreground mt-2">Admin Portal</p>
+        <h1 className="text-3xl font-bold text-foreground">Seedling Insights</h1>
+        <p className="text-muted-foreground mt-2">Leader Portal</p>
       </div>
 
       <Suspense

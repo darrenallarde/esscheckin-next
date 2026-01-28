@@ -37,11 +37,11 @@ export interface RankInfo {
 
 export const RANKS: RankInfo[] = [
   { title: "Newcomer", emoji: "🌱", color: "#22c55e", minCheckIns: 0 },
-  { title: "Regular", emoji: "⭐", color: "#3b82f6", minCheckIns: 25 },
-  { title: "Committed", emoji: "🔥", color: "#f59e0b", minCheckIns: 50 },
-  { title: "Devoted", emoji: "💎", color: "#8b5cf6", minCheckIns: 100 },
-  { title: "Champion", emoji: "🏆", color: "#ef4444", minCheckIns: 200 },
-  { title: "Legend", emoji: "👑", color: "#d946ef", minCheckIns: 300 },
+  { title: "Regular", emoji: "⭐", color: "#3b82f6", minCheckIns: 10 },
+  { title: "Committed", emoji: "🔥", color: "#f59e0b", minCheckIns: 25 },
+  { title: "Devoted", emoji: "💎", color: "#8b5cf6", minCheckIns: 50 },
+  { title: "Champion", emoji: "🏆", color: "#ef4444", minCheckIns: 100 },
+  { title: "Legend", emoji: "👑", color: "#d946ef", minCheckIns: 250 },
 ];
 
 export function getRankInfo(rankTitle: string): RankInfo {

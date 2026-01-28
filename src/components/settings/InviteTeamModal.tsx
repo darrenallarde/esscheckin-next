@@ -27,6 +27,7 @@ type OrgRole = Database["public"]["Enums"]["org_role"];
 
 interface InviteTeamModalProps {
   organizationId: string;
+  organizationName: string;
   currentUserRole: OrgRole | null;
 }
 
@@ -38,6 +39,7 @@ const AVAILABLE_ROLES: Array<{ value: OrgRole; label: string; description: strin
 
 export function InviteTeamModal({
   organizationId,
+  organizationName,
   currentUserRole,
 }: InviteTeamModalProps) {
   const [open, setOpen] = useState(false);
@@ -68,6 +70,7 @@ export function InviteTeamModal({
     try {
       await inviteMember.mutateAsync({
         organizationId,
+        organizationName,
         email: email.trim(),
         role,
       });

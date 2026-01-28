@@ -14,6 +14,9 @@ import {
   Heart,
   Shield,
 } from "lucide-react";
+import { env } from "@/lib/env";
+import { PLATFORM_NAME } from "@/lib/copy";
+import { orgPath, extractRouteFromPath } from "@/lib/navigation";
 
 import {
   Sidebar,
@@ -44,27 +47,27 @@ interface AppSidebarProps {
 const navItems = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    path: "/dashboard",
     icon: Home,
   },
   {
-    title: "Students",
-    url: "/students",
+    title: "People",
+    path: "/students",
     icon: Users,
   },
   {
     title: "Pastoral",
-    url: "/pastoral",
+    path: "/pastoral",
     icon: Heart,
   },
   {
     title: "Analytics",
-    url: "/analytics",
+    path: "/analytics",
     icon: BarChart3,
   },
   {
     title: "Curriculum",
-    url: "/curriculum",
+    path: "/curriculum",
     icon: BookOpen,
   },
 ];
@@ -76,24 +79,41 @@ export function AppSidebar({
   const pathname = usePathname();
   const { currentOrganization, organizations, isSuperAdmin, switchOrganization } = useOrganization();
 
-  const isActive = (url: string) => {
-    return pathname === url || pathname.startsWith(url + "/");
+  const orgSlug = currentOrganization?.slug;
+
+  // Check if current path matches the nav item
+  const isActive = (itemPath: string) => {
+    const currentRoute = extractRouteFromPath(pathname);
+    return currentRoute === itemPath || currentRoute.startsWith(itemPath + "/");
+  };
+
+  // Generate org-prefixed URL
+  const getNavUrl = (itemPath: string) => {
+    return orgPath(orgSlug, itemPath);
   };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-5">
+        {/* Staging Environment Indicator */}
+        {env.isStaging && (
+          <div className="mb-2 rounded bg-amber-500/20 px-2 py-1 text-center text-xs font-medium text-amber-600 group-data-[collapsible=icon]:hidden">
+            STAGING
+          </div>
+        )}
         {/* Logo and Org Selector */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
             <Sprout className="h-6 w-6 text-sidebar-primary-foreground" />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-bold">ESS Check-in</span>
+            <span className="text-base font-bold">
+              {currentOrganization?.displayName || currentOrganization?.name || PLATFORM_NAME}
+            </span>
             {organizations.length > 1 ? (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground">
-                  {currentOrganization?.name || "Select Organization"}
+                  Switch organization
                   <ChevronDown className="h-3 w-3" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
@@ -103,14 +123,14 @@ export function AppSidebar({
                       onClick={() => switchOrganization(org)}
                       className={currentOrganization?.id === org.id ? "bg-accent" : ""}
                     >
-                      {org.name}
+                      {org.displayName || org.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <span className="text-xs text-sidebar-foreground/70">
-                {currentOrganization?.name || "Ministry"}
+                Powered by {PLATFORM_NAME}
               </span>
             )}
           </div>
@@ -128,10 +148,10 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive(item.url)}
+                    isActive={isActive(item.path)}
                     tooltip={item.title}
                   >
-                    <Link href={item.url}>
+                    <Link href={getNavUrl(item.path)}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -154,18 +174,18 @@ export function AppSidebar({
                   isActive={isActive("/settings")}
                   tooltip="Settings"
                 >
-                  <Link href="/settings">
+                  <Link href={getNavUrl("/settings")}>
                     <Settings />
                     <span>Settings</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {/* Admin link for super_admins */}
+              {/* Admin link for super_admins - not org-specific */}
               {isSuperAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive("/admin")}
+                    isActive={pathname.startsWith("/admin")}
                     tooltip="Admin"
                   >
                     <Link href="/admin">

@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sprout, Shield, Loader2, Mail } from "lucide-react";
+import { extractRouteFromPath } from "@/lib/navigation";
 
-export default function SetupPage() {
+function SetupPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     checkSetupStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkSetupStatus = async () => {
@@ -35,27 +38,37 @@ export default function SetupPage() {
     });
 
     if (userOrgs && userOrgs.length > 0) {
-      // User already has an org, redirect to dashboard
-      router.push("/dashboard");
+      // User already has an org - redirect to their first org's dashboard
+      const firstOrg = userOrgs[0];
+      const orgSlug = firstOrg.organization_slug;
+
+      // Check if there was a redirect param (e.g., from legacy path)
+      const redirectPath = searchParams.get("redirect");
+      if (redirectPath) {
+        // Extract just the route part (e.g., /dashboard from /dashboard)
+        const route = extractRouteFromPath(redirectPath) || "/dashboard";
+        router.push(`/${orgSlug}${route}`);
+      } else {
+        router.push(`/${orgSlug}/dashboard`);
+      }
       return;
     }
 
     // Check for any pending invitations for this user
     const { data: pendingInvites } = await supabase
       .from("organization_invitations")
-      .select("id, organization_id")
+      .select("id, organization_id, role")
       .eq("email", user.email)
       .is("accepted_at", null)
       .gt("expires_at", new Date().toISOString());
 
     if (pendingInvites && pendingInvites.length > 0) {
-      // User has pending invitations - they should re-auth to trigger auto-accept
-      // Or we could accept them here directly
+      // User has pending invitations - accept them
       for (const invite of pendingInvites) {
         await supabase.from("organization_members").upsert({
           organization_id: invite.organization_id,
           user_id: user.id,
-          role: "viewer", // Default role if somehow role wasn't set
+          role: invite.role || "viewer",
           status: "active",
           accepted_at: new Date().toISOString(),
         }, {
@@ -68,9 +81,16 @@ export default function SetupPage() {
           .eq("id", invite.id);
       }
 
-      // Redirect to dashboard after accepting invites
-      router.push("/dashboard");
-      return;
+      // Re-fetch orgs after accepting invites
+      const { data: updatedOrgs } = await supabase.rpc("get_user_organizations", {
+        p_user_id: user.id,
+      });
+
+      if (updatedOrgs && updatedOrgs.length > 0) {
+        const firstOrg = updatedOrgs[0];
+        router.push(`/${firstOrg.organization_slug}/dashboard`);
+        return;
+      }
     }
 
     setIsLoading(false);
@@ -91,7 +111,7 @@ export default function SetupPage() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
           <Sprout className="h-10 w-10 text-primary-foreground" />
         </div>
-        <h1 className="text-3xl font-bold text-foreground">ESS Check-in</h1>
+        <h1 className="text-3xl font-bold text-foreground">Seedling Insights</h1>
         <p className="text-muted-foreground mt-2">Organization Access</p>
       </div>
 
@@ -104,7 +124,7 @@ export default function SetupPage() {
           </div>
           <CardTitle>No Organization Access</CardTitle>
           <CardDescription>
-            You need to be invited to an organization to use ESS Check-in.
+            You need to be invited to an organization to use Seedling Insights.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -123,7 +143,7 @@ export default function SetupPage() {
                 you from the Team settings page.
               </p>
               <p className="mt-2">
-                Once invited, you'll receive an email with instructions to join.
+                Once invited, you&apos;ll receive an email with instructions to join.
               </p>
             </div>
           </div>
@@ -149,5 +169,17 @@ export default function SetupPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <SetupPageContent />
+    </Suspense>
   );
 }
