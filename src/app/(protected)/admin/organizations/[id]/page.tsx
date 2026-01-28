@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Building2, Users, CalendarCheck, Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,15 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAllOrganizations } from "@/hooks/queries/use-admin";
 
-export default function OrganizationDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const resolvedParams = use(params);
+export default function OrganizationDetailPage() {
+  const params = useParams<{ id: string }>();
   const { data: organizations, isLoading } = useAllOrganizations();
 
-  const organization = organizations?.find((org) => org.id === resolvedParams.id);
+  const organization = organizations?.find((org) => org.id === params.id);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {

@@ -35,35 +35,13 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
 
-      if (user) {
+      if (user && user.email) {
         // Auto-accept any pending invitations for this user's email
-        const { data: invitations } = await supabase
-          .from("organization_invitations")
-          .select("*")
-          .eq("email", user.email)
-          .is("accepted_at", null)
-          .gt("expires_at", new Date().toISOString());
-
-        // Accept each invitation by adding user to organization
-        for (const invite of invitations || []) {
-          // Add user to organization_members
-          await supabase.from("organization_members").upsert({
-            organization_id: invite.organization_id,
-            user_id: user.id,
-            role: invite.role,
-            status: "active",
-            invited_by: invite.invited_by,
-            accepted_at: new Date().toISOString(),
-          }, {
-            onConflict: "organization_id,user_id",
-          });
-
-          // Mark invitation as accepted
-          await supabase
-            .from("organization_invitations")
-            .update({ accepted_at: new Date().toISOString() })
-            .eq("id", invite.id);
-        }
+        // Uses SECURITY DEFINER RPC to bypass RLS since new users have no permissions
+        await supabase.rpc("accept_pending_invitations", {
+          p_user_id: user.id,
+          p_user_email: user.email,
+        });
 
         // Check if user is a member of any organization
         const { data: orgs } = await supabase.rpc("get_user_organizations", {
@@ -74,6 +52,13 @@ export async function GET(request: Request) {
         if (!orgs || orgs.length === 0) {
           return NextResponse.redirect(`${origin}/setup`);
         }
+
+        // Redirect to the first org's dashboard (or use next param if it's org-specific)
+        const firstOrg = orgs[0];
+        const redirectPath = next.startsWith("/") && !next.includes("/dashboard")
+          ? next
+          : `/${firstOrg.organization_slug}/dashboard`;
+        return NextResponse.redirect(`${origin}${redirectPath}`);
       }
 
       return NextResponse.redirect(`${origin}${next}`);

@@ -122,7 +122,10 @@ export function useInviteTeamMember() {
       const { data: userData } = await supabase.auth.getUser();
       const inviterEmail = userData?.user?.email || "";
 
-      // Send invitation email via Edge Function
+      // Get the invitation token from the response
+      const inviteToken = data[0].invitation_token;
+
+      // Send invitation email via Edge Function with token in URL
       try {
         await supabase.functions.invoke("send-invitation-email", {
           body: {
@@ -130,7 +133,7 @@ export function useInviteTeamMember() {
             organizationName: input.organizationName,
             inviterName: inviterEmail,
             role: input.role,
-            loginUrl: `${window.location.origin}/auth`,
+            loginUrl: `${window.location.origin}/auth?invite=${inviteToken}`,
           },
         });
       } catch (emailError) {
@@ -240,7 +243,10 @@ export function useResendInvitation() {
       const { data: userData } = await supabase.auth.getUser();
       const inviterEmail = userData?.user?.email || "";
 
-      // Resend invitation email via Edge Function
+      // Get the invitation token from the response
+      const inviteToken = data[0].invitation_token;
+
+      // Resend invitation email via Edge Function with token in URL
       try {
         await supabase.functions.invoke("send-invitation-email", {
           body: {
@@ -248,7 +254,7 @@ export function useResendInvitation() {
             organizationName: organizationName,
             inviterName: inviterEmail,
             role: role,
-            loginUrl: `${window.location.origin}/auth`,
+            loginUrl: `${window.location.origin}/auth?invite=${inviteToken}`,
           },
         });
       } catch (emailError) {

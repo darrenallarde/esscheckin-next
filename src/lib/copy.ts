@@ -1,5 +1,5 @@
 /**
- * Copy & Messaging for Seedling Insights
+ * Copy & Messaging for Sheepdoggo
  *
  * Following our design principles:
  * - Prayer-first language
@@ -8,8 +8,8 @@
  * - Uses "we" and "you" - the app is a partner
  */
 
-export const PLATFORM_NAME = 'Seedling Insights';
-export const PLATFORM_TAGLINE = 'Cultivating care, one connection at a time';
+export const PLATFORM_NAME = 'Sheepdoggo';
+export const PLATFORM_TAGLINE = 'Helping ministries shepherd their flock';
 
 /**
  * Empty states - encouraging messages when there's no data

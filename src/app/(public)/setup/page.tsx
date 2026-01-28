@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sprout, Shield, Loader2, Mail } from "lucide-react";
+import { Shield, Loader2, Mail } from "lucide-react";
+import Image from "next/image";
 import { extractRouteFromPath } from "@/lib/navigation";
 
 function SetupPageContent() {
@@ -54,32 +55,13 @@ function SetupPageContent() {
       return;
     }
 
-    // Check for any pending invitations for this user
-    const { data: pendingInvites } = await supabase
-      .from("organization_invitations")
-      .select("id, organization_id, role")
-      .eq("email", user.email)
-      .is("accepted_at", null)
-      .gt("expires_at", new Date().toISOString());
-
-    if (pendingInvites && pendingInvites.length > 0) {
-      // User has pending invitations - accept them
-      for (const invite of pendingInvites) {
-        await supabase.from("organization_members").upsert({
-          organization_id: invite.organization_id,
-          user_id: user.id,
-          role: invite.role || "viewer",
-          status: "active",
-          accepted_at: new Date().toISOString(),
-        }, {
-          onConflict: "organization_id,user_id",
-        });
-
-        await supabase
-          .from("organization_invitations")
-          .update({ accepted_at: new Date().toISOString() })
-          .eq("id", invite.id);
-      }
+    // Accept any pending invitations using SECURITY DEFINER RPC (bypasses RLS)
+    if (user.email) {
+      const { error: acceptError } = await supabase.rpc("accept_pending_invitations", {
+        p_user_id: user.id,
+        p_user_email: user.email,
+      });
+      console.log("Accept invitations:", acceptError ? acceptError.message : "success");
 
       // Re-fetch orgs after accepting invites
       const { data: updatedOrgs } = await supabase.rpc("get_user_organizations", {
@@ -108,11 +90,15 @@ function SetupPageContent() {
     <div className="min-h-screen bg-gradient-background flex flex-col items-center justify-center p-4">
       {/* Logo and Title */}
       <div className="flex flex-col items-center mb-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-          <Sprout className="h-10 w-10 text-primary-foreground" />
-        </div>
-        <h1 className="text-3xl font-bold text-foreground">Seedling Insights</h1>
-        <p className="text-muted-foreground mt-2">Organization Access</p>
+        <Image
+          src="/logo.png"
+          alt="Sheepdoggo"
+          width={280}
+          height={80}
+          className="mb-2"
+          priority
+        />
+        <p className="text-muted-foreground">Organization Access</p>
       </div>
 
       <Card className="w-full max-w-md shadow-card">
@@ -124,7 +110,7 @@ function SetupPageContent() {
           </div>
           <CardTitle>No Organization Access</CardTitle>
           <CardDescription>
-            You need to be invited to an organization to use Seedling Insights.
+            You need to be invited to an organization to use Sheepdoggo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

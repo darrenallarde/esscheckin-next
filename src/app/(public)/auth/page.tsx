@@ -1,21 +1,53 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Sprout, Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, Users } from "lucide-react";
+import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
+
+interface InvitationDetails {
+  email: string;
+  organizationName: string;
+  role: string;
+}
 
 function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
+  const [loadingInvite, setLoadingInvite] = useState(false);
+
+  // Check for invite token and fetch invitation details
+  useEffect(() => {
+    const inviteToken = searchParams.get("invite");
+    if (inviteToken) {
+      setLoadingInvite(true);
+      const supabase = createClient();
+      supabase.rpc("get_invitation_by_token", { p_token: inviteToken })
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const inv = data[0];
+            setInvitation({
+              email: inv.email,
+              organizationName: inv.organization_name,
+              role: inv.role,
+            });
+            setEmail(inv.email);
+          }
+        })
+        .finally(() => setLoadingInvite(false));
+    }
+  }, [searchParams]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +119,33 @@ function AuthForm() {
           title: "Success!",
           description: "You're now logged in.",
         });
-        // Redirect to setup which will route to user's org
+
+        // Accept any pending invitations for this email
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log("User after verify:", user?.id, user?.email);
+
+        if (user && user.email) {
+          // Accept invitations
+          const { error: acceptError } = await supabase.rpc("accept_pending_invitations", {
+            p_user_id: user.id,
+            p_user_email: user.email,
+          });
+          console.log("Accept invitations result:", acceptError ? acceptError.message : "success");
+
+          // Get user's organizations
+          const { data: orgs, error: orgsError } = await supabase.rpc("get_user_organizations", {
+            p_user_id: user.id,
+          });
+          console.log("User orgs:", orgs, orgsError);
+
+          if (orgs && orgs.length > 0) {
+            // Redirect to their first org's dashboard
+            router.push(`/${orgs[0].organization_slug}/dashboard`);
+            return;
+          }
+        }
+
+        // Fallback to setup if no orgs found
         router.push("/setup");
       }
     } catch {
@@ -170,33 +228,60 @@ function AuthForm() {
   return (
     <Card className="w-full max-w-md shadow-card">
       <CardHeader className="text-center">
-        <CardTitle>Admin Sign In</CardTitle>
-        <CardDescription>
-          Enter your email to receive a 6-digit code
-        </CardDescription>
+        {invitation ? (
+          <>
+            <div className="flex justify-center mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <CardTitle>Join {invitation.organizationName}</CardTitle>
+            <CardDescription>
+              You&apos;ve been invited to join as {invitation.role === "admin" ? "an admin" : `a ${invitation.role}`}
+            </CardDescription>
+          </>
+        ) : (
+          <>
+            <CardTitle>Sign In</CardTitle>
+            <CardDescription>
+              Enter your email to receive a 6-digit code
+            </CardDescription>
+          </>
+        )}
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSendOTP} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email Address
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your.email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-              disabled={isLoading}
-            />
+        {loadingInvite ? (
+          <div className="text-center py-4 text-muted-foreground">
+            Loading invitation details...
           </div>
+        ) : (
+          <form onSubmit={handleSendOTP} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus={!invitation}
+                disabled={isLoading || !!invitation}
+              />
+              {invitation && (
+                <p className="text-xs text-muted-foreground">
+                  This invitation was sent to {invitation.email}
+                </p>
+              )}
+            </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send One-Time Password"}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Sending..." : invitation ? "Accept Invitation" : "Send One-Time Password"}
+            </Button>
+          </form>
+        )}
 
         <div className="mt-6 text-center">
           <Button onClick={() => router.push("/")} variant="ghost" size="sm">
@@ -213,11 +298,15 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gradient-background flex flex-col items-center justify-center p-4">
       <div className="flex flex-col items-center mb-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-          <Sprout className="h-10 w-10 text-primary-foreground" />
-        </div>
-        <h1 className="text-3xl font-bold text-foreground">Seedling Insights</h1>
-        <p className="text-muted-foreground mt-2">Leader Portal</p>
+        <Image
+          src="/logo.png"
+          alt="Sheepdoggo"
+          width={280}
+          height={80}
+          className="mb-2"
+          priority
+        />
+        <p className="text-muted-foreground">Leader Portal</p>
       </div>
 
       <Suspense
