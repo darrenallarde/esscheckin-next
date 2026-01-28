@@ -2,27 +2,107 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Users, Search, X, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStudents } from "@/hooks/queries/use-students";
+import { useGroups } from "@/hooks/queries/use-groups";
 import { useOrganization } from "@/hooks/useOrganization";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+
+type ActivityFilter = "all" | "active" | "inactive" | "never" | "attention";
+
+const GRADES = ["6", "7", "8", "9", "10", "11", "12"];
 
 export default function PeoplePage() {
   const [search, setSearch] = useState("");
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
+
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
 
   const { data: students, isLoading: studentsLoading } = useStudents(organizationId);
+  const { data: groups } = useGroups(organizationId);
 
   const isLoading = orgLoading || studentsLoading;
 
-  // Filter students by search
-  const filteredStudents = students?.filter((student) => {
-    if (!search) return true;
-    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-    return fullName.includes(search.toLowerCase());
-  });
+  // Filter students
+  const filteredStudents = useMemo(() => {
+    if (!students) return [];
+
+    return students.filter((student) => {
+      // Search filter
+      if (search) {
+        const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+        const phone = student.phone_number?.toLowerCase() || "";
+        if (!fullName.includes(search.toLowerCase()) && !phone.includes(search.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Grade filter
+      if (gradeFilter !== "all" && student.grade !== gradeFilter) {
+        return false;
+      }
+
+      // Group filter
+      if (groupFilter !== "all") {
+        if (groupFilter === "none") {
+          if (student.groups && student.groups.length > 0) return false;
+        } else {
+          const inGroup = student.groups?.some((g) => g.id === groupFilter);
+          if (!inGroup) return false;
+        }
+      }
+
+      // Activity filter
+      if (activityFilter !== "all") {
+        const days = student.days_since_last_check_in;
+        switch (activityFilter) {
+          case "active":
+            if (days === null || days > 14) return false;
+            break;
+          case "inactive":
+            if (days === null || days <= 14) return false;
+            break;
+          case "never":
+            if (student.last_check_in !== null) return false;
+            break;
+          case "attention":
+            if (days === null || days < 30) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+  }, [students, search, gradeFilter, groupFilter, activityFilter]);
+
+  const hasActiveFilters = gradeFilter !== "all" || groupFilter !== "all" || activityFilter !== "all";
+
+  const clearFilters = () => {
+    setGradeFilter("all");
+    setGroupFilter("all");
+    setActivityFilter("all");
+    setSearch("");
+  };
+
+  // Get unique grades from actual data
+  const availableGrades = useMemo(() => {
+    if (!students) return GRADES;
+    const grades = new Set(students.map((s) => s.grade).filter(Boolean));
+    return GRADES.filter((g) => grades.has(g));
+  }, [students]);
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -36,16 +116,112 @@ export default function PeoplePage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Filter Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Filter className="h-4 w-4" />
+            <span>Filter:</span>
+          </div>
+
+          {/* Grade Filter */}
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Grades</SelectItem>
+              {availableGrades.map((grade) => (
+                <SelectItem key={grade} value={grade}>
+                  Grade {grade}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Group Filter */}
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Group" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Groups</SelectItem>
+              <SelectItem value="none">Not in any group</SelectItem>
+              {groups?.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Activity Filter Buttons */}
+          <div className="flex gap-1">
+            <Button
+              variant={activityFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActivityFilter("all")}
+            >
+              All
+            </Button>
+            <Button
+              variant={activityFilter === "active" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActivityFilter("active")}
+            >
+              Active
+            </Button>
+            <Button
+              variant={activityFilter === "inactive" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActivityFilter("inactive")}
+            >
+              Inactive
+            </Button>
+            <Button
+              variant={activityFilter === "attention" ? "destructive" : "outline"}
+              size="sm"
+              onClick={() => setActivityFilter("attention")}
+            >
+              Needs Attention
+            </Button>
+            <Button
+              variant={activityFilter === "never" ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setActivityFilter("never")}
+            >
+              Never Checked In
+            </Button>
+          </div>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Results Count */}
+      {!isLoading && (
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredStudents.length} of {students?.length || 0} people
+        </p>
+      )}
 
       {/* People List */}
       {isLoading ? (
@@ -54,7 +230,7 @@ export default function PeoplePage() {
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
-      ) : filteredStudents && filteredStudents.length > 0 ? (
+      ) : filteredStudents.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -67,25 +243,65 @@ export default function PeoplePage() {
               {filteredStudents.map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between py-3"
+                  className="flex items-center justify-between py-3 gap-4"
                 >
-                  <div>
-                    <p className="font-medium">
-                      {student.first_name} {student.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {student.grade ? `Grade ${student.grade}` : "No grade set"}
-                      {student.groups && student.groups.length > 0 && (
-                        <span className="ml-2">
-                          - {student.groups.map((g) => g.name).join(", ")}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">
+                        {student.first_name} {student.last_name}
+                      </p>
+                      {student.grade && (
+                        <Badge variant="secondary" className="shrink-0">
+                          {student.grade}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {student.groups && student.groups.length > 0 ? (
+                        student.groups.map((g) => (
+                          <Badge
+                            key={g.id}
+                            variant="outline"
+                            className="text-xs"
+                            style={{
+                              borderColor: g.color || undefined,
+                              color: g.color || undefined,
+                            }}
+                          >
+                            {g.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Not in any group
                         </span>
                       )}
-                    </p>
+                    </div>
                   </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    {student.last_check_in
-                      ? `Last seen: ${new Date(student.last_check_in).toLocaleDateString()}`
-                      : "Never checked in"}
+                  <div className="text-right text-sm shrink-0">
+                    {student.last_check_in ? (
+                      <div>
+                        <p
+                          className={
+                            student.days_since_last_check_in !== null &&
+                            student.days_since_last_check_in >= 30
+                              ? "text-destructive font-medium"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {student.days_since_last_check_in === 0
+                            ? "Today"
+                            : student.days_since_last_check_in === 1
+                            ? "Yesterday"
+                            : `${student.days_since_last_check_in}d ago`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {student.total_check_ins} check-ins
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Never checked in</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -97,13 +313,18 @@ export default function PeoplePage() {
           <CardContent className="py-12 text-center">
             <Users className="mx-auto h-12 w-12 text-muted-foreground/30" />
             <h3 className="mt-4 text-lg font-medium">
-              {search ? "No people found" : "No people yet"}
+              {search || hasActiveFilters ? "No people found" : "No people yet"}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
-              {search
-                ? "Try a different search term"
+              {search || hasActiveFilters
+                ? "Try adjusting your filters"
                 : "Import people or add them through the Groups page"}
             </p>
+            {hasActiveFilters && (
+              <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
