@@ -44,8 +44,11 @@ function AuthForm() {
             });
             setEmail(inv.email);
           }
+          setLoadingInvite(false);
         })
-        .finally(() => setLoadingInvite(false));
+        .catch(() => {
+          setLoadingInvite(false);
+        });
     }
   }, [searchParams]);
 
