@@ -147,9 +147,18 @@ const NewStudentForm = ({ onSuccess, onBack, organizationId }: NewStudentFormPro
 
       if (result && result[0]?.success) {
         const userType = data.isStudentLeader ? "Student Leader" : "Student";
+        const celebrationMessages = [
+          `🎉 Welcome to the family, ${data.firstName}! Your adventure begins now!`,
+          `🌟 ${data.firstName} has entered the chat! Let's gooo!`,
+          `🎊 You're officially one of us, ${data.firstName}! So hyped to have you!`,
+          `✨ ${data.firstName} just leveled up to "${userType}"! Epic!`,
+          `🚀 Houston, we have a new ${userType.toLowerCase()}! Welcome, ${data.firstName}!`,
+        ];
+        const randomMessage = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
+
         toast({
-          title: "Success!",
-          description: `Welcome ${data.firstName}! You've been successfully registered as a ${userType} and checked in.`,
+          title: "You're In! 🙌",
+          description: randomMessage,
         });
 
         onSuccess();
