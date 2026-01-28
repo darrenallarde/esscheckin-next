@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Users,
+  UsersRound,
   BarChart3,
   BookOpen,
   Settings,
@@ -55,8 +56,13 @@ const navItems = [
   },
   {
     title: "People",
-    path: "/students",
+    path: "/people",
     icon: Users,
+  },
+  {
+    title: "Groups",
+    path: "/groups",
+    icon: UsersRound,
   },
   {
     title: "Pastoral",
