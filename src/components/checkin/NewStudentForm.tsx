@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  validateFormSubmission,
+  handleSecurityFailure,
+  TIMING_THRESHOLDS,
+  honeypotStyles,
+} from "@/lib/security";
 
 const newStudentSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
@@ -62,6 +68,10 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Security: Honeypot and timing
+  const [honeypot, setHoneypot] = useState('');
+  const formLoadTime = useRef<number>(Date.now());
+
   const form = useForm<NewStudentFormData>({
     resolver: zodResolver(newStudentSchema),
     defaultValues: {
@@ -90,6 +100,19 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
   const isStudentLeader = form.watch("isStudentLeader");
 
   const onSubmit = async (data: NewStudentFormData) => {
+    // Security validation
+    const security = validateFormSubmission(
+      honeypot,
+      formLoadTime.current,
+      TIMING_THRESHOLDS.REGISTRATION_FORM
+    );
+    if (!security.isValid) {
+      setIsSubmitting(true);
+      await handleSecurityFailure(security.failureReason!);
+      setIsSubmitting(false);
+      return; // Silent fail
+    }
+
     setIsSubmitting(true);
     const supabase = createClient();
     try {
@@ -154,6 +177,17 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Honeypot field - invisible to humans, bots will fill it */}
+            <input
+              type="text"
+              name="company"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={honeypotStyles}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
             <FormField
               control={form.control}
               name="isStudentLeader"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import NewStudentForm from "./NewStudentForm";
 import GameCheckInSuccessDB from "./GameCheckInSuccessDB";
+import {
+  validateFormSubmission,
+  handleSecurityFailure,
+  TIMING_THRESHOLDS,
+  honeypotStyles,
+} from "@/lib/security";
 
 const phoneSearchSchema = z.object({
   phoneNumber: z.string().trim().min(2, "Enter at least 2 characters").max(50, "Entry is too long"),
@@ -59,6 +65,10 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
   const [emailInput, setEmailInput] = useState('');
   const [emailError, setEmailError] = useState('');
 
+  // Security: Honeypot and timing
+  const [honeypot, setHoneypot] = useState('');
+  const formLoadTime = useRef<number>(Date.now());
+
   const phoneForm = useForm<PhoneSearchData>({
     resolver: zodResolver(phoneSearchSchema),
     defaultValues: { phoneNumber: "" },
@@ -77,6 +87,19 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
   }, [viewState.type]);
 
   const searchByPhone = async (data: PhoneSearchData) => {
+    // Security validation
+    const security = validateFormSubmission(
+      honeypot,
+      formLoadTime.current,
+      TIMING_THRESHOLDS.SEARCH_FORM
+    );
+    if (!security.isValid) {
+      setIsSearching(true);
+      await handleSecurityFailure(security.failureReason!);
+      setIsSearching(false);
+      return; // Silent fail
+    }
+
     setIsSearching(true);
     const supabase = createClient();
     try {
@@ -143,6 +166,19 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
   };
 
   const searchByNameOrEmail = async (data: NameEmailSearchData) => {
+    // Security validation
+    const security = validateFormSubmission(
+      honeypot,
+      formLoadTime.current,
+      TIMING_THRESHOLDS.SEARCH_FORM
+    );
+    if (!security.isValid) {
+      setIsSearching(true);
+      await handleSecurityFailure(security.failureReason!);
+      setIsSearching(false);
+      return; // Silent fail
+    }
+
     setIsSearching(true);
     const supabase = createClient();
     try {
@@ -517,6 +553,17 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
         <div className="jrpg-textbox jrpg-corners">
           <Form {...phoneForm}>
             <form onSubmit={phoneForm.handleSubmit(searchByPhone)} className="space-y-6">
+              {/* Honeypot field - invisible to humans, bots will fill it */}
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                style={honeypotStyles}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+              />
               <FormField
                 control={phoneForm.control}
                 name="phoneNumber"
@@ -568,6 +615,17 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
         </div>
         <Form {...nameForm}>
           <form onSubmit={nameForm.handleSubmit(searchByNameOrEmail)} className="space-y-6">
+            {/* Honeypot field - invisible to humans, bots will fill it */}
+            <input
+              type="text"
+              name="website"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={honeypotStyles}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
             <FormField
               control={nameForm.control}
               name="searchTerm"

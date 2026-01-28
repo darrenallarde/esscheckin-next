@@ -1,17 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, Users, CalendarCheck, Activity, ArrowRight, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Building2, Users, CalendarCheck, Activity, ArrowRight, Plus, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { usePlatformStats, useAllOrganizations } from "@/hooks/queries/use-admin";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { data: stats, isLoading: statsLoading } = usePlatformStats();
   const { data: organizations, isLoading: orgsLoading } = useAllOrganizations();
 
   const recentOrgs = organizations?.slice(0, 5) || [];
+
+  const handleJumpToOrg = (slug: string) => {
+    router.push(`/${slug}/dashboard`);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -23,12 +37,49 @@ export default function AdminDashboardPage() {
             Platform overview and organization management
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/organizations/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Organization
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Jump to Org Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Building2 className="mr-2 h-4 w-4" />
+                Jump to Org
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
+              <DropdownMenuLabel>Switch to Organization</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {orgsLoading ? (
+                <div className="p-2">
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : organizations && organizations.length > 0 ? (
+                organizations.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => handleJumpToOrg(org.slug)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{org.display_name || org.name}</span>
+                      <span className="text-xs text-muted-foreground">/{org.slug}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <div className="p-2 text-sm text-muted-foreground">No organizations</div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button asChild>
+            <Link href="/admin/organizations/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Organization
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Platform Stats */}
