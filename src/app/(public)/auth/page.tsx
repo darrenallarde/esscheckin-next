@@ -32,9 +32,10 @@ function AuthForm() {
     const inviteToken = searchParams.get("invite");
     if (inviteToken) {
       setLoadingInvite(true);
-      const supabase = createClient();
-      supabase.rpc("get_invitation_by_token", { p_token: inviteToken })
-        .then(({ data, error }) => {
+      const fetchInvitation = async () => {
+        try {
+          const supabase = createClient();
+          const { data, error } = await supabase.rpc("get_invitation_by_token", { p_token: inviteToken });
           if (!error && data && data.length > 0) {
             const inv = data[0];
             setInvitation({
@@ -44,11 +45,11 @@ function AuthForm() {
             });
             setEmail(inv.email);
           }
+        } finally {
           setLoadingInvite(false);
-        })
-        .catch(() => {
-          setLoadingInvite(false);
-        });
+        }
+      };
+      fetchInvitation();
     }
   }, [searchParams]);
 
