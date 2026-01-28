@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ============================================
 // Set to false when dedicated number is approved
 // to enable full NPC routing and conversation features
-const INTERIM_MODE = true;
+const INTERIM_MODE = false; // Dedicated number approved Jan 28, 2026
 
 // Interim responses - simple, generic, no confusion for Seedling users
 const INTERIM_RESPONSES = {
