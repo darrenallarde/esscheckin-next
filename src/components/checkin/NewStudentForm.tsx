@@ -62,9 +62,10 @@ type NewStudentFormData = z.infer<typeof newStudentSchema>;
 interface NewStudentFormProps {
   onSuccess: () => void;
   onBack: () => void;
+  organizationId?: string;
 }
 
-const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
+const NewStudentForm = ({ onSuccess, onBack, organizationId }: NewStudentFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -118,6 +119,7 @@ const NewStudentForm = ({ onSuccess, onBack }: NewStudentFormProps) => {
     try {
       const { data: result, error } = await supabase
         .rpc('register_student_and_checkin', {
+          p_organization_id: organizationId,
           p_first_name: data.firstName,
           p_last_name: data.lastName,
           p_phone_number: data.phoneNumber || null,

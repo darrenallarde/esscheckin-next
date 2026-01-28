@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
       ai_recommendations: {
@@ -88,7 +93,29 @@ export type Database = {
           status?: string | null
           student_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendations_curriculum_week_id_fkey"
+            columns: ["curriculum_week_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_weeks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recommendations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recommendations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campuses: {
         Row: {
@@ -124,7 +151,15 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       check_ins: {
         Row: {
@@ -145,7 +180,22 @@ export type Database = {
           organization_id?: string
           student_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_ins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       curriculum_weeks: {
         Row: {
@@ -220,7 +270,15 @@ export type Database = {
           updated_at?: string | null
           week_date?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_weeks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_transactions: {
         Row: {
@@ -256,7 +314,29 @@ export type Database = {
           student_id?: string
           transaction_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "game_transactions_check_in_id_fkey"
+            columns: ["check_in_id"]
+            isOneToOne: false
+            referencedRelation: "check_ins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_transactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_leaders: {
         Row: {
@@ -280,7 +360,15 @@ export type Database = {
           role?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "group_leaders_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_meeting_times: {
         Row: {
@@ -313,7 +401,15 @@ export type Database = {
           is_active?: boolean | null
           start_time?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "group_meeting_times_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_members: {
         Row: {
@@ -337,7 +433,22 @@ export type Database = {
           id?: string
           student_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       groups: {
         Row: {
@@ -373,7 +484,22 @@ export type Database = {
           organization_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "groups_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       interactions: {
         Row: {
@@ -418,7 +544,22 @@ export type Database = {
           status?: string
           student_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "interactions_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_invitations: {
         Row: {
@@ -454,7 +595,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["org_role"]
           token?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_members: {
         Row: {
@@ -493,7 +642,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organizations: {
         Row: {
@@ -503,9 +660,12 @@ export type Database = {
           id: string
           ministry_type: string | null
           name: string
+          org_number: number
           owner_email: string | null
           parent_organization_id: string | null
           settings: Json | null
+          short_code: string | null
+          short_code_changed_at: string | null
           slug: string
           status: string | null
           theme_id: string | null
@@ -519,9 +679,12 @@ export type Database = {
           id?: string
           ministry_type?: string | null
           name: string
+          org_number?: number
           owner_email?: string | null
           parent_organization_id?: string | null
           settings?: Json | null
+          short_code?: string | null
+          short_code_changed_at?: string | null
           slug: string
           status?: string | null
           theme_id?: string | null
@@ -535,16 +698,27 @@ export type Database = {
           id?: string
           ministry_type?: string | null
           name?: string
+          org_number?: number
           owner_email?: string | null
           parent_organization_id?: string | null
           settings?: Json | null
+          short_code?: string | null
+          short_code_changed_at?: string | null
           slug?: string
           status?: string | null
           theme_id?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_messages: {
         Row: {
@@ -586,7 +760,15 @@ export type Database = {
           twilio_sid?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_achievements: {
         Row: {
@@ -625,7 +807,22 @@ export type Database = {
           student_id?: string
           unlocked_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_achievements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_achievements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_game_stats: {
         Row: {
@@ -658,7 +855,22 @@ export type Database = {
           total_points?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_game_stats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_game_stats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_notes: {
         Row: {
@@ -691,7 +903,15 @@ export type Database = {
           student_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles_extended: {
         Row: {
@@ -739,7 +959,15 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_profiles_extended_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
@@ -829,7 +1057,15 @@ export type Database = {
           user_type?: string | null
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -896,6 +1132,12 @@ export type Database = {
         Args: { p_group_id: string; p_role?: string; p_user_id: string }
         Returns: string
       }
+      auth_has_org_role: {
+        Args: { p_org_id: string; p_roles: string[]; p_user_id?: string }
+        Returns: boolean
+      }
+      auth_is_super_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      auth_user_org_ids: { Args: { p_user_id?: string }; Returns: string[] }
       award_points: {
         Args: {
           p_check_in_id?: string
@@ -924,33 +1166,33 @@ export type Database = {
           user_type: string
         }[]
       }
-      create_organization: {
-        Args: {
-          p_ministry_type?: string
-          p_name: string
-          p_slug?: string
-          p_theme_id?: string
-          p_timezone?: string
-        }
-        Returns: Json
-      }
+      create_organization:
+        | {
+            Args: { p_name: string; p_slug?: string; p_timezone?: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_ministry_type?: string
+              p_name: string
+              p_slug?: string
+              p_theme_id?: string
+              p_timezone?: string
+            }
+            Returns: Json
+          }
       create_organization_invitation: {
-        Args: {
-          p_email: string
-          p_organization_id: string
-          p_role?: string
-        }
+        Args: { p_email: string; p_organization_id: string; p_role?: string }
         Returns: {
-          invitation_id: string
           invitation_token: string
           message: string
           success: boolean
         }[]
       }
       find_student_by_phone: { Args: { p_phone: string }; Returns: string }
-      generate_profile_pin: { Args: Record<string, never>; Returns: string }
+      generate_profile_pin: { Args: never; Returns: string }
       get_all_organizations: {
-        Args: Record<string, never>
+        Args: never
         Returns: {
           created_at: string
           id: string
@@ -965,7 +1207,7 @@ export type Database = {
         }[]
       }
       get_default_organization: {
-        Args: Record<string, never>
+        Args: never
         Returns: {
           id: string
           name: string
@@ -974,7 +1216,7 @@ export type Database = {
         }[]
       }
       get_my_queue: {
-        Args: Record<string, never>
+        Args: never
         Returns: {
           days_since_last_seen: number
           student_id: string
@@ -1003,6 +1245,12 @@ export type Database = {
           student_id: string
           updated_at: string | null
           updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "student_profiles_extended"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       get_or_create_student_game_stats: {
@@ -1042,7 +1290,7 @@ export type Database = {
         }[]
       }
       get_pastoral_analytics: {
-        Args: Record<string, never>
+        Args: never
         Returns: {
           action_message: string
           action_priority: number
@@ -1223,6 +1471,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      normalize_phone_number: { Args: { phone: string }; Returns: string }
       process_checkin_rewards: {
         Args: { p_check_in_id: string; p_student_id: string }
         Returns: Json
@@ -1262,6 +1511,7 @@ export type Database = {
           p_mother_first_name?: string
           p_mother_last_name?: string
           p_mother_phone?: string
+          p_organization_id: string
           p_parent_name?: string
           p_parent_phone?: string
           p_phone_number?: string
@@ -1297,7 +1547,7 @@ export type Database = {
         }[]
       }
       search_student_for_checkin: {
-        Args: { p_organization_id?: string; p_search_term: string }
+        Args: { p_organization_id: string; p_search_term: string }
         Returns: {
           first_name: string
           grade: string
@@ -1311,7 +1561,7 @@ export type Database = {
         Args: { p_curriculum_id: string }
         Returns: boolean
       }
-      trigger_recommendation_generation: { Args: Record<string, never>; Returns: undefined }
+      trigger_recommendation_generation: { Args: never; Returns: undefined }
       unlock_achievement: {
         Args: {
           p_achievement_description: string
@@ -1324,16 +1574,32 @@ export type Database = {
         }
         Returns: boolean
       }
-      update_member_role: {
-        Args: {
-          p_new_role: string
-          p_organization_id: string
-          p_user_id: string
-        }
-        Returns: {
-          message: string
-          success: boolean
-        }[]
+      update_member_role:
+        | {
+            Args: {
+              p_new_role: Database["public"]["Enums"]["org_role"]
+              p_organization_id: string
+              p_user_id: string
+            }
+            Returns: {
+              message: string
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_new_role: string
+              p_organization_id: string
+              p_user_id: string
+            }
+            Returns: {
+              message: string
+              success: boolean
+            }[]
+          }
+      update_org_short_code: {
+        Args: { p_org_id: string; p_short_code: string }
+        Returns: Json
       }
       update_recommendation_status: {
         Args: {
@@ -1371,14 +1637,6 @@ export type Database = {
         Args: { p_pin: string; p_student_id: string }
         Returns: Json
       }
-      get_invitation_by_token: {
-        Args: { p_token: string }
-        Returns: {
-          email: string
-          organization_name: string
-          role: string
-        }[]
-      }
     }
     Enums: {
       app_role: "admin" | "student" | "student_leader" | "super_admin"
@@ -1390,23 +1648,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1424,16 +1684,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1449,16 +1709,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1474,16 +1734,42 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["admin", "student", "student_leader", "super_admin"],
+      org_role: ["owner", "admin", "leader", "viewer"],
+    },
+  },
+} as const

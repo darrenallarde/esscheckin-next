@@ -369,6 +369,7 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
       <NewStudentForm
         onSuccess={() => setViewState({ type: 'phone-search' })}
         onBack={() => setViewState({ type: 'name-search' })}
+        organizationId={organizationId}
       />
     );
   }
