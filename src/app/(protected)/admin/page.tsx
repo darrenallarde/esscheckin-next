@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
                     className="cursor-pointer"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{org.display_name || org.name}</span>
+                      <span className="font-medium">{org.name}</span>
                       <span className="text-xs text-muted-foreground">/{org.slug}</span>
                     </div>
                   </DropdownMenuItem>
