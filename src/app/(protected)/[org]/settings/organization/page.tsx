@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Settings, Check, Sprout, Gamepad2, ClipboardList, Minus } from "lucide-react";
+import { Loader2, Settings, Check, Sprout, Gamepad2, ClipboardList, Minus, Copy, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
 import { createClient } from "@/lib/supabase/client";
@@ -15,7 +14,6 @@ import { THEME_LIST, getTheme } from "@/lib/themes";
 import { SUCCESS_MESSAGES, PLATFORM_NAME } from "@/lib/copy";
 
 export default function OrganizationSettingsPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const { currentOrganization, userRole, refreshOrganizations } = useOrganization();
 
@@ -25,12 +23,22 @@ export default function OrganizationSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Short code state
+  const [shortCode, setShortCode] = useState("");
+  const [originalShortCode, setOriginalShortCode] = useState("");
+  const [isSavingShortCode, setIsSavingShortCode] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
   // Load current settings
   useEffect(() => {
     if (currentOrganization) {
       setDisplayName(currentOrganization.displayName || currentOrganization.name || "");
       setSelectedTheme(currentOrganization.themeId || "default");
       setCheckinStyle(currentOrganization.checkinStyle || "gamified");
+      // Load short code from raw org data
+      const orgShortCode = (currentOrganization as { short_code?: string | null }).short_code || "";
+      setShortCode(orgShortCode);
+      setOriginalShortCode(orgShortCode);
     }
   }, [currentOrganization]);
 
@@ -90,6 +98,69 @@ export default function OrganizationSettingsPage() {
       setIsSaving(false);
     }
   };
+
+  const handleCopyUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(url);
+      setTimeout(() => setCopiedUrl(null), 2000);
+    } catch {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveShortCode = async () => {
+    if (!currentOrganization) return;
+
+    setIsSavingShortCode(true);
+    const supabase = createClient();
+
+    try {
+      const { data, error } = await supabase.rpc("update_org_short_code", {
+        p_org_id: currentOrganization.id,
+        p_short_code: shortCode.trim() || null,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        toast({
+          title: "Unable to update short code",
+          description: result.error || "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setOriginalShortCode(shortCode.trim());
+      await refreshOrganizations();
+
+      toast({
+        title: "Short code updated",
+        description: shortCode.trim()
+          ? `Your short URL is now active at /c/${shortCode.trim()}`
+          : "Short code removed",
+      });
+    } catch (error) {
+      console.error("Error saving short code:", error);
+      toast({
+        title: "Error saving short code",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingShortCode(false);
+    }
+  };
+
+  const shortCodeChanged = shortCode !== originalShortCode;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   if (!currentOrganization) {
     return (
@@ -275,29 +346,109 @@ export default function OrganizationSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Organization Info (Read-only) */}
-        <Card className="lg:col-span-2">
+        {/* Organization Details */}
+        <Card>
           <CardHeader>
             <CardTitle>Organization Details</CardTitle>
             <CardDescription>
-              Information about your organization. Contact support to make changes.
+              Reference information for your organization
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label className="text-muted-foreground">Organization Slug</Label>
+                <Label className="text-muted-foreground">Organization ID</Label>
+                <p className="font-mono text-lg mt-1">
+                  #{(currentOrganization as { org_number?: number }).org_number || "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Reference this when contacting support</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Slug</Label>
                 <p className="font-mono text-sm mt-1 p-2 bg-muted rounded">
                   {currentOrganization.slug}
                 </p>
               </div>
-              <div>
-                <Label className="text-muted-foreground">Public Check-in URL</Label>
-                <p className="font-mono text-sm mt-1 p-2 bg-muted rounded break-all">
-                  {typeof window !== "undefined" ? `${window.location.origin}/${currentOrganization.slug}` : `/${currentOrganization.slug}`}
-                </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Public Check-in URL */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Public Check-in URL</CardTitle>
+            <CardDescription>
+              Share this link for students to check in
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Full URL */}
+            <div>
+              <Label className="text-muted-foreground">Full URL</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <code className="flex-1 p-2 bg-muted rounded text-sm break-all">
+                  {origin}/{currentOrganization.slug}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopyUrl(`${origin}/${currentOrganization.slug}`)}
+                >
+                  {copiedUrl === `${origin}/${currentOrganization.slug}` ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </div>
+
+            {/* Short URL */}
+            {canEdit && (
+              <div>
+                <Label>Short URL (optional)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-muted-foreground text-sm whitespace-nowrap">{origin}/c/</span>
+                  <Input
+                    value={shortCode}
+                    onChange={(e) => setShortCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
+                    placeholder="abc"
+                    maxLength={10}
+                    className="w-32 font-mono"
+                  />
+                  <Button
+                    onClick={handleSaveShortCode}
+                    disabled={isSavingShortCode || !shortCodeChanged}
+                    size="sm"
+                  >
+                    {isSavingShortCode ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  2-10 lowercase letters/numbers. Can be changed once per day.
+                </p>
+                {shortCode && !shortCodeChanged && (
+                  <div className="flex items-center gap-2 mt-3 p-2 bg-muted rounded">
+                    <code className="flex-1 text-sm break-all">{origin}/c/{shortCode}</code>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopyUrl(`${origin}/c/${shortCode}`)}
+                    >
+                      {copiedUrl === `${origin}/c/${shortCode}` ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

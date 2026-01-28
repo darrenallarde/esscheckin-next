@@ -11,8 +11,6 @@ import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
 import { AddStudentToGroupModal } from "@/components/groups/AddStudentToGroupModal";
 import { useGroups, Group, useGroupMembers } from "@/hooks/queries/use-groups";
 import { useOrganization } from "@/hooks/useOrganization";
-import { orgPath } from "@/lib/navigation";
-import Link from "next/link";
 
 export default function StudentsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -101,14 +99,11 @@ export default function StudentsPage() {
         )}
       </div>
 
-      {/* All Students Preview - Admin only */}
+      {/* All Students Summary */}
       <div className="mt-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-lg">All Students</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={orgPath(orgSlug, "/students/all")}>View All</Link>
-            </Button>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
