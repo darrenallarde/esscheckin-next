@@ -367,7 +367,27 @@ const CheckInForm = ({ onCheckInComplete, organizationId }: CheckInFormProps = {
   if (viewState.type === 'new-student') {
     return (
       <NewStudentForm
-        onSuccess={() => setViewState({ type: 'phone-search' })}
+        onSuccess={(result) => {
+          // Show the success screen with the new student's data
+          setViewState({
+            type: 'success',
+            student: {
+              id: result.student.id,
+              first_name: result.student.first_name,
+              last_name: result.student.last_name,
+              email: result.student.email,
+              phone_number: null,
+              grade: result.student.grade,
+              high_school: result.student.high_school,
+              parent_name: null,
+              parent_phone: null,
+              user_type: result.student.user_type,
+              created_at: new Date().toISOString(),
+            },
+            checkInId: result.checkInId,
+            profilePin: result.profilePin,
+          });
+        }}
         onBack={() => setViewState({ type: 'name-search' })}
         organizationId={organizationId}
       />

@@ -59,8 +59,22 @@ const newStudentSchema = z.object({
 
 type NewStudentFormData = z.infer<typeof newStudentSchema>;
 
+interface RegistrationResult {
+  student: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    user_type: string;
+    grade: string | null;
+    high_school: string | null;
+  };
+  checkInId: string;
+  profilePin?: string;
+}
+
 interface NewStudentFormProps {
-  onSuccess: () => void;
+  onSuccess: (result: RegistrationResult) => void;
   onBack: () => void;
   organizationId?: string;
 }
@@ -146,22 +160,20 @@ const NewStudentForm = ({ onSuccess, onBack, organizationId }: NewStudentFormPro
       }
 
       if (result && result[0]?.success) {
-        const userType = data.isStudentLeader ? "Student Leader" : "Student";
-        const celebrationMessages = [
-          `🎉 Welcome to the family, ${data.firstName}! Your adventure begins now!`,
-          `🌟 ${data.firstName} has entered the chat! Let's gooo!`,
-          `🎊 You're officially one of us, ${data.firstName}! So hyped to have you!`,
-          `✨ ${data.firstName} just leveled up to "${userType}"! Epic!`,
-          `🚀 Houston, we have a new ${userType.toLowerCase()}! Welcome, ${data.firstName}!`,
-        ];
-        const randomMessage = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
-
-        toast({
-          title: "You're In! 🙌",
-          description: randomMessage,
+        // Pass registration result back to parent for success screen
+        onSuccess({
+          student: {
+            id: result[0].student_id,
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email || null,
+            user_type: data.isStudentLeader ? 'student_leader' : 'student',
+            grade: data.grade || null,
+            high_school: data.highSchool || null,
+          },
+          checkInId: result[0].check_in_id,
+          profilePin: result[0].profile_pin,
         });
-
-        onSuccess();
       } else {
         throw new Error(result?.[0]?.message || 'Registration failed');
       }
