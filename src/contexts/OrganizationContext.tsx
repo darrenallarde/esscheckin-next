@@ -17,6 +17,8 @@ export interface Organization {
   displayName?: string | null;
   themeId?: string | null;
   checkinStyle?: string | null;
+  shortCode?: string | null;
+  orgNumber?: number | null;
 }
 
 interface OrganizationContextType {
@@ -101,6 +103,8 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
         display_name: string | null;
         theme_id: string | null;
         checkin_style: string | null;
+        short_code: string | null;
+        org_number: number | null;
       }) => ({
         id: org.organization_id,
         name: org.organization_name,
@@ -108,6 +112,8 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
         displayName: org.display_name,
         themeId: org.theme_id,
         checkinStyle: org.checkin_style,
+        shortCode: org.short_code,
+        orgNumber: org.org_number,
       }));
 
       setOrganizations(mappedOrgs);

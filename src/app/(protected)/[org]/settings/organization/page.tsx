@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Settings, Check, Sprout, Gamepad2, ClipboardList, Minus, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, Settings, Check, Sprout, Gamepad2, ClipboardList, Minus, Copy, CheckCircle2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
 import { createClient } from "@/lib/supabase/client";
@@ -35,8 +35,8 @@ export default function OrganizationSettingsPage() {
       setDisplayName(currentOrganization.displayName || currentOrganization.name || "");
       setSelectedTheme(currentOrganization.themeId || "default");
       setCheckinStyle(currentOrganization.checkinStyle || "gamified");
-      // Load short code from raw org data
-      const orgShortCode = (currentOrganization as { short_code?: string | null }).short_code || "";
+      // Load short code from org data
+      const orgShortCode = currentOrganization.shortCode || "";
       setShortCode(orgShortCode);
       setOriginalShortCode(orgShortCode);
     }
@@ -346,6 +346,49 @@ export default function OrganizationSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* SMS Code */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              SMS Code
+            </CardTitle>
+            <CardDescription>
+              Students can text this code to connect with your ministry
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-center p-6 bg-background rounded-lg border-2 border-dashed">
+              <span className="text-4xl font-mono font-bold tracking-widest uppercase">
+                {shortCode || "—"}
+              </span>
+            </div>
+            <div className="text-center text-sm text-muted-foreground space-y-1">
+              <p>Students text <strong>{shortCode?.toUpperCase() || "your code"}</strong> to your Twilio number</p>
+              <p className="text-xs">They&apos;ll be connected and can start messaging leaders</p>
+            </div>
+            {shortCode && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleCopyUrl(shortCode.toUpperCase())}
+              >
+                {copiedUrl === shortCode.toUpperCase() ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy SMS Code
+                  </>
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Organization Details */}
         <Card>
           <CardHeader>
@@ -359,7 +402,7 @@ export default function OrganizationSettingsPage() {
               <div>
                 <Label className="text-muted-foreground">Organization ID</Label>
                 <p className="font-mono text-lg mt-1">
-                  #{(currentOrganization as { org_number?: number }).org_number || "—"}
+                  #{currentOrganization.orgNumber || "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">Reference this when contacting support</p>
               </div>
