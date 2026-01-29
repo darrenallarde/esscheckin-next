@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
 export interface CheckinResult {
@@ -14,6 +14,39 @@ interface BulkCheckinParams {
   students: Array<{ id: string; first_name: string; last_name: string }>;
   checkinTimestamp: string; // ISO string
   organizationId: string;
+}
+
+// Fetch student IDs who have check-ins on a specific date
+async function fetchCheckinsForDate(
+  organizationId: string,
+  date: Date
+): Promise<Set<string>> {
+  const supabase = createClient();
+
+  // Get start and end of the day
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data, error } = await supabase
+    .from("check_ins")
+    .select("student_id")
+    .eq("organization_id", organizationId)
+    .gte("checked_in_at", startOfDay.toISOString())
+    .lte("checked_in_at", endOfDay.toISOString());
+
+  if (error) throw error;
+
+  return new Set((data || []).map((row) => row.student_id));
+}
+
+export function useCheckinsForDate(organizationId: string | null, date: Date | null) {
+  return useQuery({
+    queryKey: ["checkins-for-date", organizationId, date?.toISOString()],
+    queryFn: () => fetchCheckinsForDate(organizationId!, date!),
+    enabled: !!organizationId && !!date,
+  });
 }
 
 export function useBulkHistoricalCheckin() {
@@ -81,6 +114,9 @@ export function useBulkHistoricalCheckin() {
       });
       queryClient.invalidateQueries({
         queryKey: ["groups", variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["checkins-for-date", variables.organizationId],
       });
     },
   });

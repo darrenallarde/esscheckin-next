@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useSearchStudents } from "@/hooks/queries/use-students";
 import { useGroups, useGroupMembers, type Group } from "@/hooks/queries/use-groups";
-import { useBulkHistoricalCheckin, type CheckinResult } from "@/hooks/queries/use-attendance-cleanup";
+import { useBulkHistoricalCheckin, useCheckinsForDate, type CheckinResult } from "@/hooks/queries/use-attendance-cleanup";
 import { useToast } from "@/hooks/use-toast";
 
 interface SelectedStudent {
@@ -90,6 +90,9 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
   // Browse by group state (for individual selection)
   const [browseGroupId, setBrowseGroupId] = useState<string | null>(null);
   const { data: browseGroupMembers, isLoading: isLoadingBrowseMembers } = useGroupMembers(browseGroupId);
+
+  // Fetch existing check-ins for selected date
+  const { data: existingCheckins } = useCheckinsForDate(organizationId, selectedDate || null);
 
   // Clear all confirmation
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -383,7 +386,12 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
       {groups && groups.length > 0 && (
         <div>
           <label className="text-sm font-medium mb-2 block">Browse by Group</label>
-          <p className="text-xs text-muted-foreground mb-2">Select individuals from a group</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            {selectedDate
+              ? "Select individuals - shows who's already checked in for the selected date"
+              : "Select a date first to see check-in status"
+            }
+          </p>
           <Select value={browseGroupId || ""} onValueChange={(val) => setBrowseGroupId(val || null)}>
             <SelectTrigger className="w-full sm:w-[280px]">
               <SelectValue placeholder="Select a group to browse..." />
@@ -399,59 +407,92 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
 
           {/* Group Members List */}
           {browseGroupId && (
-            <div className="mt-3 border rounded-lg max-h-[250px] overflow-y-auto">
+            <div className="mt-3">
               {isLoadingBrowseMembers ? (
-                <div className="p-4 text-center text-muted-foreground">
+                <div className="p-4 text-center text-muted-foreground border rounded-lg">
                   <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                 </div>
               ) : browseGroupMembers && browseGroupMembers.length > 0 ? (
-                <div className="divide-y">
-                  {browseGroupMembers.map((member) => {
-                    const isSelected = selectedStudents.has(member.student_id);
-                    return (
-                      <button
-                        key={member.student_id}
-                        onClick={() => {
-                          if (isSelected) {
-                            removeStudent(member.student_id);
-                          } else {
-                            addStudent({
-                              id: member.student_id,
-                              first_name: member.first_name,
-                              last_name: member.last_name,
-                              grade: member.grade,
-                              current_rank: member.current_rank,
-                            });
-                          }
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors",
-                          isSelected && "bg-primary/5"
-                        )}
-                      >
-                        <div>
-                          <span className="font-medium">
-                            {member.first_name} {member.last_name}
-                          </span>
-                          {member.grade && (
-                            <span className="ml-2 text-sm text-muted-foreground">
-                              Grade {member.grade}
-                            </span>
-                          )}
-                        </div>
-                        {isSelected ? (
-                          <Badge variant="default" className="gap-1">
-                            <Check className="h-3 w-3" /> Added
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">+ Add</Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  {/* Summary when date is selected */}
+                  {selectedDate && existingCheckins && (
+                    <div className="mb-2 flex gap-4 text-sm">
+                      <span className="text-green-600">
+                        <Check className="h-3 w-3 inline mr-1" />
+                        {browseGroupMembers.filter(m => existingCheckins.has(m.student_id)).length} checked in
+                      </span>
+                      <span className="text-muted-foreground">
+                        {browseGroupMembers.filter(m => !existingCheckins.has(m.student_id)).length} remaining
+                      </span>
+                    </div>
+                  )}
+                  <div className="border rounded-lg max-h-[250px] overflow-y-auto divide-y">
+                    {/* Sort: not checked in first, then already checked in */}
+                    {[...browseGroupMembers]
+                      .sort((a, b) => {
+                        if (!selectedDate || !existingCheckins) return 0;
+                        const aCheckedIn = existingCheckins.has(a.student_id);
+                        const bCheckedIn = existingCheckins.has(b.student_id);
+                        if (aCheckedIn === bCheckedIn) return 0;
+                        return aCheckedIn ? 1 : -1;
+                      })
+                      .map((member) => {
+                        const isSelected = selectedStudents.has(member.student_id);
+                        const alreadyCheckedIn = selectedDate && existingCheckins?.has(member.student_id);
+                        return (
+                          <button
+                            key={member.student_id}
+                            onClick={() => {
+                              if (alreadyCheckedIn) return; // Can't add if already checked in
+                              if (isSelected) {
+                                removeStudent(member.student_id);
+                              } else {
+                                addStudent({
+                                  id: member.student_id,
+                                  first_name: member.first_name,
+                                  last_name: member.last_name,
+                                  grade: member.grade,
+                                  current_rank: member.current_rank,
+                                });
+                              }
+                            }}
+                            disabled={!!alreadyCheckedIn}
+                            className={cn(
+                              "w-full flex items-center justify-between p-3 text-left transition-colors",
+                              alreadyCheckedIn
+                                ? "bg-green-50 dark:bg-green-950/20 cursor-default"
+                                : "hover:bg-muted/50",
+                              isSelected && !alreadyCheckedIn && "bg-primary/5"
+                            )}
+                          >
+                            <div>
+                              <span className={cn("font-medium", alreadyCheckedIn && "text-green-700 dark:text-green-400")}>
+                                {member.first_name} {member.last_name}
+                              </span>
+                              {member.grade && (
+                                <span className="ml-2 text-sm text-muted-foreground">
+                                  Grade {member.grade}
+                                </span>
+                              )}
+                            </div>
+                            {alreadyCheckedIn ? (
+                              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700 gap-1">
+                                <Check className="h-3 w-3" /> Checked In
+                              </Badge>
+                            ) : isSelected ? (
+                              <Badge variant="default" className="gap-1">
+                                <Check className="h-3 w-3" /> Added
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">+ Add</Badge>
+                            )}
+                          </button>
+                        );
+                      })}
+                  </div>
+                </>
               ) : (
-                <div className="p-4 text-center text-muted-foreground">
+                <div className="p-4 text-center text-muted-foreground border rounded-lg">
                   No members in this group
                 </div>
               )}
