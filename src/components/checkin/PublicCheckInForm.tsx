@@ -28,6 +28,7 @@ type SearchData = z.infer<typeof searchSchema>;
 interface PublicCheckInFormProps {
   onCheckInComplete?: () => void;
   orgSlug: string;
+  deviceId?: string | null;
 }
 
 interface Student {
@@ -51,7 +52,7 @@ type ViewState =
   | { type: 'new-student' }
   | { type: 'success', student: Student, checkInId: string, profilePin?: string };
 
-const PublicCheckInForm = ({ onCheckInComplete, orgSlug }: PublicCheckInFormProps) => {
+const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId }: PublicCheckInFormProps) => {
   const { toast } = useToast();
   const [viewState, setViewState] = useState<ViewState>({ type: 'search' });
   const [isSearching, setIsSearching] = useState(false);
@@ -150,11 +151,12 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug }: PublicCheckInFormProp
     const supabase = createClient();
 
     try {
-      // Use public RPC function
+      // Use public RPC function with optional device tracking
       const { data: result, error } = await supabase
         .rpc('checkin_student_public', {
           p_org_slug: orgSlug,
-          p_student_id: student.id
+          p_student_id: student.id,
+          p_device_id: deviceId || null
         });
 
       if (error) {
@@ -224,6 +226,7 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug }: PublicCheckInFormProp
     return (
       <PublicNewStudentForm
         orgSlug={orgSlug}
+        deviceId={deviceId}
         onSuccess={(result) => {
           setViewState({
             type: 'success',

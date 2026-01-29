@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PublicCheckInForm from "@/components/checkin/PublicCheckInForm";
+import DeviceSetupModal from "@/components/checkin/DeviceSetupModal";
 import { getTheme, getThemeCSSVariables } from "@/lib/themes";
 import { PLATFORM_NAME } from "@/lib/copy";
-import { Loader2, Sprout } from "lucide-react";
+import { Loader2, Sprout, Tablet } from "lucide-react";
 
 const verses = [
   { text: "For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, plans to give you hope and a future.", reference: "Jeremiah 29:11" },
@@ -36,6 +37,22 @@ export default function OrgCheckInPage() {
   const [orgInfo, setOrgInfo] = useState<OrgInfo | null>(null);
   const [notFoundState, setNotFoundState] = useState(false);
 
+  // Device tracking state
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [deviceName, setDeviceName] = useState<string | null>(null);
+  const [showDeviceSetup, setShowDeviceSetup] = useState(false);
+
+  // Check for existing device on mount
+  useEffect(() => {
+    const storedDeviceId = localStorage.getItem("deviceId");
+    const storedDeviceName = localStorage.getItem("deviceName");
+
+    if (storedDeviceId && storedDeviceName) {
+      setDeviceId(storedDeviceId);
+      setDeviceName(storedDeviceName);
+    }
+  }, []);
+
   // Fetch org info and generate stars on mount
   useEffect(() => {
     const fetchOrgInfo = async () => {
@@ -63,6 +80,12 @@ export default function OrgCheckInPage() {
         checkinStyle: data.checkin_style,
       });
       setIsLoading(false);
+
+      // Show device setup if no device stored
+      const storedDeviceId = localStorage.getItem("deviceId");
+      if (!storedDeviceId) {
+        setShowDeviceSetup(true);
+      }
     };
 
     fetchOrgInfo();
@@ -75,6 +98,13 @@ export default function OrgCheckInPage() {
     }));
     setStars(starArray);
   }, [orgSlug]);
+
+  // Handle device creation
+  const handleDeviceCreated = (newDeviceId: string, newDeviceName: string) => {
+    setDeviceId(newDeviceId);
+    setDeviceName(newDeviceName);
+    setShowDeviceSetup(false);
+  };
 
   // Function to cycle to next verse (called after check-in)
   const nextVerse = () => {
@@ -105,6 +135,13 @@ export default function OrgCheckInPage() {
   if (checkinStyle === "gamified") {
     return (
       <div className="jrpg-background min-h-screen relative" style={themeStyles as React.CSSProperties}>
+        {/* Device Setup Modal */}
+        <DeviceSetupModal
+          open={showDeviceSetup}
+          organizationId={orgInfo.id}
+          onDeviceCreated={handleDeviceCreated}
+        />
+
         {/* Staging environment banner */}
         {process.env.NEXT_PUBLIC_APP_ENV === 'staging' && (
           <div className="fixed top-0 left-0 right-0 bg-amber-500 text-black text-center py-1 text-sm font-bold z-50">
@@ -143,20 +180,31 @@ export default function OrgCheckInPage() {
             </div>
           </div>
 
-          <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} />
+          <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} />
         </div>
 
-        {/* Powered by footer */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm py-2 text-center z-40">
-          <a
-            href="https://seedlinginsights.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Sprout className="h-3 w-3" />
-            Powered by {PLATFORM_NAME}
-          </a>
+        {/* Footer with device indicator */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm py-2 z-40">
+          <div className="flex items-center justify-between px-4 max-w-4xl mx-auto">
+            {deviceName && (
+              <button
+                onClick={() => setShowDeviceSetup(true)}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Tablet className="h-3 w-3" />
+                {deviceName}
+              </button>
+            )}
+            <a
+              href="https://seedlinginsights.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+            >
+              <Sprout className="h-3 w-3" />
+              Powered by {PLATFORM_NAME}
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -165,6 +213,13 @@ export default function OrgCheckInPage() {
   // Standard style - clean, minimal
   return (
     <div className="min-h-screen bg-gradient-background" style={themeStyles as React.CSSProperties}>
+      {/* Device Setup Modal */}
+      <DeviceSetupModal
+        open={showDeviceSetup}
+        organizationId={orgInfo.id}
+        onDeviceCreated={handleDeviceCreated}
+      />
+
       {/* Staging environment banner */}
       {process.env.NEXT_PUBLIC_APP_ENV === 'staging' && (
         <div className="fixed top-0 left-0 right-0 bg-amber-500 text-black text-center py-1 text-sm font-bold z-50">
@@ -190,20 +245,31 @@ export default function OrgCheckInPage() {
           </div>
         </div>
 
-        <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} />
+        <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} />
       </div>
 
-      {/* Powered by footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm py-2 text-center border-t">
-        <a
-          href="https://seedlinginsights.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Sprout className="h-3 w-3" />
-          Powered by {PLATFORM_NAME}
-        </a>
+      {/* Footer with device indicator */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm py-2 border-t z-40">
+        <div className="flex items-center justify-between px-4 max-w-4xl mx-auto">
+          {deviceName && (
+            <button
+              onClick={() => setShowDeviceSetup(true)}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Tablet className="h-3 w-3" />
+              {deviceName}
+            </button>
+          )}
+          <a
+            href="https://seedlinginsights.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          >
+            <Sprout className="h-3 w-3" />
+            Powered by {PLATFORM_NAME}
+          </a>
+        </div>
       </div>
     </div>
   );

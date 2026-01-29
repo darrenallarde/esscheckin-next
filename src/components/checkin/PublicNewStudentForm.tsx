@@ -78,9 +78,10 @@ interface PublicNewStudentFormProps {
   onSuccess: (result: RegistrationResult) => void;
   onBack: () => void;
   orgSlug: string;
+  deviceId?: string | null;
 }
 
-const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug }: PublicNewStudentFormProps) => {
+const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId }: PublicNewStudentFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -132,7 +133,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug }: PublicNewStudentFo
     setIsSubmitting(true);
     const supabase = createClient();
     try {
-      // Use public RPC function
+      // Use public RPC function with optional device tracking
       const { data: result, error } = await supabase
         .rpc('register_student_and_checkin_public', {
           p_org_slug: orgSlug,
@@ -155,6 +156,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug }: PublicNewStudentFo
           p_city: data.city || null,
           p_state: data.state || 'California',
           p_zip: data.zip || null,
+          p_device_id: deviceId || null,
         });
 
       if (error) {
