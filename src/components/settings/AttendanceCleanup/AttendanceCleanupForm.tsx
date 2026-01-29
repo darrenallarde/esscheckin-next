@@ -90,6 +90,9 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
   // Clear all confirmation
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  // Calendar popover state
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
   // Add student to selection
   const addStudent = (student: SelectedStudent) => {
     setSelectedStudents((prev) => {
@@ -296,7 +299,7 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <label className="text-sm font-medium mb-2 block">Date</label>
-          <Popover>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -313,7 +316,10 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setCalendarOpen(false);
+                }}
                 disabled={disabledDays}
                 initialFocus
               />
