@@ -124,10 +124,12 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 3. ✅ Domain verified: sheepdoggo.ai
 4. ✅ No more rate limit issues
 
-**Phase 3: Device Tracking**
-1. Create devices table
-2. Add device naming UI
-3. Store in localStorage + check_ins table
+**Phase 3: Device Tracking** ✅ COMPLETE (01/29/2026)
+1. ✅ Created devices table with RLS policies
+2. ✅ Added DeviceSetupModal with suggested names
+3. ✅ Store in localStorage + check_ins.device_id
+4. ✅ Device name in footer (tappable to change)
+5. ✅ Tracks last_seen_at for analytics
 
 **Phase 4: Abuse Prevention**
 1. Add rate limiting middleware
@@ -147,7 +149,7 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 - [x] Works on iPad Safari ✅ (01/29/2026)
 - [x] Errors appear in Sentry dashboard
 - [x] Admin can login via OTP on iPad Safari ✅ (01/29/2026)
-- [ ] Device name persists across sessions
+- [x] Device name persists across sessions ✅ (01/29/2026)
 - [ ] Rate limiting blocks excessive requests
 
 ---
