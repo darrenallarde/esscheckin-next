@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import CheckInForm from "@/components/checkin/CheckInForm";
+import PublicCheckInForm from "@/components/checkin/PublicCheckInForm";
 import { getTheme, getThemeCSSVariables } from "@/lib/themes";
 import { PLATFORM_NAME } from "@/lib/copy";
 import { Loader2, Sprout } from "lucide-react";
@@ -143,7 +143,7 @@ export default function OrgCheckInPage() {
             </div>
           </div>
 
-          <CheckInForm onCheckInComplete={nextVerse} organizationId={orgInfo.id} />
+          <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} />
         </div>
 
         {/* Powered by footer */}
@@ -190,7 +190,7 @@ export default function OrgCheckInPage() {
           </div>
         </div>
 
-        <CheckInForm onCheckInComplete={nextVerse} organizationId={orgInfo.id} />
+        <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} />
       </div>
 
       {/* Powered by footer */}
