@@ -58,12 +58,31 @@ function AuthForm() {
     setIsLoading(true);
 
     try {
+      // Debug: Show we're starting
+      toast({
+        title: "Debug: Creating client...",
+        description: `Email: ${email}`,
+      });
+
       const supabase = createClient();
+
+      // Debug: Show client created
+      toast({
+        title: "Debug: Calling signInWithOtp...",
+        description: "Waiting for Supabase response",
+      });
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
         },
+      });
+
+      // Debug: Show response received
+      toast({
+        title: "Debug: Response received",
+        description: error ? `Error: ${error.message}` : "Success!",
       });
 
       if (error) {
@@ -81,9 +100,10 @@ function AuthForm() {
       }
     } catch (err) {
       console.error("OTP send error:", err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       toast({
-        title: "Something went wrong",
-        description: "Please try again later.",
+        title: "Caught exception",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
