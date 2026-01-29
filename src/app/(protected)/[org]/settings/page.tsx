@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Users, Upload, Palette, ChevronRight } from "lucide-react";
+import { User, Users, Upload, Palette, Tablet, ChevronRight } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 
@@ -40,6 +40,13 @@ export default function SettingsPage() {
       description: "Bulk import students from CSV files",
       href: orgPath(orgSlug, "/settings/import"),
       icon: Upload,
+      available: canManageOrg,
+    },
+    {
+      title: "Devices",
+      description: "Manage check-in devices (iPads, tablets)",
+      href: orgPath(orgSlug, "/settings/devices"),
+      icon: Tablet,
       available: canManageOrg,
     },
   ];
