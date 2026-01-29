@@ -87,6 +87,10 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const { data: groupMembers, isLoading: isLoadingMembers } = useGroupMembers(activeGroupId);
 
+  // Browse by group state (for individual selection)
+  const [browseGroupId, setBrowseGroupId] = useState<string | null>(null);
+  const { data: browseGroupMembers, isLoading: isLoadingBrowseMembers } = useGroupMembers(browseGroupId);
+
   // Clear all confirmation
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -347,6 +351,7 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
       {groups && groups.length > 0 && (
         <div>
           <label className="text-sm font-medium mb-2 block">Quick Add by Group</label>
+          <p className="text-xs text-muted-foreground mb-2">Click to add all members at once</p>
           <div className="flex flex-wrap gap-2">
             {groups.map((group) => (
               <Button
@@ -371,6 +376,87 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
               </Button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Browse by Group (individual selection) */}
+      {groups && groups.length > 0 && (
+        <div>
+          <label className="text-sm font-medium mb-2 block">Browse by Group</label>
+          <p className="text-xs text-muted-foreground mb-2">Select individuals from a group</p>
+          <Select value={browseGroupId || ""} onValueChange={(val) => setBrowseGroupId(val || null)}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="Select a group to browse..." />
+            </SelectTrigger>
+            <SelectContent>
+              {groups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name} ({group.member_count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Group Members List */}
+          {browseGroupId && (
+            <div className="mt-3 border rounded-lg max-h-[250px] overflow-y-auto">
+              {isLoadingBrowseMembers ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                </div>
+              ) : browseGroupMembers && browseGroupMembers.length > 0 ? (
+                <div className="divide-y">
+                  {browseGroupMembers.map((member) => {
+                    const isSelected = selectedStudents.has(member.student_id);
+                    return (
+                      <button
+                        key={member.student_id}
+                        onClick={() => {
+                          if (isSelected) {
+                            removeStudent(member.student_id);
+                          } else {
+                            addStudent({
+                              id: member.student_id,
+                              first_name: member.first_name,
+                              last_name: member.last_name,
+                              grade: member.grade,
+                              current_rank: member.current_rank,
+                            });
+                          }
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors",
+                          isSelected && "bg-primary/5"
+                        )}
+                      >
+                        <div>
+                          <span className="font-medium">
+                            {member.first_name} {member.last_name}
+                          </span>
+                          {member.grade && (
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              Grade {member.grade}
+                            </span>
+                          )}
+                        </div>
+                        {isSelected ? (
+                          <Badge variant="default" className="gap-1">
+                            <Check className="h-3 w-3" /> Added
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">+ Add</Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  No members in this group
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
