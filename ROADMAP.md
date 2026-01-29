@@ -109,12 +109,20 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
    - `register_student_and_checkin_public(p_org_slug, ...)`
 2. ✅ Built `PublicCheckInForm` and `PublicNewStudentForm` components
 3. ✅ Updated `/[org]/checkin` page to use public functions
-4. Test thoroughly on iPad Safari
+4. ✅ Added RLS policy for anon to read active orgs (was causing 404)
+5. ✅ Tested on iPad Safari - WORKS!
 
 **Phase 2: Sentry Integration** ✅ COMPLETE
 1. ✅ Install and configure Sentry
 2. ✅ Add client-side config with Session Replay
-3. Test error capture
+3. ✅ Sentry MCP connected for real-time debugging
+4. ✅ Test error capture - confirmed working
+
+**Phase 2.5: Email/SMTP** ✅ COMPLETE (01/29/2026)
+1. ✅ Configured Resend as custom SMTP provider
+2. ✅ Removed Supabase built-in email (had 30/hour project limit)
+3. ✅ Domain verified: sheepdoggo.ai
+4. ✅ No more rate limit issues
 
 **Phase 3: Station Tracking**
 1. Create stations table
@@ -125,21 +133,22 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 1. Add rate limiting middleware
 2. Create flagged check-ins dashboard
 
-**Phase 5: OTP Improvements**
-1. Better error handling and feedback
-2. Fallback mechanisms
+**Phase 5: OTP Improvements** ✅ COMPLETE (01/29/2026)
+1. ✅ Added inline status messages (toasts don't render on iPad Safari)
+2. ✅ Custom SMTP via Resend (no more Supabase rate limits)
+3. ✅ Error messages now visible on all devices
 
 ---
 
 ## Verification Checklist
 
-- [x] Can access `/echo-students/checkin` without logging in
+- [x] Can access `/ess-ministry/checkin` without logging in
 - [x] Can search for student and check in (no auth)
-- [ ] Works on iPad Safari (needs testing)
+- [x] Works on iPad Safari ✅ (01/29/2026)
 - [x] Errors appear in Sentry dashboard
+- [x] Admin can login via OTP on iPad Safari ✅ (01/29/2026)
 - [ ] Station selection persists across sessions
 - [ ] Rate limiting blocks excessive requests
-- [ ] Admin can still access protected routes with OTP
 
 ---
 
@@ -264,3 +273,32 @@ After SMS routing is complete, build the Messages tab:
 ---
 
 *Roadmap last updated: January 29, 2026*
+
+---
+
+# SESSION CONTEXT (01/29/2026 Evening) ✅ RESOLVED
+
+## Issues Resolved This Session
+
+### 1. OTP Login on iPad Safari ✅ FIXED
+- **Root cause:** Supabase built-in SMTP had 30 emails/hour project-wide limit
+- **Also:** Toasts don't render on iPad Safari (no visible error feedback)
+- **Fix:**
+  - Configured Resend as custom SMTP provider
+  - Added inline status messages visible on all browsers
+
+### 2. Public Check-in 404 ✅ FIXED
+- **Root cause:** RLS blocked anon users from reading `organizations` table
+- **Fix:** Added RLS policy `Allow anon to read active orgs for check-in`
+- **Production URL:** `https://www.sheepdoggo.ai/ess-ministry/checkin`
+
+### 3. Sentry MCP ✅ CONNECTED
+- Added via `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`
+- Authenticated via `/mcp` command
+- Organization: `seedling-12`
+
+## Production Info
+
+- Org slug: `ess-ministry`
+- Public check-in: `https://www.sheepdoggo.ai/ess-ministry/checkin`
+- SMTP: Resend (custom, no rate limits)
