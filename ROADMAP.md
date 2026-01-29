@@ -39,26 +39,26 @@ When auth fails, the entire check-in flow is blocked with no fallback.
 - `src/components/checkin/PublicCheckInForm.tsx` - Check-in form without auth
 - Database: New RPC functions with SECURITY DEFINER
 
-### 2. Station/Device Tracking
+### 2. Device Tracking
 
 **Implementation:**
-- Store `stationId` in localStorage on first setup
-- On first visit: Show station selection modal
+- Store `deviceId` in localStorage on first setup
+- On first visit: Show device naming modal
 - Remember selection for future sessions
-- Include `station_id` in check-in records for analytics
+- Include `device_id` in check-in records for analytics
 
-**Station Selection UI:**
+**Device Setup UI:**
 ```
-"Which station is this iPad?"
-[ Front Door ]
-[ Side Entrance ]
-[ Overflow Room ]
-[ + Add New Station ]
+"Name this device:"
+[ Front Door iPad ]
+[ Side Entrance iPad ]
+[ Overflow Room iPad ]
+[ + Custom Name ]
 ```
 
 **Database Changes:**
-- Add `stations` table: `id, organization_id, name, created_at`
-- Add `station_id` column to `check_ins` table
+- Add `devices` table: `id, organization_id, name, created_at`
+- Add `device_id` column to `check_ins` table
 
 ### 3. Sentry Error Tracking ✅ INSTALLED
 
@@ -124,9 +124,9 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 3. ✅ Domain verified: sheepdoggo.ai
 4. ✅ No more rate limit issues
 
-**Phase 3: Station Tracking**
-1. Create stations table
-2. Add station selection UI
+**Phase 3: Device Tracking**
+1. Create devices table
+2. Add device naming UI
 3. Store in localStorage + check_ins table
 
 **Phase 4: Abuse Prevention**
@@ -147,7 +147,7 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 - [x] Works on iPad Safari ✅ (01/29/2026)
 - [x] Errors appear in Sentry dashboard
 - [x] Admin can login via OTP on iPad Safari ✅ (01/29/2026)
-- [ ] Station selection persists across sessions
+- [ ] Device name persists across sessions
 - [ ] Rate limiting blocks excessive requests
 
 ---
