@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Users, Upload, Palette, Tablet, ChevronRight } from "lucide-react";
+import { User, Users, Upload, Palette, Tablet, ClipboardCheck, ChevronRight } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 
@@ -47,6 +47,13 @@ export default function SettingsPage() {
       description: "Manage check-in devices (iPads, tablets)",
       href: orgPath(orgSlug, "/settings/devices"),
       icon: Tablet,
+      available: canManageOrg,
+    },
+    {
+      title: "Attendance Cleanup",
+      description: "Retroactively check in students who attended",
+      href: orgPath(orgSlug, "/settings/attendance-cleanup"),
+      icon: ClipboardCheck,
       available: canManageOrg,
     },
   ];

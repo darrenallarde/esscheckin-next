@@ -154,6 +154,120 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 
 ---
 
+# PRIORITY -0.5: Attendance Cleanup Tool
+
+## Problem Statement
+
+When check-in fails (iPad issues, connectivity, etc.), admins need a way to retroactively record attendance. The 01/28/2026 incident required manually importing from Google Forms CSV - this was clunky and error-prone (name matching issues with "Mary " vs "Mary", "Pardo de Zela" vs "Pardo").
+
+**Need**: An elegant, standalone tool for retroactive check-ins that handles real-world name variations.
+
+## Solution: Settings > Attendance Cleanup
+
+A new page in Settings that allows admins to:
+1. Pick a single date/time for the check-in
+2. Add students via search (with fuzzy matching) OR quick-add entire groups
+3. Review selection and submit
+4. See results (created vs skipped duplicates)
+
+## User Flow
+
+```
+1. Select Date & Time
+   ┌─────────────────────────┐  ┌─────────────────┐
+   │ [Calendar] Jan 28, 2026 │  │ [Time] 6:30 PM  │
+   └─────────────────────────┘  └─────────────────┘
+
+2. Add Students
+   Quick Add by Group:
+   [MS Boys (12)] [MS Girls (8)] [HS Boys (15)] [HS Girls (11)]
+
+   Search: [🔍 Search by name or phone...]
+   Results appear below, click to add
+
+3. Review Selection
+   Selected Students (24):
+   [John Pardo de Zela ✕] [Sarah Johnson ✕] [Mike Thompson ✕] ...
+
+   [Preview & Submit]
+
+4. Results
+   ✅ 22 students checked in
+   ⏭️ 2 skipped (already checked in that day)
+
+   [Check in more students]
+```
+
+## Key UX Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Input method | Manual selection (not CSV) | More elegant, handles name issues |
+| Date selection | Single date for all | Simpler UX, batch operations |
+| Group selection | Adds to current selection | Can mix groups + individuals |
+| Duplicates | Skip silently | Don't create errors for honest mistakes |
+| Gamification | Award points | Retroactive check-ins should count |
+
+## Database Changes
+
+**Migration: `update_historical_checkin_with_org_id.sql`**
+
+The existing `import_historical_checkin` function is missing `organization_id` parameter. Update required.
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/app/(protected)/[org]/settings/attendance-cleanup/page.tsx` | Page component |
+| `src/components/settings/AttendanceCleanup/AttendanceCleanupForm.tsx` | Main form orchestrator |
+| `src/components/settings/AttendanceCleanup/DateTimePicker.tsx` | Date & time selection |
+| `src/components/settings/AttendanceCleanup/StudentSearch.tsx` | Search with fuzzy matching |
+| `src/components/settings/AttendanceCleanup/GroupQuickSelect.tsx` | Group chips for quick add |
+| `src/components/settings/AttendanceCleanup/SelectedStudentsList.tsx` | Selected students with remove |
+| `src/components/settings/AttendanceCleanup/SubmissionSummary.tsx` | Results display |
+| `src/hooks/queries/use-attendance-cleanup.ts` | Mutation hook for bulk check-ins |
+
+## Implementation Phases
+
+**Phase 1: Database Migration**
+1. Create migration with updated `import_historical_checkin` function
+2. Apply to STAGING, test, then PRODUCTION
+
+**Phase 2: Navigation & Page Shell**
+1. Add settings link with ClipboardCheck icon
+2. Create page with permission check (owner/admin only)
+
+**Phase 3: Core Components**
+1. DateTimePicker - Calendar popover + time dropdown
+2. StudentSearch - Debounced search, click to add
+3. SelectedStudentsList - Chips with remove, clear all
+4. AttendanceCleanupForm - State management, view transitions
+
+**Phase 4: Group Integration**
+1. GroupQuickSelect - Fetch groups, show as badges
+2. Click handler fetches members, adds to selection (union)
+
+**Phase 5: Submission & Results**
+1. use-attendance-cleanup hook with bulk RPC calls
+2. SubmissionSummary with success/skip counts
+
+## Verification Checklist
+
+- [ ] Can access Settings > Attendance Cleanup as admin
+- [ ] Date picker only allows past dates (last 90 days)
+- [ ] Time dropdown defaults to 6:30 PM
+- [ ] Search finds "Pardo de Zela" when searching "Pardo"
+- [ ] Click group adds all members to selection
+- [ ] Duplicate students not added twice
+- [ ] Can remove individual students
+- [ ] Clear All requires confirmation
+- [ ] Submit creates check-in records
+- [ ] Duplicates silently skipped (shown in results)
+- [ ] Gamification points awarded
+- [ ] Can check in more students after completion
+
+---
+
 # PRIORITY 0: Immediate Tasks
 
 ## 0.0 SMS Multi-Org Routing System ✅ COMPLETE
@@ -274,7 +388,7 @@ After SMS routing is complete, build the Messages tab:
 
 ---
 
-*Roadmap last updated: January 29, 2026*
+*Roadmap last updated: January 29, 2026 (Evening)*
 
 ---
 
