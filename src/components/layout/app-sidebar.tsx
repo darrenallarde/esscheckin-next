@@ -226,28 +226,32 @@ export function AppSidebar({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {/* Admin link for super_admins - not org-specific */}
-              {isSuperAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith("/admin")}
-                    tooltip="Admin"
-                  >
-                    <Link href="/admin">
-                      <Shield />
-                      <span>Admin</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        <SidebarSeparator className="mb-4" />
+        {/* Super Admin link - platform-wide, not org-specific */}
+        {isSuperAdmin && (
+          <>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith("/admin")}
+                  tooltip="Super Admin"
+                >
+                  <Link href="/admin">
+                    <Shield />
+                    <span>Super Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
+        <SidebarSeparator className="my-4" />
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
