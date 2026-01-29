@@ -528,15 +528,16 @@ export default function AttendanceCleanupForm({ organizationId }: AttendanceClea
                   return (
                     <button
                       key={student.id}
-                      onClick={() =>
+                      onClick={() => {
                         addStudent({
                           id: student.id,
                           first_name: student.first_name,
                           last_name: student.last_name,
                           grade: student.grade,
                           current_rank: student.current_rank,
-                        })
-                      }
+                        });
+                        setSearchQuery(""); // Clear search after adding
+                      }}
                       disabled={isSelected}
                       className={cn(
                         "w-full flex items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors",
