@@ -57,9 +57,8 @@ function AuthForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    const supabase = createClient();
-
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -80,7 +79,8 @@ function AuthForm() {
           description: "We've sent you a 6-digit code to access the dashboard.",
         });
       }
-    } catch {
+    } catch (err) {
+      console.error("OTP send error:", err);
       toast({
         title: "Something went wrong",
         description: "Please try again later.",
@@ -103,9 +103,8 @@ function AuthForm() {
 
     setIsLoading(true);
 
-    const supabase = createClient();
-
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: verificationCode,
@@ -152,7 +151,8 @@ function AuthForm() {
         // Fallback to setup if no orgs found
         router.push("/setup");
       }
-    } catch {
+    } catch (err) {
+      console.error("OTP verify error:", err);
       toast({
         title: "Something went wrong",
         description: "Please try again.",
