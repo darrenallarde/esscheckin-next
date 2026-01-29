@@ -57,20 +57,12 @@ function AuthForm() {
     e.preventDefault();
     setIsLoading(true);
 
+    // DEBUG: Alert-based debugging for iPad Safari (toasts may not work)
+    alert(`[1] Starting OTP for: ${email}`);
+
     try {
-      // Debug: Show we're starting
-      toast({
-        title: "Debug: Creating client...",
-        description: `Email: ${email}`,
-      });
-
       const supabase = createClient();
-
-      // Debug: Show client created
-      toast({
-        title: "Debug: Calling signInWithOtp...",
-        description: "Waiting for Supabase response",
-      });
+      alert("[2] Supabase client created");
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -79,11 +71,7 @@ function AuthForm() {
         },
       });
 
-      // Debug: Show response received
-      toast({
-        title: "Debug: Response received",
-        description: error ? `Error: ${error.message}` : "Success!",
-      });
+      alert(`[3] OTP response: ${error ? error.message : "SUCCESS"}`);
 
       if (error) {
         toast({
@@ -101,6 +89,7 @@ function AuthForm() {
     } catch (err) {
       console.error("OTP send error:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
+      alert(`[CATCH] Exception: ${errorMessage}`);
       toast({
         title: "Caught exception",
         description: errorMessage,
@@ -108,6 +97,7 @@ function AuthForm() {
       });
     } finally {
       setIsLoading(false);
+      alert("[4] Finally block - done");
     }
   };
 
