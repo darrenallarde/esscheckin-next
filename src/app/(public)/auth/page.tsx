@@ -26,6 +26,7 @@ function AuthForm() {
   const [emailSent, setEmailSent] = useState(false);
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loadingInvite, setLoadingInvite] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Check for invite token and fetch invitation details
   useEffect(() => {
@@ -56,13 +57,10 @@ function AuthForm() {
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // DEBUG: Alert-based debugging for iPad Safari (toasts may not work)
-    alert(`[1] Starting OTP for: ${email}`);
+    setStatusMessage(null);
 
     try {
       const supabase = createClient();
-      alert("[2] Supabase client created");
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -71,9 +69,8 @@ function AuthForm() {
         },
       });
 
-      alert(`[3] OTP response: ${error ? error.message : "SUCCESS"}`);
-
       if (error) {
+        setStatusMessage({ type: 'error', text: error.message });
         toast({
           title: "Unable to send code",
           description: error.message,
@@ -89,7 +86,7 @@ function AuthForm() {
     } catch (err) {
       console.error("OTP send error:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      alert(`[CATCH] Exception: ${errorMessage}`);
+      setStatusMessage({ type: 'error', text: errorMessage });
       toast({
         title: "Caught exception",
         description: errorMessage,
@@ -97,7 +94,6 @@ function AuthForm() {
       });
     } finally {
       setIsLoading(false);
-      alert("[4] Finally block - done");
     }
   };
 
@@ -290,6 +286,17 @@ function AuthForm() {
                 </p>
               )}
             </div>
+
+            {/* Inline status message for Safari compatibility (toasts may not show) */}
+            {statusMessage && (
+              <div className={`p-3 rounded-md text-sm ${
+                statusMessage.type === 'error'
+                  ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                  : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {statusMessage.text}
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Sending..." : invitation ? "Accept Invitation" : "Send One-Time Password"}
