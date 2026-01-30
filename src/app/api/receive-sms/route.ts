@@ -81,19 +81,12 @@ function getSupabase() {
 export async function POST(request: NextRequest) {
   console.log("[receive-sms] Starting POST handler");
 
-  // TEMPORARY DEBUG: Always return a test message
-  // Remove this once we confirm basic flow works
-  const DEBUG_MODE = true;
-  if (DEBUG_MODE) {
-    return twimlResponse("DEBUG: Vercel endpoint reached successfully!");
-  }
-
   let supabase;
   try {
     supabase = getSupabase();
   } catch (e) {
     console.error("[receive-sms] Failed to create Supabase client:", e);
-    return twimlResponse(`Supabase init error: ${e instanceof Error ? e.message : 'unknown'}`);
+    return twimlResponse(`ENV ERROR: ${e instanceof Error ? e.message : 'unknown'}`);
   }
 
   try {
@@ -109,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     if (!from || !body) {
       console.error("[receive-sms] Missing required fields from Twilio webhook");
-      return twimlResponse(null);
+      return twimlResponse(`PARSE ERROR: from=${!!from}, body=${!!body}`);
     }
 
     const upperBody = body.toUpperCase();
