@@ -275,7 +275,8 @@ export async function POST(request: NextRequest) {
 // Helper Functions
 // ========================================
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClient = any;
 
 async function findRecentConversation(
   supabase: SupabaseClient,
