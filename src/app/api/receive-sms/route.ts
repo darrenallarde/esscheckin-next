@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
   let supabase;
   try {
     supabase = getSupabase();
+    // DEBUG: Return after supabase init to test
+    return twimlResponse("DEBUG: Supabase client created OK");
   } catch (e) {
     console.error("[receive-sms] Failed to create Supabase client:", e);
     return twimlResponse(`ENV ERROR: ${e instanceof Error ? e.message : 'unknown'}`);
