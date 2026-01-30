@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { GitMerge, ArrowLeft, Loader2, RefreshCw, Users, Check, AlertTriangle } from "lucide-react";
+import { GitMerge, ArrowLeft, Loader2, RefreshCw, Users, Check, AlertTriangle, Star } from "lucide-react";
 import Link from "next/link";
 import { orgPath } from "@/lib/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -299,8 +299,24 @@ export default function MergeDuplicatesPage() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Student A */}
-                            <div className="p-3 bg-muted/50 rounded">
-                              <div className="font-medium">{pair.student_a_name}</div>
+                            <div
+                              className={cn(
+                                "p-3 rounded border-2 cursor-pointer transition-all hover:border-primary",
+                                pair.student_a_checkin_count >= pair.student_b_checkin_count
+                                  ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
+                                  : "bg-muted/50 border-transparent"
+                              )}
+                              onClick={() => setConfirmMerge({ pair, keepId: pair.student_a_id })}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{pair.student_a_name}</span>
+                                {pair.student_a_checkin_count >= pair.student_b_checkin_count && (
+                                  <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                                    <Star className="h-3 w-3 mr-1" />
+                                    Keep
+                                  </Badge>
+                                )}
+                              </div>
                               {pair.student_a_grade && (
                                 <div className="text-sm text-muted-foreground">Grade {pair.student_a_grade}</div>
                               )}
@@ -313,8 +329,24 @@ export default function MergeDuplicatesPage() {
                             </div>
 
                             {/* Student B */}
-                            <div className="p-3 bg-muted/50 rounded">
-                              <div className="font-medium">{pair.student_b_name}</div>
+                            <div
+                              className={cn(
+                                "p-3 rounded border-2 cursor-pointer transition-all hover:border-primary",
+                                pair.student_b_checkin_count > pair.student_a_checkin_count
+                                  ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
+                                  : "bg-muted/50 border-transparent"
+                              )}
+                              onClick={() => setConfirmMerge({ pair, keepId: pair.student_b_id })}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{pair.student_b_name}</span>
+                                {pair.student_b_checkin_count > pair.student_a_checkin_count && (
+                                  <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                                    <Star className="h-3 w-3 mr-1" />
+                                    Keep
+                                  </Badge>
+                                )}
+                              </div>
                               {pair.student_b_grade && (
                                 <div className="text-sm text-muted-foreground">Grade {pair.student_b_grade}</div>
                               )}
@@ -326,6 +358,9 @@ export default function MergeDuplicatesPage() {
                               </div>
                             </div>
                           </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Click a record to keep it and merge the other into it
+                          </p>
                         </div>
 
                         <Button
@@ -333,7 +368,7 @@ export default function MergeDuplicatesPage() {
                           size="sm"
                           onClick={() => setPreviewPair(pair)}
                         >
-                          Review
+                          Details
                         </Button>
                       </div>
                     </div>
@@ -377,12 +412,24 @@ export default function MergeDuplicatesPage() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Student A */}
                 <div
-                  className="border rounded-lg p-4 cursor-pointer hover:border-primary transition-colors"
+                  className={cn(
+                    "border-2 rounded-lg p-4 cursor-pointer transition-all hover:border-primary",
+                    previewPair.student_a_checkin_count >= previewPair.student_b_checkin_count
+                      ? "border-green-300 bg-green-50 dark:bg-green-950/30"
+                      : "border-muted"
+                  )}
                   onClick={() => setConfirmMerge({ pair: previewPair, keepId: previewPair.student_a_id })}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold">Keep this record</span>
-                    <Check className="h-4 w-4 text-muted-foreground" />
+                    {previewPair.student_a_checkin_count >= previewPair.student_b_checkin_count ? (
+                      <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                        <Star className="h-3 w-3 mr-1" />
+                        Recommended
+                      </Badge>
+                    ) : (
+                      <Check className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <div className="font-medium text-lg">{previewPair.student_a_name}</div>
@@ -397,12 +444,24 @@ export default function MergeDuplicatesPage() {
 
                 {/* Student B */}
                 <div
-                  className="border rounded-lg p-4 cursor-pointer hover:border-primary transition-colors"
+                  className={cn(
+                    "border-2 rounded-lg p-4 cursor-pointer transition-all hover:border-primary",
+                    previewPair.student_b_checkin_count > previewPair.student_a_checkin_count
+                      ? "border-green-300 bg-green-50 dark:bg-green-950/30"
+                      : "border-muted"
+                  )}
                   onClick={() => setConfirmMerge({ pair: previewPair, keepId: previewPair.student_b_id })}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold">Keep this record</span>
-                    <Check className="h-4 w-4 text-muted-foreground" />
+                    {previewPair.student_b_checkin_count > previewPair.student_a_checkin_count ? (
+                      <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                        <Star className="h-3 w-3 mr-1" />
+                        Recommended
+                      </Badge>
+                    ) : (
+                      <Check className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <div className="font-medium text-lg">{previewPair.student_b_name}</div>
