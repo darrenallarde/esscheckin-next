@@ -154,7 +154,7 @@ Even though check-in won't need auth, admin functions still do. Improve OTP:
 
 ---
 
-# PRIORITY -0.5: Attendance Cleanup Tool
+# PRIORITY -0.5: Attendance Cleanup Tool ✅ COMPLETE (01/29/2026)
 
 ## Problem Statement
 
@@ -162,109 +162,128 @@ When check-in fails (iPad issues, connectivity, etc.), admins need a way to retr
 
 **Need**: An elegant, standalone tool for retroactive check-ins that handles real-world name variations.
 
-## Solution: Settings > Attendance Cleanup
+## Solution: Settings > Org Tools > Attendance Cleanup ✅ IMPLEMENTED
 
-A new page in Settings that allows admins to:
-1. Pick a single date/time for the check-in
-2. Add students via search (with fuzzy matching) OR quick-add entire groups
-3. Review selection and submit
-4. See results (created vs skipped duplicates)
+Located at: `/settings/org-tools/attendance-cleanup`
 
-## User Flow
-
-```
-1. Select Date & Time
-   ┌─────────────────────────┐  ┌─────────────────┐
-   │ [Calendar] Jan 28, 2026 │  │ [Time] 6:30 PM  │
-   └─────────────────────────┘  └─────────────────┘
-
-2. Add Students
-   Quick Add by Group:
-   [MS Boys (12)] [MS Girls (8)] [HS Boys (15)] [HS Girls (11)]
-
-   Search: [🔍 Search by name or phone...]
-   Results appear below, click to add
-
-3. Review Selection
-   Selected Students (24):
-   [John Pardo de Zela ✕] [Sarah Johnson ✕] [Mike Thompson ✕] ...
-
-   [Preview & Submit]
-
-4. Results
-   ✅ 22 students checked in
-   ⏭️ 2 skipped (already checked in that day)
-
-   [Check in more students]
-```
-
-## Key UX Decisions
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Input method | Manual selection (not CSV) | More elegant, handles name issues |
-| Date selection | Single date for all | Simpler UX, batch operations |
-| Group selection | Adds to current selection | Can mix groups + individuals |
-| Duplicates | Skip silently | Don't create errors for honest mistakes |
-| Gamification | Award points | Retroactive check-ins should count |
-
-## Database Changes
-
-**Migration: `update_historical_checkin_with_org_id.sql`**
-
-The existing `import_historical_checkin` function is missing `organization_id` parameter. Update required.
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/app/(protected)/[org]/settings/attendance-cleanup/page.tsx` | Page component |
-| `src/components/settings/AttendanceCleanup/AttendanceCleanupForm.tsx` | Main form orchestrator |
-| `src/components/settings/AttendanceCleanup/DateTimePicker.tsx` | Date & time selection |
-| `src/components/settings/AttendanceCleanup/StudentSearch.tsx` | Search with fuzzy matching |
-| `src/components/settings/AttendanceCleanup/GroupQuickSelect.tsx` | Group chips for quick add |
-| `src/components/settings/AttendanceCleanup/SelectedStudentsList.tsx` | Selected students with remove |
-| `src/components/settings/AttendanceCleanup/SubmissionSummary.tsx` | Results display |
-| `src/hooks/queries/use-attendance-cleanup.ts` | Mutation hook for bulk check-ins |
-
-## Implementation Phases
-
-**Phase 1: Database Migration**
-1. Create migration with updated `import_historical_checkin` function
-2. Apply to STAGING, test, then PRODUCTION
-
-**Phase 2: Navigation & Page Shell**
-1. Add settings link with ClipboardCheck icon
-2. Create page with permission check (owner/admin only)
-
-**Phase 3: Core Components**
-1. DateTimePicker - Calendar popover + time dropdown
-2. StudentSearch - Debounced search, click to add
-3. SelectedStudentsList - Chips with remove, clear all
-4. AttendanceCleanupForm - State management, view transitions
-
-**Phase 4: Group Integration**
-1. GroupQuickSelect - Fetch groups, show as badges
-2. Click handler fetches members, adds to selection (union)
-
-**Phase 5: Submission & Results**
-1. use-attendance-cleanup hook with bulk RPC calls
-2. SubmissionSummary with success/skip counts
+Features implemented:
+- Calendar date picker (past 90 days only)
+- Time dropdown (defaults to 6:30 PM)
+- Student search with fuzzy matching
+- Quick add by group (click to add all members)
+- Selected students list with remove/clear all
+- Bulk check-in with duplicate detection
+- Gamification points awarded retroactively
 
 ## Verification Checklist
 
-- [ ] Can access Settings > Attendance Cleanup as admin
-- [ ] Date picker only allows past dates (last 90 days)
-- [ ] Time dropdown defaults to 6:30 PM
-- [ ] Search finds "Pardo de Zela" when searching "Pardo"
-- [ ] Click group adds all members to selection
-- [ ] Duplicate students not added twice
-- [ ] Can remove individual students
-- [ ] Clear All requires confirmation
-- [ ] Submit creates check-in records
-- [ ] Duplicates silently skipped (shown in results)
-- [ ] Gamification points awarded
-- [ ] Can check in more students after completion
+- [x] Can access Settings > Org Tools > Attendance Cleanup as admin
+- [x] Date picker only allows past dates (last 90 days)
+- [x] Time dropdown defaults to 6:30 PM
+- [x] Search finds students with fuzzy matching
+- [x] Click group adds all members to selection
+- [x] Duplicate students not added twice
+- [x] Can remove individual students
+- [x] Clear All requires confirmation
+- [x] Submit creates check-in records
+- [x] Duplicates silently skipped (shown in results)
+- [x] Gamification points awarded
+- [x] Can check in more students after completion
+
+---
+
+# PRIORITY -0.4: Org Tools Navigation & Merge Duplicates ✅ COMPLETE (01/29/2026)
+
+## Problem Statement
+
+1. **Settings Navigation**: Admin tools (Import, Devices, Attendance Cleanup) were mixed with personal settings, making the Settings page cluttered.
+
+2. **Duplicate Students**: Students sometimes get registered multiple times (typos, different devices, forgot they registered). This creates split check-in history, incorrect attendance counts, confusing group memberships, and wrong gamification stats.
+
+## Solution: Org Tools Hub + Merge Duplicates
+
+### Navigation Restructure ✅ IMPLEMENTED
+
+**New Structure:**
+```
+Settings/
+├── Account (personal)
+├── Team (invites)
+├── Organization (branding)
+└── Org Tools →
+    ├── Import Students
+    ├── Devices
+    ├── Attendance Cleanup
+    └── Merge Duplicates (NEW)
+```
+
+**Route Changes:**
+| Old Path | New Path |
+|----------|----------|
+| `/settings/import` | `/settings/org-tools/import` |
+| `/settings/devices` | `/settings/org-tools/devices` |
+| `/settings/attendance-cleanup` | `/settings/org-tools/attendance-cleanup` |
+| (new) | `/settings/org-tools/merge` |
+
+### Merge Duplicates Feature ✅ IMPLEMENTED
+
+**Detection Algorithm** (multi-signal scoring):
+| Signal | Score | Description |
+|--------|-------|-------------|
+| Exact phone match | 100 | Same phone = definite duplicate |
+| Exact email match | 90 | Same email = very likely duplicate |
+| Name similarity > 90% | 70 | Fuzzy match (Levenshtein distance) |
+| Same grade + similar name | 50 | Additional confidence |
+
+**Merge Strategy:**
+- Combine ALL check-ins (no data loss)
+- Union of group memberships (deduplicated)
+- Primary phone kept, alternate stored as `secondary_phone`
+- Recalculate gamification from merged check-ins
+- Keep all notes, interactions, SMS history
+
+**Database Changes:**
+- Added `secondary_phone` column to `students` table
+- Created `find_duplicate_students(p_organization_id)` RPC
+- Created `merge_students(p_keep_student_id, p_merge_student_id, ...)` RPC
+
+**Tables Affected by Merge:**
+| Table | Action |
+|-------|--------|
+| `check_ins` | UPDATE student_id |
+| `group_members` | UPDATE student_id (skip if duplicate) |
+| `student_achievements` | UPDATE student_id (skip if duplicate) |
+| `game_transactions` | UPDATE student_id |
+| `student_notes` | UPDATE student_id |
+| `interactions` | UPDATE student_id |
+| `sms_messages` | UPDATE student_id |
+| `ai_recommendations` | UPDATE student_id |
+| `student_game_stats` | DELETE merge record, recalculate keep |
+| `student_profiles_extended` | DELETE merge record |
+| `students` | DELETE merge record |
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `src/app/(protected)/[org]/settings/org-tools/page.tsx` | Org Tools hub |
+| `src/app/(protected)/[org]/settings/org-tools/merge/page.tsx` | Merge duplicates page |
+| `src/hooks/queries/use-duplicates.ts` | Detection + merge hooks |
+
+## Verification Checklist
+
+- [x] Org Tools page accessible from Settings
+- [x] All existing tools work from new location
+- [x] Duplicate detection finds known duplicates
+- [x] Confidence badges show match quality (HIGH/MEDIUM/LOW)
+- [x] Match reasons displayed (phone, email, name similarity)
+- [x] Preview shows side-by-side comparison
+- [x] After merge: check-ins are combined
+- [x] After merge: groups are combined (no duplicates)
+- [x] After merge: gamification recalculated
+- [x] Secondary phone stored correctly
+- [x] Bulk merge works for multiple pairs
+- [x] Merged student is deleted
+- [x] No orphaned records remain
 
 ---
 
@@ -388,7 +407,7 @@ After SMS routing is complete, build the Messages tab:
 
 ---
 
-*Roadmap last updated: January 29, 2026 (Evening)*
+*Roadmap last updated: January 29, 2026 (Late Evening)*
 
 ---
 
