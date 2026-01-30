@@ -82,13 +82,15 @@ export async function POST(request: NextRequest) {
   console.log("[receive-sms] Starting POST handler");
 
   // DEBUG: Test what getSupabase does
+  let supabase;
   try {
-    const supabase = getSupabase();
+    supabase = getSupabase();
     return twimlResponse("STEP1 OK: Supabase created");
   } catch (e) {
     return twimlResponse("STEP1 FAIL: " + String(e));
   }
 
+  // NOTE: Code below is unreachable during debug, but kept for later
   try {
     // Parse Twilio webhook (form data)
     const formData = await request.formData();
