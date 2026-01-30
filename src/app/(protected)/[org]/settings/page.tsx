@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { User, Users, Upload, Palette, Tablet, ClipboardCheck, ChevronRight } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, Users, Palette, Wrench, ChevronRight } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 
@@ -36,24 +35,10 @@ export default function SettingsPage() {
       available: canManageOrg,
     },
     {
-      title: "Import Students",
-      description: "Bulk import students from CSV files",
-      href: orgPath(orgSlug, "/settings/import"),
-      icon: Upload,
-      available: canManageOrg,
-    },
-    {
-      title: "Devices",
-      description: "Manage check-in devices (iPads, tablets)",
-      href: orgPath(orgSlug, "/settings/devices"),
-      icon: Tablet,
-      available: canManageOrg,
-    },
-    {
-      title: "Attendance Cleanup",
-      description: "Retroactively check in students who attended",
-      href: orgPath(orgSlug, "/settings/attendance-cleanup"),
-      icon: ClipboardCheck,
+      title: "Org Tools",
+      description: "Import, devices, attendance cleanup, merge duplicates",
+      href: orgPath(orgSlug, "/settings/org-tools"),
+      icon: Wrench,
       available: canManageOrg,
     },
   ];

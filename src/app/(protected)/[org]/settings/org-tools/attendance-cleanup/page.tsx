@@ -27,7 +27,7 @@ export default function AttendanceCleanupPage() {
     return (
       <div className="flex flex-col gap-6 p-6 md:p-8">
         <div className="flex items-center gap-4">
-          <Link href={orgPath(orgSlug, "/settings")}>
+          <Link href={orgPath(orgSlug, "/settings/org-tools")}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -51,7 +51,7 @@ export default function AttendanceCleanupPage() {
     <div className="flex flex-col gap-6 p-6 md:p-8">
       {/* Header with back link */}
       <div className="flex items-center gap-4">
-        <Link href={orgPath(orgSlug, "/settings")}>
+        <Link href={orgPath(orgSlug, "/settings/org-tools")}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>

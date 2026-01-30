@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 import CSVImporter from "@/components/settings/CSVImporter";
@@ -33,15 +35,19 @@ export default function ImportSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center gap-3">
-          <Upload className="h-8 w-8" />
-          Import Students
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Bulk import students from a CSV file
-        </p>
+      {/* Header with back link */}
+      <div className="flex items-center gap-4">
+        <Link href={orgPath(currentOrganization.slug, "/settings/org-tools")}>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Import Students</h1>
+          <p className="text-muted-foreground mt-1">
+            Bulk import students from a CSV file
+          </p>
+        </div>
       </div>
 
       {/* CSV Importer */}
