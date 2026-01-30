@@ -65,8 +65,16 @@ function twimlResponse(message: string | null): NextResponse {
 
 // Create Supabase client with service role key
 function getSupabase() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  console.log("[receive-sms] Supabase URL:", supabaseUrl ? "SET" : "MISSING");
+  console.log("[receive-sms] Service Key:", supabaseServiceKey ? "SET" : "MISSING");
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error(`Missing env vars: URL=${!!supabaseUrl}, KEY=${!!supabaseServiceKey}`);
+  }
+
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
@@ -267,7 +275,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("[receive-sms] Error processing webhook:", error);
-    return twimlResponse(null);
+    // Return error message for debugging
+    return twimlResponse(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
