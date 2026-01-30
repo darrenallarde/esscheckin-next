@@ -9,6 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -333,9 +340,22 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId }: PublicNe
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Grade *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. 9th, 10th, 11th, 12th" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="6">6th Grade</SelectItem>
+                            <SelectItem value="7">7th Grade</SelectItem>
+                            <SelectItem value="8">8th Grade</SelectItem>
+                            <SelectItem value="9">9th Grade</SelectItem>
+                            <SelectItem value="10">10th Grade</SelectItem>
+                            <SelectItem value="11">11th Grade</SelectItem>
+                            <SelectItem value="12">12th Grade</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
