@@ -180,7 +180,7 @@ export default function OrgCheckInPage() {
             </div>
           </div>
 
-          <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} />
+          <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} checkinStyle={checkinStyle} />
         </div>
 
         {/* Footer with device indicator */}
@@ -245,7 +245,7 @@ export default function OrgCheckInPage() {
           </div>
         </div>
 
-        <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} />
+        <PublicCheckInForm onCheckInComplete={nextVerse} orgSlug={orgInfo.slug} deviceId={deviceId} checkinStyle={checkinStyle} />
       </div>
 
       {/* Footer with device indicator */}

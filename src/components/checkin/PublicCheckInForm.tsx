@@ -29,6 +29,7 @@ interface PublicCheckInFormProps {
   onCheckInComplete?: () => void;
   orgSlug: string;
   deviceId?: string | null;
+  checkinStyle?: string;
 }
 
 interface Student {
@@ -52,7 +53,7 @@ type ViewState =
   | { type: 'new-student' }
   | { type: 'success', student: Student, checkInId: string, profilePin?: string };
 
-const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId }: PublicCheckInFormProps) => {
+const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle = 'gamified' }: PublicCheckInFormProps) => {
   const { toast } = useToast();
   const [viewState, setViewState] = useState<ViewState>({ type: 'search' });
   const [isSearching, setIsSearching] = useState(false);
@@ -227,6 +228,7 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId }: PublicCheck
       <PublicNewStudentForm
         orgSlug={orgSlug}
         deviceId={deviceId}
+        checkinStyle={checkinStyle}
         onSuccess={(result) => {
           setViewState({
             type: 'success',
