@@ -79,11 +79,20 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabase();
+  console.log("[receive-sms] Starting POST handler");
+
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch (e) {
+    console.error("[receive-sms] Failed to create Supabase client:", e);
+    return twimlResponse(`Supabase init error: ${e instanceof Error ? e.message : 'unknown'}`);
+  }
 
   try {
     // Parse Twilio webhook (form data)
     const formData = await request.formData();
+    console.log("[receive-sms] Form data parsed successfully");
     const from = formData.get("From") as string;
     const to = formData.get("To") as string;
     const body = (formData.get("Body") as string || "").trim();
@@ -258,19 +267,29 @@ export async function POST(request: NextRequest) {
     }
 
     // STEP 6: Unknown contact - welcome message
-    await addToWaitingRoom(supabase, from, null, body);
-    await storeMessage(supabase, {
-      from,
-      to,
-      body,
-      messageSid,
-      studentId: null,
-      organizationId: null,
-      groupId: null,
-      direction: "inbound",
-      isLobbyMessage: false,
-    });
+    console.log("[receive-sms] STEP 6: Unknown contact, sending welcome");
+    try {
+      await addToWaitingRoom(supabase, from, null, body);
+    } catch (e) {
+      console.error("[receive-sms] addToWaitingRoom failed:", e);
+    }
+    try {
+      await storeMessage(supabase, {
+        from,
+        to,
+        body,
+        messageSid,
+        studentId: null,
+        organizationId: null,
+        groupId: null,
+        direction: "inbound",
+        isLobbyMessage: false,
+      });
+    } catch (e) {
+      console.error("[receive-sms] storeMessage failed:", e);
+    }
 
+    console.log("[receive-sms] Returning welcome message:", NPC_RESPONSES.welcome);
     return twimlResponse(NPC_RESPONSES.welcome);
 
   } catch (error) {
