@@ -81,14 +81,12 @@ function getSupabase() {
 export async function POST(request: NextRequest) {
   console.log("[receive-sms] Starting POST handler");
 
-  let supabase;
+  // DEBUG: Test what getSupabase does
   try {
-    supabase = getSupabase();
-    // DEBUG: Return after supabase init to test
-    return twimlResponse("DEBUG: Supabase client created OK");
+    const supabase = getSupabase();
+    return twimlResponse("STEP1 OK: Supabase created");
   } catch (e) {
-    console.error("[receive-sms] Failed to create Supabase client:", e);
-    return twimlResponse(`ENV ERROR: ${e instanceof Error ? e.message : 'unknown'}`);
+    return twimlResponse("STEP1 FAIL: " + String(e));
   }
 
   try {
