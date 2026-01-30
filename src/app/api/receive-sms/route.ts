@@ -81,6 +81,13 @@ function getSupabase() {
 export async function POST(request: NextRequest) {
   console.log("[receive-sms] Starting POST handler");
 
+  // TEMPORARY DEBUG: Always return a test message
+  // Remove this once we confirm basic flow works
+  const DEBUG_MODE = true;
+  if (DEBUG_MODE) {
+    return twimlResponse("DEBUG: Vercel endpoint reached successfully!");
+  }
+
   let supabase;
   try {
     supabase = getSupabase();
