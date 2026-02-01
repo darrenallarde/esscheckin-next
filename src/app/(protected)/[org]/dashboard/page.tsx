@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Users, CalendarCheck, TrendingUp, AlertCircle } from "lucide-react";
 import { StatCard } from "@/components/analytics/StatCard";
 import { MiniTrendChart } from "@/components/analytics/MiniTrendChart";
@@ -7,15 +8,19 @@ import { LeaderboardPreview } from "@/components/analytics/LeaderboardPreview";
 import { PastoralQueue } from "@/components/pastoral/PastoralQueue";
 import { EncouragingMessage } from "@/components/shared/EncouragingMessage";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
+import { TodaysCheckInsModal } from "@/components/dashboard/TodaysCheckInsModal";
 import { useDashboardStats, useWeeklyAttendance } from "@/hooks/queries/use-dashboard-stats";
 import { useLeaderboard } from "@/hooks/queries/use-gamification";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
+import { useTodaysCheckIns } from "@/hooks/queries/use-todays-checkins";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 import { BelongingStatus } from "@/types/pastoral";
 
 export default function DashboardPage() {
+  const [showTodaysCheckIns, setShowTodaysCheckIns] = useState(false);
+
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
   const orgSlug = currentOrganization?.slug;
@@ -25,6 +30,7 @@ export default function DashboardPage() {
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 5);
   const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(organizationId, 5);
   const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
+  const { data: todaysCheckIns, isLoading: todaysLoading } = useTodaysCheckIns(organizationId);
 
   const isLoading = orgLoading || statsLoading;
 
@@ -61,10 +67,11 @@ export default function DashboardPage() {
         <StatCard
           title="Check-ins Today"
           value={stats?.checkInsToday ?? 0}
-          subtitle="Students checked in today"
+          subtitle="Click to see who's here"
           icon={CalendarCheck}
           trend={stats?.todayTrend}
           loading={isLoading}
+          onClick={() => setShowTodaysCheckIns(true)}
         />
         <StatCard
           title="Daily Average"
@@ -117,6 +124,14 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* Today's Check-ins Modal */}
+      <TodaysCheckInsModal
+        open={showTodaysCheckIns}
+        onOpenChange={setShowTodaysCheckIns}
+        checkIns={todaysCheckIns ?? []}
+        loading={todaysLoading}
+      />
     </div>
   );
 }

@@ -16,12 +16,22 @@ const BelongingSpectrum: React.FC<BelongingSpectrumProps> = ({
   selectedFilter = 'all'
 }) => {
   const [hoveredStatus, setHoveredStatus] = useState<BelongingStatus | null>(null);
+  // Green gradient: more connected = darker/brighter, less connected = lighter
   const statusColors = {
-    'Ultra-Core': '#3B82F6',     // Blue
-    'Core': '#10B981',            // Green
-    'Connected': '#14B8A6',       // Teal
-    'On the Fringe': '#FBBF24',  // Yellow
-    'Missing': '#EF4444'          // Red
+    'Ultra-Core': '#15803d',      // green-700 - deep forest
+    'Core': '#22c55e',            // green-500 - medium green
+    'Connected': '#4ade80',       // green-400 - light green
+    'On the Fringe': '#86efac',   // green-300 - pale green
+    'Missing': '#bbf7d0'          // green-200 - very light mint
+  };
+
+  // Text colors for contrast (dark text on light backgrounds)
+  const textColors = {
+    'Ultra-Core': 'text-white',
+    'Core': 'text-white',
+    'Connected': 'text-gray-800',
+    'On the Fringe': 'text-gray-800',
+    'Missing': 'text-gray-600'
   };
 
   const statusOrder: Array<keyof BelongingDistribution> = [
@@ -60,7 +70,7 @@ const BelongingSpectrum: React.FC<BelongingSpectrumProps> = ({
           {selectedFilter !== 'all' && (
             <button
               onClick={() => onFilterChange && onFilterChange('all')}
-              className="text-sm font-normal text-blue-600 hover:text-blue-800 underline"
+              className="text-sm font-normal text-green-600 hover:text-green-800 underline"
             >
               Clear Filter
             </button>
@@ -87,8 +97,9 @@ const BelongingSpectrum: React.FC<BelongingSpectrumProps> = ({
                     backgroundColor: statusColors[status]
                   }}
                   className={`
-                    relative flex items-center justify-center text-white font-bold text-sm
+                    relative flex items-center justify-center font-bold text-sm
                     transition-all duration-200 cursor-pointer
+                    ${textColors[status]}
                     ${isSelected ? 'ring-4 ring-yellow-400 ring-inset scale-105 z-10' : 'hover:opacity-90 hover:scale-105'}
                     ${isHovered ? 'shadow-2xl z-20' : ''}
                   `}

@@ -20,7 +20,6 @@ import {
   Trophy,
   MessageCircle,
   UsersRound,
-  Heart,
   Flame,
   Star,
   PhoneOff,
@@ -29,6 +28,7 @@ import { Student } from "@/hooks/queries/use-students";
 import { useSmsConversation } from "@/hooks/queries/use-sms-conversation";
 import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
+import { PersonPastoralContent } from "./PersonPastoralContent";
 
 interface PersonProfileModalProps {
   person: Student | null;
@@ -37,12 +37,13 @@ interface PersonProfileModalProps {
   onSendText?: (person: Student) => void;
 }
 
+// Green gradient theme matching BelongingSpectrum
 const belongingStatusColors: Record<string, string> = {
-  "Ultra-Core": "bg-purple-500 text-white",
-  "Core": "bg-blue-500 text-white",
-  "Connected": "bg-teal-500 text-white",
-  "On the Fringe": "bg-yellow-500 text-white",
-  "Missing": "bg-red-500 text-white",
+  "Ultra-Core": "bg-green-700 text-white",
+  "Core": "bg-green-500 text-white",
+  "Connected": "bg-green-400 text-gray-800",
+  "On the Fringe": "bg-green-300 text-gray-800",
+  "Missing": "bg-green-200 text-gray-600",
 };
 
 const rankEmojis: Record<string, string> = {
@@ -262,62 +263,11 @@ export function PersonProfileModal({
           </TabsContent>
 
           {/* Pastoral Tab */}
-          <TabsContent value="pastoral" className="space-y-4 mt-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <Heart className="h-5 w-5 text-rose-500" />
-                  <span className="font-medium">Pastoral Care</span>
-                </div>
-
-                {/* Belonging Status */}
-                <div className="mb-4 p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Belonging Status</p>
-                  <Badge className={`${belongingStatusColors[belongingStatus]} text-sm`}>
-                    {belongingStatus}
-                  </Badge>
-                  <p className="text-sm mt-2">
-                    {getStatusDescription(belongingStatus, person)}
-                  </p>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  {person.phone_number && onSendText && (
-                    <Button
-                      onClick={() => onSendText(person)}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Send Text Message
-                    </Button>
-                  )}
-                  {person.phone_number && (
-                    <Button
-                      asChild
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <a href={`tel:${person.phone_number}`}>
-                        <Phone className="h-4 w-4 mr-2" />
-                        Call {person.first_name}
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Recommendation placeholder */}
-            <Card>
-              <CardContent className="pt-4">
-                <p className="text-sm text-muted-foreground">
-                  AI recommendations and prayer prompts will appear here based on this
-                  person's engagement patterns.
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="pastoral" className="mt-4">
+            <PersonPastoralContent
+              student={person}
+              onSendText={onSendText}
+            />
           </TabsContent>
 
           {/* Groups Tab */}
@@ -379,19 +329,3 @@ function formatLastSeen(days: number | null): string {
   return `${Math.floor(days / 30)} months ago`;
 }
 
-function getStatusDescription(status: string, person: Student): string {
-  switch (status) {
-    case "Ultra-Core":
-      return `${person.first_name} is highly engaged! Consider leadership opportunities.`;
-    case "Core":
-      return `${person.first_name} attends consistently. Keep affirming their presence!`;
-    case "Connected":
-      return `${person.first_name} comes periodically. Encourage more consistent attendance.`;
-    case "On the Fringe":
-      return `${person.first_name} hasn't been seen in a while. Reach out soon!`;
-    case "Missing":
-      return `${person.first_name} may need parent outreach. Something might be going on.`;
-    default:
-      return "";
-  }
-}
