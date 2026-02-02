@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sheepdoggo
 
-## Getting Started
+Student engagement platform for youth ministries.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Documentation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See the [`/docs`](./docs/README.md) folder for comprehensive documentation:
 
-## Learn More
+- [Getting Started](./docs/getting-started.md) — Developer onboarding
+- [Architecture](./docs/architecture.md) — System design
+- [Database](./docs/database.md) — Schema reference
+- [API Reference](./docs/api-reference.md) — Functions and endpoints
+- [Feature Docs](./docs/features/) — Individual feature documentation
+- [Roadmap](./docs/roadmap.md) — What's done and what's next
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/              # Next.js App Router pages
+├── components/       # React components
+├── hooks/queries/    # TanStack Query hooks
+├── lib/supabase/     # Supabase clients
+├── types/            # TypeScript definitions
+└── utils/            # Helper functions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+docs/                 # Product documentation
+├── features/         # Feature-specific docs
+└── archive/          # Superseded docs
 
-## Deploy on Vercel
+supabase/             # Database migrations and functions
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Framework:** Next.js 14 (App Router)
+- **Database:** Supabase (PostgreSQL)
+- **UI:** shadcn/ui + Tailwind CSS
+- **State:** TanStack Query
+- **AI:** Anthropic Claude
+- **SMS:** Twilio
+
+## Contributing
+
+See [CLAUDE.md](./CLAUDE.md) for development guidelines and debugging rules.
+
+## License
+
+Private — All rights reserved.

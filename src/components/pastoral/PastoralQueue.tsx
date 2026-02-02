@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Heart, Clock, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { PersonProfileModal } from "@/components/people/PersonProfileModal";
+import { Student } from "@/hooks/queries/use-students";
 
 export interface PastoralRecommendation {
   id: string;
@@ -48,6 +51,36 @@ export function PastoralQueue({
   loading = false,
   viewAllHref = "/pastoral",
 }: PastoralQueueProps) {
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const handleStudentClick = (rec: PastoralRecommendation) => {
+    // Parse first and last name from student_name
+    const nameParts = rec.student_name.split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // Create a minimal Student object for the profile modal
+    const studentForModal: Student = {
+      id: rec.student_id,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: null,
+      email: null,
+      grade: null,
+      high_school: null,
+      user_type: null,
+      total_points: 0,
+      current_rank: "Newcomer",
+      last_check_in: rec.last_seen,
+      days_since_last_check_in: rec.days_absent,
+      total_check_ins: 0,
+      groups: [],
+    };
+    setSelectedStudent(studentForModal);
+    setProfileOpen(true);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -87,9 +120,10 @@ export function PastoralQueue({
             const PriorityIcon = config.icon;
 
             return (
-              <div
+              <button
                 key={rec.id}
-                className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50"
+                onClick={() => handleStudentClick(rec)}
+                className="w-full flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50 text-left cursor-pointer"
               >
                 {/* Priority Icon */}
                 <div className="mt-0.5">
@@ -113,7 +147,7 @@ export function PastoralQueue({
                       : `${rec.days_absent} days absent`}
                   </p>
                 </div>
-              </div>
+              </button>
             );
           })}
 
@@ -130,6 +164,13 @@ export function PastoralQueue({
           )}
         </div>
       </CardContent>
+
+      {/* Profile modal */}
+      <PersonProfileModal
+        person={selectedStudent}
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+      />
     </Card>
   );
 }

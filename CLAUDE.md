@@ -187,6 +187,101 @@ npm run build  # Build for production
 npm run lint   # Run ESLint
 ```
 
+## Quality Checklist: "Ship It Like You Use It"
+
+**Every feature must be complete, not just functional.**
+
+### Before Writing Code
+
+1. **Understand Mission Impact**
+   - Who uses this feature?
+   - What are they trying to accomplish?
+   - What happens if it fails for them?
+
+2. **System Audit**
+   - What existing features does this touch?
+   - Where else does this data appear in the UI?
+   - What other components use this hook/function?
+
+3. **State Inventory**
+   - What does SUCCESS look like?
+   - What does LOADING look like?
+   - What does ERROR look like? (specific errors, not just "error")
+   - What does EMPTY look like?
+
+### During Implementation
+
+4. **Feedback Rule** — Every user action MUST have visible feedback
+   - Click → something changes (spinner, message, navigation)
+   - Error → user sees what went wrong AND what to do
+   - Success → user knows it worked
+   - Never rely solely on toast() — always add inline feedback for critical errors
+
+5. **No Dead UI**
+   - If it looks clickable, it must be clickable
+   - If it has a hover state, it must have an onClick
+   - If it's not ready, don't show it (or show "coming soon")
+
+### After Implementation
+
+6. **User Testing** (not developer testing)
+   - Use the feature on mobile/iPad
+   - Try to break it (wrong input, slow network, back button)
+   - Try the feature from every entry point
+
+7. **Integration Check**
+   - Did this break anything else?
+   - Do related features still work?
+   - Is the data consistent across views?
+
+### Common Anti-patterns to Avoid
+
+| Problem | Example | Fix |
+|---------|---------|-----|
+| Silent errors | toast() without Toaster rendered | Add inline error messages |
+| Dead UI | hover state without onClick | Wire up handler or remove hover style |
+| Missing feedback | form submit with no loading state | Add isLoading state and spinner |
+| Unfinished integration | Button exists but does nothing | Implement or hide with "coming soon" |
+
+## Analytics Event Rules (MUST FOLLOW)
+
+**Prevent duplicate events that corrupt analytics data.**
+
+### 1. NEVER Create an Event Without Checking the Registry
+
+Before adding ANY tracking call:
+1. **Check `docs/analytics.md` first**
+2. If event exists → use the **exact name and properties** listed
+3. If event doesn't exist → **add to registry FIRST**, then implement
+
+### 2. Event Naming Convention
+
+- **Format:** `{object}_{action}` in `snake_case`
+- **Examples:** `checkin_started`, `sms_sent`, `student_created`
+- **NEVER:** camelCase (`checkInStarted`), PascalCase (`CheckinStarted`), kebab-case (`checkin-started`)
+
+### 3. Required Properties (Every Event)
+
+The `analytics.track()` wrapper enforces these automatically:
+- `org_id` - Organization UUID (null for public)
+- `org_slug` - Organization slug for readable analysis (null for public)
+- `user_id` - Who triggered it (null for public actions)
+- `timestamp` - ISO 8601 timestamp
+- `source` - Where in the app (`kiosk`, `dashboard`, `api`, etc.)
+
+### 4. Before Adding a New Event
+
+1. Search `docs/analytics.md` for similar events
+2. Check if existing event could be extended with a new property
+3. Add to registry with full documentation
+4. THEN implement the tracking call
+
+### 5. No PII in Events
+
+- Never log emails, phone numbers, or names directly
+- Use `email_domain` instead of full email
+- Use IDs instead of names
+
 ## Deployment
 
 1. Push to `main` branch on GitHub
