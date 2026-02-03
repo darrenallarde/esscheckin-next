@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Mail, ArrowLeft, Users } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthTracking } from "@/lib/amplitude/hooks";
 
 interface InvitationDetails {
   email: string;
@@ -27,6 +28,19 @@ function AuthForm() {
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loadingInvite, setLoadingInvite] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Amplitude tracking
+  const { trackAuthPageViewed, trackOtpRequested, trackOtpVerified } = useAuthTracking();
+  const hasTrackedPageView = useRef(false);
+
+  // Track page view on mount
+  useEffect(() => {
+    if (!hasTrackedPageView.current) {
+      const hasInviteToken = !!searchParams.get("invite");
+      trackAuthPageViewed({ has_invite_token: hasInviteToken });
+      hasTrackedPageView.current = true;
+    }
+  }, [searchParams, trackAuthPageViewed]);
 
   // Check for invite token and fetch invitation details
   useEffect(() => {
@@ -77,6 +91,9 @@ function AuthForm() {
           variant: "destructive",
         });
       } else {
+        // Track OTP requested
+        trackOtpRequested({ is_invite_flow: !!invitation });
+
         setEmailSent(true);
         toast({
           title: "Check your email!",
@@ -124,6 +141,9 @@ function AuthForm() {
           variant: "destructive",
         });
       } else {
+        // Track OTP verified
+        trackOtpVerified({ is_invite_flow: !!invitation });
+
         toast({
           title: "Success!",
           description: "You're now logged in.",

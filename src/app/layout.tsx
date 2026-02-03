@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AmplitudeInit } from "@/lib/amplitude/AmplitudeInit";
 
 export const metadata: Metadata = {
   title: "Sheepdoggo",
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        <AmplitudeInit />
         {children}
       </body>
     </html>

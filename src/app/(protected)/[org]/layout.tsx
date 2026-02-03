@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { AmplitudeProvider } from "@/lib/amplitude/context";
+import { setOrgContext } from "@/lib/amplitude/user";
 
 interface OrgLayoutProps {
   children: React.ReactNode;
@@ -19,6 +21,9 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
   const orgSlug = params.org as string;
   const [isValidating, setIsValidating] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "leader" | "viewer">("viewer");
 
   useEffect(() => {
     const validateOrgAccess = async () => {
@@ -33,6 +38,8 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
           return;
         }
 
+        setUserId(user.id);
+
         // Fetch user's organizations
         const { data: orgs, error } = await supabase.rpc("get_user_organizations", {
           p_user_id: user.id,
@@ -45,11 +52,12 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
         }
 
         // Check if user has access to this org
-        const hasOrgAccess = orgs?.some(
-          (org: { organization_slug: string }) => org.organization_slug === orgSlug
+        const matchingOrg = orgs?.find(
+          (org: { organization_slug: string; organization_id: string; role: string }) =>
+            org.organization_slug === orgSlug
         );
 
-        if (!hasOrgAccess) {
+        if (!matchingOrg) {
           // Check if user is super admin
           const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", {
             p_user_id: user.id,
@@ -68,7 +76,16 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               router.push("/setup");
               return;
             }
+            setOrgId(org.id);
+            setUserRole("admin"); // Super admins are treated as admins
             setHasAccess(true);
+
+            // Set Amplitude context for super admin
+            setOrgContext({
+              orgId: org.id,
+              orgSlug,
+              role: "admin",
+            });
           } else {
             // Not a super admin and no access
             if (orgs && orgs.length > 0) {
@@ -80,7 +97,16 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
             return;
           }
         } else {
+          setOrgId(matchingOrg.organization_id);
+          setUserRole(matchingOrg.role as "admin" | "leader" | "viewer");
           setHasAccess(true);
+
+          // Set Amplitude context
+          setOrgContext({
+            orgId: matchingOrg.organization_id,
+            orgSlug,
+            role: matchingOrg.role as "admin" | "leader" | "viewer",
+          });
         }
       } catch (err) {
         console.error("Error validating org access:", err);
@@ -105,5 +131,14 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
     return null; // Will redirect
   }
 
-  return <>{children}</>;
+  return (
+    <AmplitudeProvider
+      orgSlug={orgSlug}
+      orgId={orgId}
+      adminUserId={userId}
+      isPublicSession={false}
+    >
+      {children}
+    </AmplitudeProvider>
+  );
 }

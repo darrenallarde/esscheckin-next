@@ -25,6 +25,7 @@ import {
   honeypotStyles,
 } from "@/lib/security";
 import * as Sentry from "@sentry/nextjs";
+import { useCheckInTracking } from "@/lib/amplitude/hooks";
 
 const newStudentSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
@@ -89,10 +90,49 @@ interface PublicNewStudentFormProps {
   checkinStyle?: string;
 }
 
+/**
+ * Parse database/RPC errors into user-friendly messages
+ */
+function parseRegistrationError(error: unknown): string {
+  const errorStr = error instanceof Error ? error.message : String(error);
+  const errorObj = error as { code?: string; message?: string; details?: string };
+
+  // Check for unique constraint violations
+  if (errorObj.code === '23505' || errorStr.includes('duplicate key') || errorStr.includes('already exists')) {
+    if (errorStr.includes('phone') || errorStr.includes('phone_number')) {
+      return 'This phone number is already registered. Try searching for your name instead.';
+    }
+    if (errorStr.includes('email')) {
+      return 'This email is already registered. Try searching for your name instead.';
+    }
+    return 'An account with this information already exists. Try searching for your name instead.';
+  }
+
+  // Check for validation errors
+  if (errorStr.includes('invalid') && errorStr.includes('email')) {
+    return 'Please enter a valid email address.';
+  }
+  if (errorStr.includes('invalid') && errorStr.includes('phone')) {
+    return 'Please enter a valid phone number.';
+  }
+
+  // Check for RPC-returned error messages
+  if (errorObj.message && !errorObj.message.includes('duplicate key')) {
+    return errorObj.message;
+  }
+
+  // Default
+  return 'Registration failed. Please check your information and try again.';
+}
+
 const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinStyle = 'gamified' }: PublicNewStudentFormProps) => {
   const isGamified = checkinStyle === 'gamified';
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Amplitude tracking
+  const tracking = useCheckInTracking();
 
   // Security: Honeypot and timing
   const [honeypot, setHoneypot] = useState('');
@@ -126,6 +166,9 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
   const isStudentLeader = form.watch("isStudentLeader");
 
   const onSubmit = async (data: NewStudentFormData) => {
+    // Clear any previous errors
+    setFormError(null);
+
     // Security validation
     const security = validateFormSubmission(
       honeypot,
@@ -176,6 +219,14 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       }
 
       if (result && result[0]?.success) {
+        // Track registration completed
+        tracking.trackRegistrationCompleted({
+          student_id: result[0].student_id,
+          student_grade: data.grade || '',
+          has_email: !!data.email,
+          has_parent_info: !!(data.fatherPhone || data.motherPhone),
+        });
+
         // Pass registration result back to parent for success screen
         onSuccess({
           student: {
@@ -191,13 +242,21 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           profilePin: result[0].profile_pin,
         });
       } else {
-        throw new Error(result?.[0]?.message || 'Registration failed');
+        // RPC returned success: false with a message
+        const errorMessage = result?.[0]?.message || 'Registration failed';
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Error creating student:", error);
+
+      // Parse and display the error prominently
+      const userFriendlyError = parseRegistrationError(error);
+      setFormError(userFriendlyError);
+
+      // Also show toast for visibility
       toast({
-        title: "Error",
-        description: "Failed to register. Please try again.",
+        title: "Registration Error",
+        description: userFriendlyError,
         variant: "destructive",
       });
     } finally {
@@ -572,6 +631,28 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             </div>
           )}
         </div>
+
+        {/* Error Display */}
+        {formError && (
+          <div className={isGamified
+            ? "p-4 bg-red-100 border-2 border-red-500 text-red-800 text-center"
+            : "p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-center"
+          }>
+            <p className={isGamified ? "jrpg-font text-sm" : "font-medium"}>
+              {formError}
+            </p>
+            <button
+              type="button"
+              onClick={() => setFormError(null)}
+              className={isGamified
+                ? "mt-2 text-xs text-red-600 underline"
+                : "mt-2 text-sm text-destructive/70 underline hover:text-destructive"
+              }
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="flex gap-4 pt-4">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Lock, Send, CheckCircle, Zap } from "lucide-react";
+import { useMarketingTracking } from "@/lib/amplitude/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,12 +25,26 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Amplitude tracking
+  const { trackLandingPageViewed, trackWaitlistFormSubmitted } = useMarketingTracking();
+
+  // Track page view on mount
+  useEffect(() => {
+    trackLandingPageViewed();
+  }, [trackLandingPageViewed]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log("Waitlist submission:", formData);
+
+    // Track waitlist submission
+    trackWaitlistFormSubmitted({
+      ministry_name: formData.ministry,
+      ministry_size: formData.size as "small" | "medium" | "large" | "mega",
+    });
 
     setIsSubmitting(false);
     setIsSubmitted(true);

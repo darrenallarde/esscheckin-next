@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PublicCheckInForm from "@/components/checkin/PublicCheckInForm";
@@ -8,6 +8,32 @@ import DeviceSetupModal from "@/components/checkin/DeviceSetupModal";
 import { getTheme, getThemeCSSVariables } from "@/lib/themes";
 import { PLATFORM_NAME } from "@/lib/copy";
 import { Loader2, Sprout, Tablet } from "lucide-react";
+import { AmplitudeProvider } from "@/lib/amplitude/context";
+import { setDeviceContext } from "@/lib/amplitude/user";
+import { useCheckInTracking } from "@/lib/amplitude/hooks";
+
+// Track page view on mount (must be inside AmplitudeProvider)
+function CheckInPageTracker({ checkinStyle, deviceId, deviceName }: {
+  checkinStyle: "gamified" | "standard";
+  deviceId?: string | null;
+  deviceName?: string | null;
+}) {
+  const tracking = useCheckInTracking();
+  const hasTracked = useRef(false);
+
+  useEffect(() => {
+    if (!hasTracked.current) {
+      hasTracked.current = true;
+      tracking.trackPageViewed({
+        checkin_style: checkinStyle,
+        device_id: deviceId || undefined,
+        device_name: deviceName || undefined,
+      });
+    }
+  }, [tracking, checkinStyle, deviceId, deviceName]);
+
+  return null;
+}
 
 const verses = [
   { text: "For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, plans to give you hope and a future.", reference: "Jeremiah 29:11" },
@@ -42,7 +68,7 @@ export default function OrgCheckInPage() {
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [showDeviceSetup, setShowDeviceSetup] = useState(false);
 
-  // Check for existing device on mount
+  // Check for existing device on mount and set Amplitude context
   useEffect(() => {
     const storedDeviceId = localStorage.getItem("deviceId");
     const storedDeviceName = localStorage.getItem("deviceName");
@@ -50,8 +76,15 @@ export default function OrgCheckInPage() {
     if (storedDeviceId && storedDeviceName) {
       setDeviceId(storedDeviceId);
       setDeviceName(storedDeviceName);
+
+      // Set Amplitude device context
+      setDeviceContext({
+        deviceId: storedDeviceId,
+        deviceName: storedDeviceName,
+        orgSlug,
+      });
     }
-  }, []);
+  }, [orgSlug]);
 
   // Fetch org info and generate stars on mount
   useEffect(() => {
@@ -104,6 +137,14 @@ export default function OrgCheckInPage() {
     setDeviceId(newDeviceId);
     setDeviceName(newDeviceName);
     setShowDeviceSetup(false);
+
+    // Set Amplitude device context
+    setDeviceContext({
+      deviceId: newDeviceId,
+      deviceName: newDeviceName,
+      orgSlug,
+      orgId: orgInfo?.id,
+    });
   };
 
   // Function to cycle to next verse (called after check-in)
@@ -134,6 +175,16 @@ export default function OrgCheckInPage() {
   // For gamified style, use the JRPG theme
   if (checkinStyle === "gamified") {
     return (
+      <AmplitudeProvider
+        orgSlug={orgInfo.slug}
+        orgId={orgInfo.id}
+        isPublicSession={true}
+      >
+      <CheckInPageTracker
+        checkinStyle="gamified"
+        deviceId={deviceId}
+        deviceName={deviceName}
+      />
       <div className="jrpg-background min-h-screen relative" style={themeStyles as React.CSSProperties}>
         {/* Device Setup Modal */}
         <DeviceSetupModal
@@ -207,11 +258,22 @@ export default function OrgCheckInPage() {
           </div>
         </div>
       </div>
+      </AmplitudeProvider>
     );
   }
 
   // Standard style - clean, minimal
   return (
+    <AmplitudeProvider
+      orgSlug={orgInfo.slug}
+      orgId={orgInfo.id}
+      isPublicSession={true}
+    >
+    <CheckInPageTracker
+      checkinStyle="standard"
+      deviceId={deviceId}
+      deviceName={deviceName}
+    />
     <div className="min-h-screen bg-gradient-background" style={themeStyles as React.CSSProperties}>
       {/* Device Setup Modal */}
       <DeviceSetupModal
@@ -272,5 +334,6 @@ export default function OrgCheckInPage() {
         </div>
       </div>
     </div>
+    </AmplitudeProvider>
   );
 }

@@ -18,6 +18,7 @@ import {
   honeypotStyles,
 } from "@/lib/security";
 import * as Sentry from "@sentry/nextjs";
+import { useCheckInTracking } from "@/lib/amplitude/hooks";
 
 const searchSchema = z.object({
   searchTerm: z.string().trim().min(2, "Enter at least 2 characters").max(50, "Entry is too long"),
@@ -57,6 +58,9 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
   const { toast } = useToast();
   const [viewState, setViewState] = useState<ViewState>({ type: 'search' });
   const [isSearching, setIsSearching] = useState(false);
+
+  // Amplitude tracking
+  const tracking = useCheckInTracking();
 
   // Security: Honeypot and timing
   const [honeypot, setHoneypot] = useState('');
@@ -109,6 +113,12 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
         throw error;
       }
 
+      // Track search event
+      tracking.trackStudentSearched({
+        search_term_length: cleanedSearch.length,
+        result_count: results?.length || 0,
+      });
+
       if (results && results.length > 0) {
         const students: Student[] = results.map((r: { student_id: string; first_name: string; last_name: string; user_type: string; grade: string | null; high_school: string | null }) => ({
           id: r.student_id,
@@ -125,6 +135,11 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
         }));
 
         if (students.length === 1) {
+          // Track student selected (single result auto-select)
+          tracking.trackStudentSelected({
+            student_id: students[0].id,
+            selection_method: 'single',
+          });
           setViewState({ type: 'confirm-student', student: students[0] });
         } else {
           setViewState({ type: 'select-student', students });
@@ -150,6 +165,9 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
   const confirmCheckIn = async (student: Student) => {
     setIsSearching(true);
     const supabase = createClient();
+
+    // Track confirmation
+    tracking.trackCheckInConfirmed({ student_id: student.id });
 
     try {
       // Use public RPC function with optional device tracking
@@ -189,6 +207,13 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
 
         const checkInId = result[0].check_in_id || 'temp-checkin-id';
         const profilePin = result[0].profile_pin;
+
+        // Track check-in completed
+        tracking.trackCheckInCompleted({
+          student_id: student.id,
+          is_duplicate: isAlreadyCheckedIn,
+          points_earned: result[0].points_earned || 0,
+        });
 
         setViewState({ type: 'success', student, checkInId, profilePin });
       } else {
@@ -269,7 +294,14 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
             {students.map((student) => (
               <button
                 key={student.id}
-                onClick={() => setViewState({ type: 'confirm-student', student })}
+                onClick={() => {
+                  // Track student selection from list
+                  tracking.trackStudentSelected({
+                    student_id: student.id,
+                    selection_method: 'from_list',
+                  });
+                  setViewState({ type: 'confirm-student', student });
+                }}
                 className="w-full p-4 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl hover:from-green-200 hover:to-emerald-200 transition-all text-left border-2 border-green-600/30"
               >
                 <div className="font-bold text-gray-800">
@@ -392,7 +424,11 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
             <div className="text-center pt-4">
               <button
                 type="button"
-                onClick={() => setViewState({ type: 'new-student' })}
+                onClick={() => {
+                  // Track registration started
+                  tracking.trackRegistrationStarted();
+                  setViewState({ type: 'new-student' });
+                }}
                 className="jrpg-font text-xs text-green-700 hover:text-green-900 underline"
               >
                 NEW STUDENT?
