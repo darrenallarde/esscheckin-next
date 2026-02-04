@@ -69,9 +69,30 @@ export const EVENTS = {
   MEETING_TIME_CHANGED: "Meeting Time Changed",
 
   // ============================================
+  // FAMILIES
+  // ============================================
+  FAMILIES_PAGE_VIEWED: "Families Page Viewed",
+  PARENT_SEARCHED: "Parent Searched",
+  PARENT_CARD_CLICKED: "Parent Card Clicked",
+  PARENT_CALLED: "Parent Called",
+  PARENT_TEXTED: "Parent Texted",
+  SIBLING_CLICKED: "Sibling Clicked",
+  FAMILY_SECTION_EXPANDED: "Family Section Expanded",
+
+  // ============================================
   // PASTORAL CARE & OUTREACH
   // ============================================
+  // Outbound SMS (admin sends)
   SMS_SENT: "SMS Sent",
+
+  // ============================================
+  // SMS & NPC ROUTER (Inbound via Edge Function)
+  // These events are logged by the Edge Function, not the frontend
+  // ============================================
+  SMS_RECEIVED: "SMS Received",
+  SMS_SESSION_STARTED: "SMS Session Started",
+  SMS_ORG_CONNECTED: "SMS Org Connected",
+  SMS_MESSAGE_ROUTED: "SMS Message Routed",
   NOTE_CREATED: "Note Created",
   RECOMMENDATION_VIEWED: "Recommendation Viewed",
   RECOMMENDATION_ACTIONED: "Recommendation Actioned",

@@ -109,18 +109,32 @@ Before adding ANY event, it must answer a real business question:
 
 User properties describe WHO the user is. They persist across sessions and update on change.
 
+**For Authenticated Admin Users:**
+
 | Property | Type | Description | When Set | Example |
 |----------|------|-------------|----------|---------|
+| `user_id` | UUID | Admin's actual user ID | On auth | `"uuid..."` |
+| `email` | String | Admin's email address | On auth | `"admin@church.org"` |
+| `display_name` | String | Admin's display name | On auth | `"John Smith"` |
 | `organization_id` | UUID | Current org | On auth, on org switch | `"uuid..."` |
 | `organization_slug` | String | Human-readable org ID | On auth, on org switch | `"ess-ministry"` |
 | `role` | String | User's role in org | On auth | `"admin"`, `"leader"`, `"viewer"` |
-| `is_public_session` | Boolean | Unauthenticated check-in | On page load | `true` |
+| `is_super_admin` | Boolean | Platform super admin flag | On auth | `false` |
+| `org_count` | Number | How many orgs user belongs to | On auth | `2` |
+| `is_public_session` | Boolean | Always `false` for admins | On auth | `false` |
+| `first_seen_at` | ISO Date | When user first appeared | On first event (auto) | `"2026-01-15"` |
+
+**For Public Check-in Devices:**
+
+| Property | Type | Description | When Set | Example |
+|----------|------|-------------|----------|---------|
 | `device_id` | UUID | Check-in device ID | On device setup | `"uuid..."` |
 | `device_name` | String | Human-readable device | On device setup | `"Front Door iPad"` |
-| `first_seen_at` | ISO Date | When user first appeared | On first event (auto) | `"2026-01-15"` |
-| `org_created_at` | ISO Date | When org was created | On org creation | `"2026-01-01"` |
+| `is_public_session` | Boolean | Always `true` for devices | On device setup | `true` |
+| `organization_slug` | String | Org the device belongs to | On device setup | `"ess-ministry"` |
 
 **Future User Properties (when features ship):**
+
 | Property | Description |
 |----------|-------------|
 | `campus_id` | For multi-campus orgs |
@@ -173,7 +187,7 @@ The core student check-in journey. Most events here.
 | `Student Searched` | User submitted a search | `search_term_length` | `result_count` |
 | `Student Selected` | User selected from results | `student_id`, `selection_method` | |
 | `Check In Confirmed` | User confirmed identity | `student_id` | |
-| `Check In Completed` | Check-in successful | `student_id`, `is_duplicate` | `points_earned` |
+| `Check In Completed` | Check-in successful | `student_id`, `is_duplicate` | `points_earned`, `student_grade` |
 | `Registration Started` | Clicked "New Student" | `org_slug` | |
 | `Registration Completed` | New student created + checked in | `student_id`, `student_grade` | `has_email`, `has_parent_info` |
 | `Registration Abandoned` | Went back without completing | | `last_section_completed` |
@@ -233,13 +247,52 @@ Group management and viewing.
 
 **`method` values**: `"manual"`, `"bulk"`, `"import"`
 
-### 4.5 Pastoral Care & Outreach
+### 4.5 Families
+
+Parent/guardian management and sibling detection.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Families Page Viewed` | Admin opened Families page | `org_slug` | `parent_count` |
+| `Parent Searched` | Admin searched for parent | | `search_term_length`, `result_count` |
+| `Parent Card Clicked` | Admin clicked parent card | `parent_type` | `children_count` |
+| `Parent Called` | Admin clicked call button | `parent_type` | |
+| `Parent Texted` | Admin clicked text button | `parent_type` | |
+| `Sibling Clicked` | Admin clicked sibling in profile | `sibling_id` | |
+| `Family Section Expanded` | Admin viewed family tab | | `has_siblings`, `parent_count` |
+
+**`parent_type` values**: `"mother"`, `"father"`, `"guardian"`
+
+### 4.6 Pastoral Care & Outreach
 
 SMS, notes, recommendations - the core pastoral workflow.
+
+#### Outbound SMS (Admin Dashboard)
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
 | `SMS Sent` | Admin sent text message | `student_id` | `template_used`, `automated` |
+
+#### Inbound SMS & NPC Router (Edge Function)
+
+These events are logged by the Supabase Edge Function, not the frontend. They appear as structured `SMS_EVENT` logs in Supabase Edge Function logs.
+
+| Event | Description | Properties |
+|-------|-------------|------------|
+| `SMS Received` | Every inbound SMS received | `phone_last4`, `body_length` |
+| `SMS Session Started` | New SMS session created | `org_id`, `group_id`, `status`, `phone_last4` |
+| `SMS Org Connected` | User texted valid org code | `org_id`, `org_name`, `phone_last4` |
+| `SMS Message Routed` | Message stored with routing context | `org_id`, `group_id`, `is_lobby`, `has_student`, `direction` |
+
+**Implementation:** These are console.log statements in the Edge Function with format:
+```
+console.log("SMS_EVENT", JSON.stringify({ event: "...", ... }));
+```
+
+#### Other Pastoral Events
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
 | `Note Created` | Admin added student note | `student_id` | `note_type` |
 | `Recommendation Viewed` | Admin viewed AI suggestion | `student_id`, `recommendation_type` | |
 | `Recommendation Actioned` | Admin took action on recommendation | `student_id`, `action_type` | |
@@ -257,7 +310,7 @@ SMS, notes, recommendations - the core pastoral workflow.
 | `Auto Message Sent` | Automated outreach feature |
 | `Call Logged` | Phone call tracking |
 
-### 4.6 Admin Tools (Org Tools)
+### 4.7 Admin Tools (Org Tools)
 
 Import, merge, attendance cleanup, devices.
 
@@ -274,7 +327,7 @@ Import, merge, attendance cleanup, devices.
 | `Device Created` | Named a new device | `device_name` | |
 | `Device Renamed` | Changed device name | `device_id`, `device_name` | |
 
-### 4.7 Organization & Settings
+### 4.8 Organization & Settings
 
 Org configuration, team management.
 
@@ -289,7 +342,7 @@ Org configuration, team management.
 
 **`section` values**: `"account"`, `"team"`, `"organization"`, `"org_tools"`
 
-### 4.8 Organization Lifecycle (First-Time Events)
+### 4.9 Organization Lifecycle (First-Time Events)
 
 Special events for tracking org onboarding. These fire ONCE per org.
 
@@ -301,7 +354,7 @@ Special events for tracking org onboarding. These fire ONCE per org.
 | `First SMS Sent` | Org's first outreach | `org_slug` |
 | `First Group Created` | Org's first group | `org_slug` |
 
-### 4.9 Analytics Interactions
+### 4.10 Analytics Interactions
 
 How admins interact with analytics features.
 
@@ -367,7 +420,7 @@ These properties MUST be included on every single event we fire. No exceptions.
 - `org_slug` + `org_id`: Multi-org SaaS - MUST know which org. Event property (not just user property) because user properties can change.
 - `app_version`: Debug issues tied to specific releases. "Did this bug start in v1.2.3?"
 - `page_path`: Context for where the event fired. Autocapture doesn't add this to custom events.
-- `admin_user_id`: Hybrid identity - Org ID is Amplitude user, but preserve ability to analyze individual admin behavior.
+- `admin_user_id`: Preserved for backward compatibility - User ID is now the Amplitude user ID, but this property allows filtering in existing reports.
 
 **Implementation:**
 ```typescript
@@ -471,18 +524,28 @@ Don't manually track these - Amplitude handles them:
 
 ## 6. What NOT to Track
 
-### 6.1 PII (Never Track)
+### 6.1 Student PII (Never Track)
 
-| ❌ Never Track | ✅ Track Instead |
-|----------------|------------------|
+**Important Distinction:** The PII restrictions below apply to **STUDENT** data (minors). Admin users are consenting platform users who agreed to Terms of Service, so tracking their email/name is standard SaaS practice.
+
+| ❌ Never Track (Students) | ✅ Track Instead |
+|---------------------------|------------------|
 | `student_name` | `student_id` |
 | `search_term` | `search_term_length` |
-| `phone_number` | (nothing) |
-| `email` | `has_email: true` |
+| `student_phone_number` | (nothing) |
+| `student_email` | `has_email: true` |
 | `parent_name` | `has_parent_info: true` |
 | `address` | (nothing) |
 | `notes_content` | `note_type` |
 | `sms_content` | `template_used` |
+
+**Admin User Properties (Allowed):**
+
+| ✅ Tracked for Admins | Purpose |
+|----------------------|---------|
+| `email` | User lookup in Amplitude, cohort building |
+| `display_name` | Identify users in session replay |
+| `user_id` | Per-admin behavior analysis |
 
 ### 6.2 Low-Value Events (Don't Track)
 
@@ -797,6 +860,15 @@ export const EVENTS = {
   MEMBER_ADDED: 'Member Added',
   MEMBER_REMOVED: 'Member Removed',
 
+  // Families
+  FAMILIES_PAGE_VIEWED: 'Families Page Viewed',
+  PARENT_SEARCHED: 'Parent Searched',
+  PARENT_CARD_CLICKED: 'Parent Card Clicked',
+  PARENT_CALLED: 'Parent Called',
+  PARENT_TEXTED: 'Parent Texted',
+  SIBLING_CLICKED: 'Sibling Clicked',
+  FAMILY_SECTION_EXPANDED: 'Family Section Expanded',
+
   // Pastoral
   SMS_SENT: 'SMS Sent',
   NOTE_CREATED: 'Note Created',
@@ -894,8 +966,8 @@ export function setDeviceContext(deviceId: string, deviceName: string) {
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | **Public check-in identity** | Device as Amplitude user | `device_id` becomes the user ID. All check-ins from "Front Door iPad" grouped. `student_id` is event property. |
-| **Authenticated identity** | Org ID as Amplitude user | Org-level analytics by default. |
-| **Individual admin analysis** | Hybrid approach | `admin_user_id` as event property allows drilling into individual admin behavior when needed. |
+| **Authenticated identity** | User ID as Amplitude user | User-level identity allows per-admin analysis, proper session replay identification, and "who did what" analysis. Org context is captured in user properties and event properties. |
+| **Individual admin analysis** | Native support | With user-level identity, Amplitude natively tracks individual admin behavior. `admin_user_id` event property preserved for backward compatibility. |
 | **Standard properties** | 5 required on every event | `org_slug`, `org_id`, `app_version`, `page_path`, `admin_user_id` |
 | **Staging vs Production** | Separate Amplitude projects | Different API keys for complete data isolation. No filtering needed. |
 | **Registration tracking** | Start + Complete only | Clean funnel. No per-field tracking. |
@@ -1054,5 +1126,5 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 
 ---
 
-*Last Updated: January 29, 2026*
+*Last Updated: February 3, 2026*
 *Maintainer: Engineering Team*

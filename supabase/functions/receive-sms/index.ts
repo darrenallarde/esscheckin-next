@@ -85,6 +85,14 @@ serve(async (req) => {
 
     console.log("Received SMS:", { from, to, bodyPreview: body?.substring(0, 50), messageSid, interimMode: INTERIM_MODE });
 
+    // Structured analytics log for SMS_RECEIVED
+    console.log("SMS_EVENT", JSON.stringify({
+      event: "SMS_RECEIVED",
+      phone_last4: from ? from.slice(-4) : null,
+      body_length: body?.length || 0,
+      timestamp: new Date().toISOString(),
+    }));
+
     if (!from || !body) {
       console.error("Missing required fields from Twilio webhook");
       return twimlResponse(null);
@@ -242,19 +250,30 @@ serve(async (req) => {
     const codeResult = await tryParseCode(supabase, body);
 
     if (codeResult.type === "org") {
-      const orgGroups = await listOrgGroups(supabase, codeResult.orgId!);
+      // Org-level routing: Connect directly to org inbox (no group selection)
+      // Group-level routing is opt-in (user texts group code specifically)
+      console.log("SMS_EVENT", JSON.stringify({
+        event: "SMS_ORG_CONNECTED",
+        org_id: codeResult.orgId,
+        org_name: codeResult.orgName,
+        phone_last4: phoneMatch(from).slice(-4),
+        timestamp: new Date().toISOString(),
+      }));
 
-      if (orgGroups.length === 0) {
-        await addToWaitingRoom(supabase, from, codeResult.orgId!, body);
-        return twimlResponse(NPC_RESPONSES.waitingRoom(codeResult.orgName!));
-      } else if (orgGroups.length === 1) {
-        await createSession(supabase, from, codeResult.orgId!, orgGroups[0].group_id, "active");
-        await addToWaitingRoom(supabase, from, codeResult.orgId!, body);
-        return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!));
-      } else {
-        await createSession(supabase, from, codeResult.orgId!, null, "pending_group");
-        return twimlResponse(NPC_RESPONSES.connectedWithGroups(codeResult.orgName!, orgGroups));
-      }
+      await createSession(supabase, from, codeResult.orgId!, null, "active");
+      await addToWaitingRoom(supabase, from, codeResult.orgId!, body);
+      await storeMessage(supabase, {
+        from,
+        to,
+        body,
+        messageSid,
+        studentId: null,
+        organizationId: codeResult.orgId!,
+        groupId: null, // Org-level, not group-level
+        direction: "inbound",
+        isLobbyMessage: false,
+      });
+      return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!));
     }
 
     // STEP 6: Unknown contact - welcome message
@@ -355,6 +374,16 @@ async function createSession(
 
   if (error) {
     console.error("Error creating session:", error);
+  } else {
+    // Analytics log for session creation
+    console.log("SMS_EVENT", JSON.stringify({
+      event: "SMS_SESSION_STARTED",
+      org_id: orgId,
+      group_id: groupId,
+      status,
+      phone_last4: phone.slice(-4),
+      timestamp: new Date().toISOString(),
+    }));
   }
 }
 
@@ -473,15 +502,9 @@ async function handleSwitch(
   const result = await tryParseCode(supabase, code);
 
   if (result.type === "org") {
-    await createSession(supabase, phone, result.orgId!, null, "pending_group");
-    const groups = await listOrgGroups(supabase, result.orgId!);
-    if (groups.length <= 1) {
-      if (groups.length === 1) {
-        await updateSessionGroup(supabase, (await getActiveSession(supabase, phone))!.session_id, groups[0].group_id);
-      }
-      return { message: NPC_RESPONSES.switched(result.orgName!) };
-    }
-    return { message: NPC_RESPONSES.connectedWithGroups(result.orgName!, groups) };
+    // Org-level routing: Switch to org directly (no group selection)
+    await createSession(supabase, phone, result.orgId!, null, "active");
+    return { message: NPC_RESPONSES.switched(result.orgName!) };
   }
 
   return { message: NPC_RESPONSES.unknownCode };
@@ -566,6 +589,17 @@ async function storeMessage(
 
   if (error) {
     console.error("Error storing message:", error);
+  } else {
+    // Analytics log for message routing
+    console.log("SMS_EVENT", JSON.stringify({
+      event: "SMS_MESSAGE_ROUTED",
+      org_id: msg.organizationId,
+      group_id: msg.groupId,
+      is_lobby: msg.isLobbyMessage,
+      has_student: !!msg.studentId,
+      direction: msg.direction,
+      timestamp: new Date().toISOString(),
+    }));
   }
 }
 

@@ -18,17 +18,46 @@ flowchart TD
     B --> C[Edge Function]
     C --> D{Known Phone?}
     D -->|Yes| E{Active Session?}
-    D -->|No| F[UNKNOWN NPC]
-    E -->|Yes| G[Route to Group]
+    D -->|No| F[Check for Org Code]
+    E -->|Yes| G[Route to Org/Group]
     E -->|No| H[Check Recent Convo]
     H -->|Found| I[Auto-route]
-    H -->|None| J[ROUTER NPC Menu]
-    F --> K[Ask for Org Code]
-    J --> L[Present Group Menu]
-    L --> M[User Selects]
-    M --> N[Create Session]
+    H -->|None| J[Check for Org Code]
+    F -->|Valid Code| K[Connect to Org]
+    F -->|No Code| L[UNKNOWN NPC - Welcome]
+    J -->|Valid Code| K
+    J -->|No Code| L
+    K --> M[Create Active Session]
+    M --> N[Store Message]
     G --> O[Deliver to Leaders]
 ```
+
+## Routing Levels
+
+### Org-Level Routing (Default)
+
+When someone texts an **org code** (e.g., "ECHO"), they connect directly to the org inbox:
+
+```
+User: "ECHO"
+System: "Connected to Echo! A leader will text you back soon. 🙌"
+```
+
+- Message stored with `group_id = NULL`
+- Any org leader can see and respond
+- Simplest path for new contacts
+
+### Group-Level Routing (Future)
+
+Group codes can be added later for direct group routing:
+
+```
+User: "MSBOYS"
+System: "Connected to MS Boys! A leader will text you back soon. 🙌"
+```
+
+- Message stored with specific `group_id`
+- Only that group's leaders see the message
 
 ## Key Components
 
@@ -186,9 +215,23 @@ Required:
 - Environment variables configured
 - Webhook URL set in Twilio
 
+## Analytics Events
+
+SMS events are logged by the Edge Function with structured `SMS_EVENT` console logs:
+
+| Event | When | Key Properties |
+|-------|------|----------------|
+| `SMS_RECEIVED` | Every inbound SMS | `phone_last4`, `body_length` |
+| `SMS_SESSION_STARTED` | New session created | `org_id`, `group_id`, `status` |
+| `SMS_ORG_CONNECTED` | Student texts valid org code | `org_id`, `org_name` |
+| `SMS_MESSAGE_ROUTED` | Message stored with routing | `org_id`, `group_id`, `is_lobby` |
+
+These can be extracted from Supabase Edge Function logs for analytics.
+
 ## Known Issues / Future Plans
 
-- [ ] Complete NPC router edge function
+- [x] Complete NPC router edge function (org-level routing)
+- [ ] Group-level routing (text group code directly)
 - [ ] Group broadcast messaging
 - [ ] Message templates
 - [ ] Scheduled messages
