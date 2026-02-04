@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, ChevronDown, UserPlus, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,14 +14,57 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { AdminOrganization } from "@/hooks/queries/use-admin";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { AdminOrganization, useSuperAdminJoinOrg } from "@/hooks/queries/use-admin";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrganizationTableProps {
   data: AdminOrganization[];
   loading?: boolean;
 }
 
+const ROLE_OPTIONS = [
+  { value: "owner", label: "Owner" },
+  { value: "admin", label: "Admin" },
+  { value: "leader", label: "Leader" },
+  { value: "viewer", label: "Viewer" },
+] as const;
+
 export function OrganizationTable({ data, loading }: OrganizationTableProps) {
+  const { toast } = useToast();
+  const joinOrg = useSuperAdminJoinOrg();
+  const [joiningOrgId, setJoiningOrgId] = useState<string | null>(null);
+
+  const handleJoinOrg = async (orgId: string, orgName: string, role: string) => {
+    setJoiningOrgId(orgId);
+    try {
+      const result = await joinOrg.mutateAsync({ orgId, role });
+      toast({
+        title: "Joined organization",
+        description: `You joined ${orgName} as ${role}. Use the org switcher to access it.`,
+      });
+      // Could optionally navigate to the org here
+      // router.push(`/${result.organization_slug}/dashboard`);
+    } catch (error) {
+      console.error("Failed to join organization:", error);
+      toast({
+        title: "Failed to join",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setJoiningOrgId(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -82,7 +126,7 @@ export function OrganizationTable({ data, loading }: OrganizationTableProps) {
               <TableHead className="text-center">People</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -104,12 +148,46 @@ export function OrganizationTable({ data, loading }: OrganizationTableProps) {
                   {formatDate(org.created_at)}
                 </TableCell>
                 <TableCell>
-                  <Link
-                    href={`/admin/organizations/${org.id}`}
-                    className="p-2 rounded-md hover:bg-accent transition-colors inline-flex"
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          disabled={joiningOrgId === org.id}
+                        >
+                          {joiningOrgId === org.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              <span className="sr-only sm:not-sr-only sm:inline">Join</span>
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Join as...</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {ROLE_OPTIONS.map((role) => (
+                          <DropdownMenuItem
+                            key={role.value}
+                            onClick={() => handleJoinOrg(org.id, org.name, role.value)}
+                          >
+                            {role.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Link
+                      href={`/admin/organizations/${org.id}`}
+                      className="p-2 rounded-md hover:bg-accent transition-colors inline-flex"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

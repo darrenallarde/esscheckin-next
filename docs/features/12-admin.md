@@ -64,6 +64,7 @@ Table showing all organizations:
 | Created | Creation date |
 
 **Actions:**
+- **Join as...** → Dropdown to join org as Owner, Admin, Leader, or Viewer
 - Click row → Jump to org dashboard
 - Edit org details
 - Suspend/activate org
@@ -113,6 +114,7 @@ const { data } = await supabase.rpc('create_organization', {
 | `is_super_admin(user_id)` | Check admin status |
 | `get_all_organizations()` | List all orgs with stats |
 | `create_organization(...)` | Create new org |
+| `super_admin_join_organization(org_id, role)` | Join any org with specified role |
 
 ## Security
 
@@ -156,6 +158,34 @@ const { data: orgs } = useAllOrganizations();
 
 // Create organization
 const { mutate: createOrg } = useCreateOrganization();
+
+// Join any organization
+const joinOrg = useSuperAdminJoinOrg();
+```
+
+## Join Any Organization
+
+Super admins can join any organization with a role of their choosing:
+
+1. In the Organizations table, click "Join" dropdown on a row
+2. Select role: Owner, Admin, Leader, or Viewer
+3. Toast confirms successful join
+4. Organization appears in the org switcher
+5. Access the org via the dropdown or directly at `/{org-slug}/dashboard`
+
+**Use cases:**
+- Support and debugging customer issues
+- Testing org-specific features
+- Managing organizations during onboarding
+
+```typescript
+// Using the hook
+const joinOrg = useSuperAdminJoinOrg();
+
+await joinOrg.mutateAsync({
+  orgId: 'org-uuid',
+  role: 'admin'
+});
 ```
 
 ## Jump to Organization

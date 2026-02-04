@@ -135,3 +135,36 @@ export function usePlatformStats() {
     queryFn: fetchPlatformStats,
   });
 }
+
+// Super admin join organization mutation
+export interface JoinOrgResult {
+  success: boolean;
+  message: string;
+  profile_id: string | null;
+  organization_slug: string | null;
+}
+
+export function useSuperAdminJoinOrg() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orgId, role }: { orgId: string; role: string }) => {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("super_admin_join_organization", {
+        p_org_id: orgId,
+        p_role: role,
+      });
+      if (error) throw error;
+      // RPC returns an array with one result
+      const result = (data as JoinOrgResult[])?.[0];
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to join organization");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
+    },
+  });
+}

@@ -539,6 +539,7 @@ USING (organization_id IN (SELECT auth_user_org_ids(auth.uid())));
 | `get_all_organizations()` | Super admin: all orgs |
 | `create_organization(...)` | Super admin: create org |
 | `is_super_admin(user_id)` | Check admin status |
+| `super_admin_join_organization(org_id, role)` | Super admin: join any org with specified role |
 
 ### Group Functions
 
