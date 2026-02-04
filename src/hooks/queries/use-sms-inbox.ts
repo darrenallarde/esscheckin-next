@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/client";
 
 export interface SmsConversation {
   phoneNumber: string;
-  studentId: string | null;
+  profileId: string | null; // New: unified profile ID
+  studentId: string | null; // Kept for backward compatibility
   studentName: string | null;
   lastMessage: string;
   lastMessageAt: string;
@@ -14,6 +15,7 @@ export interface SmsConversation {
 
 interface RpcConversationRow {
   phone_number: string;
+  profile_id: string | null;
   student_id: string | null;
   student_name: string | null;
   last_message: string;
@@ -26,15 +28,34 @@ interface RpcConversationRow {
 async function fetchSmsConversations(orgId: string): Promise<SmsConversation[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.rpc("get_sms_conversations", {
+  // Use the new v2 function that includes profile_id
+  const { data, error } = await supabase.rpc("get_sms_conversations_v2", {
     p_org_id: orgId,
   });
 
-  if (error) throw error;
+  if (error) {
+    // Fallback to old function if v2 doesn't exist
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc("get_sms_conversations", {
+      p_org_id: orgId,
+    });
+    if (fallbackError) throw fallbackError;
+    return (fallbackData as RpcConversationRow[] || []).map((row) => ({
+      phoneNumber: row.phone_number,
+      profileId: row.student_id, // Use student_id as profile_id for old data
+      studentId: row.student_id,
+      studentName: row.student_name,
+      lastMessage: row.last_message,
+      lastMessageAt: row.last_message_at,
+      lastMessageDirection: row.last_message_direction as "inbound" | "outbound",
+      unreadCount: Number(row.unread_count),
+      totalMessageCount: Number(row.total_message_count),
+    }));
+  }
 
   return (data as RpcConversationRow[] || []).map((row) => ({
     phoneNumber: row.phone_number,
-    studentId: row.student_id,
+    profileId: row.profile_id,
+    studentId: row.student_id, // Backward compat
     studentName: row.student_name,
     lastMessage: row.last_message,
     lastMessageAt: row.last_message_at,

@@ -57,17 +57,9 @@ async function fetchTodayCheckIns(organizationId: string): Promise<TodayCheckIn[
     .from("check_ins")
     .select(`
       id,
+      profile_id,
       student_id,
-      checked_in_at,
-      students(
-        id,
-        first_name,
-        last_name,
-        grade,
-        group_members(
-          groups(id, name, color)
-        )
-      )
+      checked_in_at
     `)
     .eq("organization_id", organizationId)
     .gte("checked_in_at", startOfDay(today).toISOString())
@@ -76,19 +68,97 @@ async function fetchTodayCheckIns(organizationId: string): Promise<TodayCheckIn[
 
   if (error) throw error;
 
-  return (data || []).map((ci) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const student = ci.students as any;
-    const groups = student?.group_members?.map((gm: { groups: { id: string; name: string; color: string | null } }) => gm.groups?.name).filter(Boolean) || [];
+  if (!data || data.length === 0) return [];
+
+  // Get unique profile/student IDs
+  const profileIds = Array.from(new Set(data.map(ci => ci.profile_id).filter(Boolean))) as string[];
+  const studentIds = Array.from(new Set(data.map(ci => ci.student_id).filter(Boolean))) as string[];
+
+  // Fetch from profiles first
+  const profilesMap = new Map<string, { first_name: string; last_name: string }>();
+  if (profileIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .in("id", profileIds);
+    if (profiles) {
+      profiles.forEach(p => profilesMap.set(p.id, p));
+    }
+  }
+
+  // Fetch student_profiles for grade
+  const studentProfilesMap = new Map<string, { grade: string | null }>();
+  if (profileIds.length > 0) {
+    const { data: studentProfiles } = await supabase
+      .from("student_profiles")
+      .select("profile_id, grade")
+      .in("profile_id", profileIds);
+    if (studentProfiles) {
+      studentProfiles.forEach(sp => studentProfilesMap.set(sp.profile_id, { grade: sp.grade }));
+    }
+  }
+
+  // Fetch group memberships
+  const groupsMap = new Map<string, string[]>();
+  if (profileIds.length > 0) {
+    const { data: memberships } = await supabase
+      .from("group_memberships")
+      .select("profile_id, groups(name)")
+      .in("profile_id", profileIds);
+    if (memberships) {
+      memberships.forEach(m => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groupName = (m.groups as any)?.name;
+        if (groupName) {
+          const existing = groupsMap.get(m.profile_id) || [];
+          existing.push(groupName);
+          groupsMap.set(m.profile_id, existing);
+        }
+      });
+    }
+  }
+
+  // Fallback: fetch from students table for any missing
+  const missingStudentIds = studentIds.filter(id => !profilesMap.has(id));
+  const studentsMap = new Map<string, { id: string; first_name: string; last_name: string; grade: string | null }>();
+  if (missingStudentIds.length > 0) {
+    const { data: students } = await supabase
+      .from("students")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        grade,
+        group_members(groups(name))
+      `)
+      .in("id", missingStudentIds);
+    if (students) {
+      students.forEach(s => {
+        studentsMap.set(s.id, { id: s.id, first_name: s.first_name, last_name: s.last_name, grade: s.grade });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groups = (s.group_members as any[])?.map(gm => gm.groups?.name).filter(Boolean) || [];
+        if (groups.length > 0) {
+          groupsMap.set(s.id, groups);
+        }
+      });
+    }
+  }
+
+  return data.map((ci) => {
+    const id = ci.profile_id || ci.student_id;
+    const profile = id ? profilesMap.get(id) : null;
+    const studentProfile = id ? studentProfilesMap.get(id) : null;
+    const student = id ? studentsMap.get(id) : null;
+    const personData = profile || student;
 
     return {
       id: ci.id,
-      student_id: ci.student_id,
+      student_id: id || ci.student_id,
       checked_in_at: ci.checked_in_at,
-      first_name: student?.first_name || "",
-      last_name: student?.last_name || "",
-      grade: student?.grade || null,
-      groups,
+      first_name: personData?.first_name || "",
+      last_name: personData?.last_name || "",
+      grade: studentProfile?.grade || student?.grade || null,
+      groups: id ? groupsMap.get(id) || [] : [],
     };
   });
 }
@@ -211,94 +281,178 @@ async function fetchStudentAttendanceList(
 ): Promise<StudentAttendanceListItem[]> {
   const supabase = createClient();
 
-  // First get students with their groups
-  let query = supabase
-    .from("students")
+  // Try profiles via organization_memberships first
+  const { data: memberships } = await supabase
+    .from("organization_memberships")
     .select(`
-      id,
-      first_name,
-      last_name,
-      grade,
-      group_members(
-        groups(id, name, color)
-      )
+      profile_id,
+      profiles(id, first_name, last_name),
+      student_profiles(grade)
     `)
     .eq("organization_id", organizationId)
-    .order("last_name");
+    .eq("role", "student")
+    .eq("status", "active");
+
+  let profileData: StudentAttendanceListItem[] = [];
+
+  if (memberships && memberships.length > 0) {
+    const profileIds = memberships.map((m) => m.profile_id);
+
+    // Get group memberships for profiles
+    const { data: groupMemberships } = await supabase
+      .from("group_memberships")
+      .select("profile_id, groups(id, name, color)")
+      .in("profile_id", profileIds);
+
+    const groupsMap = new Map<string, Array<{ id: string; name: string; color: string | null }>>();
+    (groupMemberships || []).forEach((gm) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const group = gm.groups as any;
+      if (group) {
+        const existing = groupsMap.get(gm.profile_id) || [];
+        existing.push(group);
+        groupsMap.set(gm.profile_id, existing);
+      }
+    });
+
+    // Get check-in counts (check both profile_id and student_id)
+    const { data: checkInData } = await supabase
+      .from("check_ins")
+      .select("profile_id, student_id, checked_in_at")
+      .eq("organization_id", organizationId)
+      .or(`profile_id.in.(${profileIds.join(",")}),student_id.in.(${profileIds.join(",")})`)
+      .order("checked_in_at", { ascending: false });
+
+    const checkInMap = new Map<string, { count: number; last: string | null }>();
+    profileIds.forEach((id) => checkInMap.set(id, { count: 0, last: null }));
+
+    (checkInData || []).forEach((ci) => {
+      const id = ci.profile_id || ci.student_id;
+      if (id) {
+        const existing = checkInMap.get(id);
+        if (existing) {
+          existing.count++;
+          if (!existing.last) {
+            existing.last = ci.checked_in_at;
+          }
+        }
+      }
+    });
+
+    const today = new Date();
+
+    profileData = memberships.map((m) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profile = m.profiles as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const studentProfile = m.student_profiles as any;
+      const checkInInfo = checkInMap.get(m.profile_id) || { count: 0, last: null };
+      const daysSince = checkInInfo.last
+        ? differenceInDays(today, parseISO(checkInInfo.last))
+        : null;
+
+      return {
+        id: m.profile_id,
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
+        grade: studentProfile?.grade || null,
+        groups: groupsMap.get(m.profile_id) || [],
+        total_check_ins: checkInInfo.count,
+        last_check_in: checkInInfo.last,
+        days_since_last_check_in: daysSince,
+      };
+    });
+  } else {
+    // Fallback to students table
+    const { data: students, error: studentsError } = await supabase
+      .from("students")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        grade,
+        group_members(
+          groups(id, name, color)
+        )
+      `)
+      .eq("organization_id", organizationId)
+      .order("last_name");
+    if (studentsError) throw studentsError;
+
+    if (!students || students.length === 0) {
+      return [];
+    }
+
+    const studentIds = students.map((s) => s.id);
+
+    const { data: checkInData, error: checkInError } = await supabase
+      .from("check_ins")
+      .select("student_id, checked_in_at")
+      .in("student_id", studentIds)
+      .eq("organization_id", organizationId)
+      .order("checked_in_at", { ascending: false });
+
+    if (checkInError) throw checkInError;
+
+    const checkInMap = new Map<string, { count: number; last: string | null }>();
+    studentIds.forEach((id) => checkInMap.set(id, { count: 0, last: null }));
+
+    (checkInData || []).forEach((ci) => {
+      const existing = checkInMap.get(ci.student_id);
+      if (existing) {
+        existing.count++;
+        if (!existing.last) {
+          existing.last = ci.checked_in_at;
+        }
+      }
+    });
+
+    const today = new Date();
+
+    profileData = students.map((student) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const groups = (student.group_members as any[])
+        ?.map((gm) => gm.groups)
+        .filter(Boolean) || [];
+
+      const checkInInfo = checkInMap.get(student.id) || { count: 0, last: null };
+      const daysSince = checkInInfo.last
+        ? differenceInDays(today, parseISO(checkInInfo.last))
+        : null;
+
+      return {
+        id: student.id,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        grade: student.grade,
+        groups,
+        total_check_ins: checkInInfo.count,
+        last_check_in: checkInInfo.last,
+        days_since_last_check_in: daysSince,
+      };
+    });
+  }
 
   // Apply search filter
   if (searchQuery) {
-    query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`);
-  }
-
-  const { data: students, error: studentsError } = await query;
-  if (studentsError) throw studentsError;
-
-  if (!students || students.length === 0) {
-    return [];
-  }
-
-  // Get student IDs
-  const studentIds = students.map((s) => s.id);
-
-  // Get check-in counts and last check-in for each student
-  const { data: checkInData, error: checkInError } = await supabase
-    .from("check_ins")
-    .select("student_id, checked_in_at")
-    .in("student_id", studentIds)
-    .eq("organization_id", organizationId)
-    .order("checked_in_at", { ascending: false });
-
-  if (checkInError) throw checkInError;
-
-  // Aggregate check-in data
-  const checkInMap = new Map<string, { count: number; last: string | null }>();
-  studentIds.forEach((id) => checkInMap.set(id, { count: 0, last: null }));
-
-  (checkInData || []).forEach((ci) => {
-    const existing = checkInMap.get(ci.student_id);
-    if (existing) {
-      existing.count++;
-      if (!existing.last) {
-        existing.last = ci.checked_in_at;
-      }
-    }
-  });
-
-  const today = new Date();
-
-  // Map to result format
-  let results: StudentAttendanceListItem[] = students.map((student) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const groups = (student.group_members as any[])
-      ?.map((gm) => gm.groups)
-      .filter(Boolean) || [];
-
-    const checkInInfo = checkInMap.get(student.id) || { count: 0, last: null };
-    const daysSince = checkInInfo.last
-      ? differenceInDays(today, parseISO(checkInInfo.last))
-      : null;
-
-    return {
-      id: student.id,
-      first_name: student.first_name,
-      last_name: student.last_name,
-      grade: student.grade,
-      groups,
-      total_check_ins: checkInInfo.count,
-      last_check_in: checkInInfo.last,
-      days_since_last_check_in: daysSince,
-    };
-  });
-
-  // Apply group filter
-  if (groupFilter) {
-    results = results.filter((student) =>
-      student.groups.some((g) => g.id === groupFilter)
+    const lowerSearch = searchQuery.toLowerCase();
+    profileData = profileData.filter((p) =>
+      p.first_name.toLowerCase().includes(lowerSearch) ||
+      p.last_name.toLowerCase().includes(lowerSearch)
     );
   }
 
-  return results;
+  // Apply group filter
+  if (groupFilter) {
+    profileData = profileData.filter((p) =>
+      p.groups.some((g) => g.id === groupFilter)
+    );
+  }
+
+  // Sort by last name
+  profileData.sort((a, b) => a.last_name.localeCompare(b.last_name));
+
+  return profileData;
 }
 
 export function useStudentAttendanceList(
@@ -315,14 +469,15 @@ export function useStudentAttendanceList(
 
 // Student attendance history
 async function fetchStudentAttendanceHistory(
-  studentId: string
+  profileId: string
 ): Promise<StudentAttendanceHistoryItem[]> {
   const supabase = createClient();
 
+  // Query by both profile_id and student_id for backward compatibility
   const { data, error } = await supabase
     .from("check_ins")
     .select("id, checked_in_at")
-    .eq("student_id", studentId)
+    .or(`profile_id.eq.${profileId},student_id.eq.${profileId}`)
     .order("checked_in_at", { ascending: false })
     .limit(100);
 
@@ -350,14 +505,15 @@ async function fetchGroupAttendanceStats(
 ): Promise<GroupAttendanceStat[]> {
   const supabase = createClient();
 
-  // Get all groups with their members
+  // Get all groups with their members (try new group_memberships first, then old group_members)
   const { data: groups, error: groupsError } = await supabase
     .from("groups")
     .select(`
       id,
       name,
       color,
-      group_members(student_id)
+      group_members(student_id),
+      group_memberships(profile_id)
     `)
     .eq("organization_id", organizationId);
 
@@ -367,10 +523,10 @@ async function fetchGroupAttendanceStats(
     return [];
   }
 
-  // Get all check-ins in the date range
+  // Get all check-ins in the date range (check both profile_id and student_id)
   const { data: checkIns, error: checkInsError } = await supabase
     .from("check_ins")
-    .select("student_id, checked_in_at")
+    .select("profile_id, student_id, checked_in_at")
     .eq("organization_id", organizationId)
     .gte("checked_in_at", dateRange.start.toISOString())
     .lte("checked_in_at", dateRange.end.toISOString());
@@ -392,8 +548,17 @@ async function fetchGroupAttendanceStats(
   }
 
   return groups.map((group) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const memberIds = new Set((group.group_members as any[])?.map((gm) => gm.student_id) || []);
+    // Try new group_memberships first, then old group_members
+    const memberships = group.group_memberships as Array<{ profile_id: string }> | null;
+    const oldMembers = group.group_members as Array<{ student_id: string }> | null;
+
+    let memberIds: Set<string>;
+    if (memberships && memberships.length > 0) {
+      memberIds = new Set(memberships.map((m) => m.profile_id));
+    } else {
+      memberIds = new Set((oldMembers || []).map((gm) => gm.student_id));
+    }
+
     const memberCount = memberIds.size;
 
     if (memberCount === 0) {
@@ -408,11 +573,12 @@ async function fetchGroupAttendanceStats(
       };
     }
 
-    // Find unique attendees from this group
+    // Find unique attendees from this group (check both profile_id and student_id)
     const uniqueAttendees = new Set<string>();
     (checkIns || []).forEach((ci) => {
-      if (memberIds.has(ci.student_id)) {
-        uniqueAttendees.add(ci.student_id);
+      const id = ci.profile_id || ci.student_id;
+      if (id && memberIds.has(id)) {
+        uniqueAttendees.add(id);
       }
     });
 
@@ -420,13 +586,15 @@ async function fetchGroupAttendanceStats(
     const weeklyData = weeks.map((week) => {
       const weekAttendees = new Set<string>();
       (checkIns || []).forEach((ci) => {
+        const id = ci.profile_id || ci.student_id;
         const checkInDate = parseISO(ci.checked_in_at);
         if (
-          memberIds.has(ci.student_id) &&
+          id &&
+          memberIds.has(id) &&
           checkInDate >= week.start &&
           checkInDate <= week.end
         ) {
-          weekAttendees.add(ci.student_id);
+          weekAttendees.add(id);
         }
       });
 

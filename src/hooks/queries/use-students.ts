@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export interface Student {
   id: string;
+  profile_id?: string; // New: unified profile ID
   first_name: string;
   last_name: string;
   phone_number: string | null;
@@ -18,71 +19,96 @@ export interface Student {
   groups: Array<{ id: string; name: string; color: string | null }>;
 }
 
+interface RpcStudentRow {
+  profile_id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone_number: string | null;
+  grade: string | null;
+  high_school: string | null;
+  user_type: string;
+  total_points: number;
+  current_rank: string;
+  last_check_in: string | null;
+  total_check_ins: number;
+}
+
 async function fetchStudents(organizationId: string): Promise<Student[]> {
   const supabase = createClient();
 
-  // Get all students with game stats and group memberships for this organization
-  const { data: students, error } = await supabase
-    .from("students")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      phone_number,
-      email,
-      grade,
-      high_school,
-      user_type,
-      student_game_stats(total_points, current_rank),
-      group_members(
-        groups(id, name, color)
-      )
-    `)
-    .eq("organization_id", organizationId)
-    .order("first_name");
+  // Use the new profile-based RPC function
+  const { data, error } = await supabase.rpc("get_organization_students", {
+    p_org_id: organizationId,
+  });
 
   if (error) throw error;
 
-  // Get check-in counts and last check-in for each student
-  const studentIds = students?.map((s) => s.id) || [];
-
-  if (studentIds.length === 0) {
-    return [];
-  }
-
-  const { data: checkInData } = await supabase
-    .from("check_ins")
-    .select("student_id, checked_in_at")
-    .in("student_id", studentIds)
-    .order("checked_in_at", { ascending: false });
-
-  // Build check-in maps
-  const lastCheckInMap = new Map<string, string>();
-  const checkInCountMap = new Map<string, number>();
-
-  (checkInData || []).forEach((ci) => {
-    if (!lastCheckInMap.has(ci.student_id)) {
-      lastCheckInMap.set(ci.student_id, ci.checked_in_at);
-    }
-    checkInCountMap.set(ci.student_id, (checkInCountMap.get(ci.student_id) || 0) + 1);
-  });
-
+  const students = data as RpcStudentRow[] || [];
   const today = new Date();
 
-  return (students || []).map((student) => {
-    const gameStats = (student.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
-    const lastCheckIn = lastCheckInMap.get(student.id);
+  // Get group memberships for all profiles
+  const profileIds = students.map((s) => s.profile_id);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let groupMemberships: Array<{ profile_id: string; group_id: string; groups: any }> = [];
+
+  if (profileIds.length > 0) {
+    // Try new group_memberships table first
+    const { data: newGroupData } = await supabase
+      .from("group_memberships")
+      .select(`
+        profile_id,
+        group_id,
+        groups(id, name, color)
+      `)
+      .in("profile_id", profileIds);
+
+    if (newGroupData && newGroupData.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      groupMemberships = newGroupData as any;
+    } else {
+      // Fallback to old group_members table
+      const { data: oldGroupData } = await supabase
+        .from("group_members")
+        .select(`
+          student_id,
+          group_id,
+          groups(id, name, color)
+        `)
+        .in("student_id", profileIds);
+
+      if (oldGroupData) {
+        groupMemberships = oldGroupData.map((gm) => ({
+          profile_id: gm.student_id,
+          group_id: gm.group_id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          groups: gm.groups as any,
+        }));
+      }
+    }
+  }
+
+  // Build groups map by profile_id
+  const groupsMap = new Map<string, Array<{ id: string; name: string; color: string | null }>>();
+  groupMemberships.forEach((gm) => {
+    if (gm.groups) {
+      const existing = groupsMap.get(gm.profile_id) || [];
+      existing.push(gm.groups);
+      groupsMap.set(gm.profile_id, existing);
+    }
+  });
+
+  return students.map((student) => {
+    const lastCheckIn = student.last_check_in;
     const daysSince = lastCheckIn
       ? Math.floor((today.getTime() - new Date(lastCheckIn).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const groups = (student.group_members as any[])
-      ?.map((gm) => gm.groups)
-      .filter(Boolean) || [];
-
     return {
-      id: student.id,
+      id: student.profile_id, // Use profile_id as the main ID
+      profile_id: student.profile_id,
       first_name: student.first_name,
       last_name: student.last_name,
       phone_number: student.phone_number,
@@ -90,12 +116,12 @@ async function fetchStudents(organizationId: string): Promise<Student[]> {
       grade: student.grade,
       high_school: student.high_school,
       user_type: student.user_type,
-      total_points: gameStats?.total_points || 0,
-      current_rank: gameStats?.current_rank || "Newcomer",
-      last_check_in: lastCheckIn || null,
+      total_points: student.total_points || 0,
+      current_rank: student.current_rank || "Newcomer",
+      last_check_in: lastCheckIn,
       days_since_last_check_in: daysSince,
-      total_check_ins: checkInCountMap.get(student.id) || 0,
-      groups,
+      total_check_ins: Number(student.total_check_ins) || 0,
+      groups: groupsMap.get(student.profile_id) || [],
     };
   });
 }
@@ -108,40 +134,44 @@ export function useStudents(organizationId: string | null) {
   });
 }
 
-// Search students (for adding to groups)
+// Search students (for adding to groups) - uses profiles table
 async function searchStudents(organizationId: string, query: string): Promise<Student[]> {
   const supabase = createClient();
 
+  // Search profiles via organization_memberships
   const { data, error } = await supabase
-    .from("students")
+    .from("profiles")
     .select(`
       id,
       first_name,
       last_name,
       phone_number,
       email,
-      grade,
-      high_school,
-      user_type,
+      organization_memberships!inner(organization_id, role, status),
+      student_profiles(grade, high_school),
       student_game_stats(total_points, current_rank)
     `)
-    .eq("organization_id", organizationId)
+    .eq("organization_memberships.organization_id", organizationId)
+    .eq("organization_memberships.role", "student")
+    .eq("organization_memberships.status", "active")
     .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
     .limit(10);
 
   if (error) throw error;
 
-  return (data || []).map((student) => {
-    const gameStats = (student.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
+  return (data || []).map((profile) => {
+    const studentProfile = (profile.student_profiles as Array<{ grade: string | null; high_school: string | null }>)?.[0];
+    const gameStats = (profile.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
     return {
-      id: student.id,
-      first_name: student.first_name,
-      last_name: student.last_name,
-      phone_number: student.phone_number,
-      email: student.email,
-      grade: student.grade,
-      high_school: student.high_school,
-      user_type: student.user_type,
+      id: profile.id,
+      profile_id: profile.id,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      phone_number: profile.phone_number,
+      email: profile.email,
+      grade: studentProfile?.grade || null,
+      high_school: studentProfile?.high_school || null,
+      user_type: "student",
       total_points: gameStats?.total_points || 0,
       current_rank: gameStats?.current_rank || "Newcomer",
       last_check_in: null,
@@ -161,54 +191,10 @@ export function useSearchStudents(organizationId: string | null, query: string) 
 }
 
 // Fetch all students with group membership info (for bulk assignment UI)
+// Reuses the main fetchStudents function which now uses profiles
 async function fetchAllStudentsForAssignment(organizationId: string): Promise<Student[]> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from("students")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      phone_number,
-      email,
-      grade,
-      high_school,
-      user_type,
-      student_game_stats(total_points, current_rank),
-      group_members(
-        groups(id, name, color)
-      )
-    `)
-    .eq("organization_id", organizationId)
-    .order("first_name");
-
-  if (error) throw error;
-
-  return (data || []).map((student) => {
-    const gameStats = (student.student_game_stats as Array<{ total_points: number; current_rank: string }>)?.[0];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const groups = (student.group_members as any[])
-      ?.map((gm) => gm.groups)
-      .filter(Boolean) || [];
-
-    return {
-      id: student.id,
-      first_name: student.first_name,
-      last_name: student.last_name,
-      phone_number: student.phone_number,
-      email: student.email,
-      grade: student.grade,
-      high_school: student.high_school,
-      user_type: student.user_type,
-      total_points: gameStats?.total_points || 0,
-      current_rank: gameStats?.current_rank || "Newcomer",
-      last_check_in: null,
-      days_since_last_check_in: null,
-      total_check_ins: 0,
-      groups,
-    };
-  });
+  // Use the same profile-based fetch function
+  return fetchStudents(organizationId);
 }
 
 export function useAllStudentsForAssignment(organizationId: string | null) {

@@ -4,6 +4,7 @@ import { RANKS, RankInfo, getRankByCheckIns } from "@/utils/gamificationDB";
 
 export interface LeaderboardEntry {
   student_id: string;
+  profile_id?: string; // New: unified profile ID
   first_name: string;
   last_name: string;
   total_check_ins: number;
@@ -16,31 +17,67 @@ export interface LeaderboardEntry {
 async function fetchLeaderboard(organizationId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
   const supabase = createClient();
 
-  // Get all check-ins for this organization (filtered by org_id on check_ins table)
+  // Get all check-ins for this organization (check both profile_id and student_id)
   const { data: checkIns, error: checkInsError } = await supabase
     .from("check_ins")
-    .select("student_id")
+    .select("profile_id, student_id")
     .eq("organization_id", organizationId);
 
   if (checkInsError) throw checkInsError;
 
-  // Count check-ins per student
+  // Count check-ins per profile/student (prefer profile_id)
   const checkInCounts = new Map<string, number>();
   (checkIns || []).forEach((ci) => {
-    checkInCounts.set(ci.student_id, (checkInCounts.get(ci.student_id) || 0) + 1);
+    const id = ci.profile_id || ci.student_id;
+    if (id) {
+      checkInCounts.set(id, (checkInCounts.get(id) || 0) + 1);
+    }
   });
 
-  // Get student details
-  const { data: students, error: studentsError } = await supabase
-    .from("students")
-    .select("id, first_name, last_name")
-    .eq("organization_id", organizationId);
+  // Try profiles first via organization_memberships
+  const { data: memberships } = await supabase
+    .from("organization_memberships")
+    .select(`
+      profile_id,
+      profiles(id, first_name, last_name)
+    `)
+    .eq("organization_id", organizationId)
+    .eq("role", "student")
+    .eq("status", "active");
 
-  if (studentsError) throw studentsError;
+  let entries: LeaderboardEntry[] = [];
 
-  // Map and sort by check-in count
-  const entries = (students || [])
-    .map((student) => {
+  if (memberships && memberships.length > 0) {
+    // Use profiles data
+    entries = memberships
+      .filter((m) => m.profiles)
+      .map((m) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profile = m.profiles as any;
+        const totalCheckIns = checkInCounts.get(profile.id) || 0;
+        const rankInfo = getRankByCheckIns(totalCheckIns);
+        return {
+          student_id: profile.id,
+          profile_id: profile.id,
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          total_check_ins: totalCheckIns,
+          total_points: totalCheckIns,
+          current_rank: rankInfo.title,
+          rank_info: rankInfo,
+          position: 0,
+        };
+      });
+  } else {
+    // Fallback to students table
+    const { data: students, error: studentsError } = await supabase
+      .from("students")
+      .select("id, first_name, last_name")
+      .eq("organization_id", organizationId);
+
+    if (studentsError) throw studentsError;
+
+    entries = (students || []).map((student) => {
       const totalCheckIns = checkInCounts.get(student.id) || 0;
       const rankInfo = getRankByCheckIns(totalCheckIns);
       return {
@@ -48,17 +85,19 @@ async function fetchLeaderboard(organizationId: string, limit: number = 10): Pro
         first_name: student.first_name,
         last_name: student.last_name,
         total_check_ins: totalCheckIns,
-        total_points: totalCheckIns, // Points are based on check-in count
+        total_points: totalCheckIns,
         current_rank: rankInfo.title,
         rank_info: rankInfo,
         position: 0,
       };
-    })
+    });
+  }
+
+  // Sort by check-in count and assign positions
+  return entries
     .sort((a, b) => b.total_check_ins - a.total_check_ins)
     .slice(0, limit)
     .map((entry, index) => ({ ...entry, position: index + 1 }));
-
-  return entries;
 }
 
 export function useLeaderboard(organizationId: string | null, limit: number = 10) {
@@ -79,32 +118,50 @@ export interface RankDistribution {
 async function fetchRankDistribution(organizationId: string): Promise<RankDistribution[]> {
   const supabase = createClient();
 
-  // Get all check-ins for this organization (filtered by org_id on check_ins table)
+  // Get all check-ins for this organization (check both profile_id and student_id)
   const { data: checkIns, error: checkInsError } = await supabase
     .from("check_ins")
-    .select("student_id")
+    .select("profile_id, student_id")
     .eq("organization_id", organizationId);
 
   if (checkInsError) throw checkInsError;
 
-  // Count check-ins per student
+  // Count check-ins per profile/student (prefer profile_id)
   const checkInCounts = new Map<string, number>();
   (checkIns || []).forEach((ci) => {
-    checkInCounts.set(ci.student_id, (checkInCounts.get(ci.student_id) || 0) + 1);
+    const id = ci.profile_id || ci.student_id;
+    if (id) {
+      checkInCounts.set(id, (checkInCounts.get(id) || 0) + 1);
+    }
   });
 
-  // Get all students for this organization
-  const { data: students, error: studentsError } = await supabase
-    .from("students")
-    .select("id")
-    .eq("organization_id", organizationId);
+  // Try profiles via organization_memberships first
+  const { data: memberships } = await supabase
+    .from("organization_memberships")
+    .select("profile_id")
+    .eq("organization_id", organizationId)
+    .eq("role", "student")
+    .eq("status", "active");
 
-  if (studentsError) throw studentsError;
+  let profileIds: string[] = [];
+
+  if (memberships && memberships.length > 0) {
+    profileIds = memberships.map((m) => m.profile_id);
+  } else {
+    // Fallback to students table
+    const { data: students, error: studentsError } = await supabase
+      .from("students")
+      .select("id")
+      .eq("organization_id", organizationId);
+
+    if (studentsError) throw studentsError;
+    profileIds = (students || []).map((s) => s.id);
+  }
 
   // Count students per rank based on check-in counts
   const rankCounts: Record<string, number> = {};
-  (students || []).forEach((student) => {
-    const totalCheckIns = checkInCounts.get(student.id) || 0;
+  profileIds.forEach((id) => {
+    const totalCheckIns = checkInCounts.get(id) || 0;
     const rankInfo = getRankByCheckIns(totalCheckIns);
     rankCounts[rankInfo.title] = (rankCounts[rankInfo.title] || 0) + 1;
   });

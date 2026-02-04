@@ -7,6 +7,7 @@ interface SendSmsParams {
   to: string;
   body: string;
   studentId?: string;
+  profileId?: string; // New: unified profile ID (preferred)
 }
 
 interface SendSmsResult {
@@ -24,7 +25,7 @@ export function useSendSms() {
   const { data: profile } = useMyOrgProfile(currentOrganization?.id || null);
   const supabase = createClient();
 
-  const sendSms = async ({ to, body, studentId }: SendSmsParams): Promise<SendSmsResult> => {
+  const sendSms = async ({ to, body, studentId, profileId }: SendSmsParams): Promise<SendSmsResult> => {
     setIsSending(true);
     setError(null);
 
@@ -36,6 +37,7 @@ export function useSendSms() {
           to,
           body,
           studentId,
+          profileId: profileId || studentId, // Use profileId if provided, otherwise studentId
           organizationId: currentOrganization?.id || null,
           senderDisplayName: profile?.display_name || null,
         },

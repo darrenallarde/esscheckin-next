@@ -12,10 +12,10 @@ export interface SmsMessage {
   sent_by_name: string | null;
 }
 
-async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
+async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
   const supabase = createClient();
 
-  // Get all messages for this student
+  // Get all messages for this profile (check both profile_id and student_id for backward compat)
   const { data: messages, error } = await supabase
     .from("sms_messages")
     .select(`
@@ -29,7 +29,7 @@ async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
       sent_by,
       organization_id
     `)
-    .eq("student_id", studentId)
+    .or(`profile_id.eq.${profileId},student_id.eq.${profileId}`)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
@@ -41,7 +41,7 @@ async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
       .map((m) => m.sent_by)
   ));
 
-  let senderNames: Record<string, string> = {};
+  const senderNames: Record<string, string> = {};
 
   if (senderIds.length > 0) {
     // Get organization ID from first message
@@ -89,11 +89,11 @@ async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
   }));
 }
 
-export function useSmsConversation(studentId: string | null) {
+export function useSmsConversation(profileId: string | null) {
   return useQuery({
-    queryKey: ["sms-conversation", studentId],
-    queryFn: () => fetchSmsConversation(studentId!),
-    enabled: !!studentId,
+    queryKey: ["sms-conversation", profileId],
+    queryFn: () => fetchSmsConversation(profileId!),
+    enabled: !!profileId,
   });
 }
 
@@ -101,7 +101,7 @@ export function useSmsConversation(studentId: string | null) {
 export function useRefreshConversation() {
   const queryClient = useQueryClient();
 
-  return (studentId: string) => {
-    queryClient.invalidateQueries({ queryKey: ["sms-conversation", studentId] });
+  return (profileId: string) => {
+    queryClient.invalidateQueries({ queryKey: ["sms-conversation", profileId] });
   };
 }

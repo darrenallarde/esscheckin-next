@@ -37,14 +37,15 @@ export function ConversationPanel({
   const orgId = currentOrganization?.id;
   const orgSlug = currentOrganization?.slug;
 
-  // Fetch full message history by student ID (existing hook)
-  const { data: messages, isLoading: messagesLoading } = useSmsConversation(
-    conversation.studentId
-  );
+  // Use profileId if available, fallback to studentId
+  const recipientId = conversation.profileId || conversation.studentId;
+
+  // Fetch full message history (hook supports both profile_id and student_id)
+  const { data: messages, isLoading: messagesLoading } = useSmsConversation(recipientId);
 
   const markRead = useMarkConversationRead();
 
-  const isUnknownContact = !conversation.studentId;
+  const isUnknownContact = !recipientId;
 
   // Mark as read when conversation is opened
   useEffect(() => {
@@ -52,10 +53,10 @@ export function ConversationPanel({
       markRead.mutate({
         orgId,
         phoneNumber: conversation.phoneNumber,
-        studentId: conversation.studentId,
+        studentId: recipientId,
       });
     }
-  }, [conversation.phoneNumber, conversation.studentId, conversation.unreadCount, orgId, markRead]);
+  }, [conversation.phoneNumber, recipientId, conversation.unreadCount, orgId, markRead]);
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
@@ -98,8 +99,8 @@ export function ConversationPanel({
 
         <div className="flex items-center gap-2">
           {/* Link to student profile if known */}
-          {conversation.studentId && orgSlug && (
-            <Link href={orgPath(orgSlug, `/people?studentId=${conversation.studentId}`)}>
+          {recipientId && orgSlug && (
+            <Link href={orgPath(orgSlug, `/people?studentId=${recipientId}`)}>
               <Button variant="ghost" size="sm">
                 <ExternalLink className="h-4 w-4 mr-1" />
                 Profile
@@ -126,7 +127,7 @@ export function ConversationPanel({
       )}
 
       {/* Messages */}
-      {conversation.studentId ? (
+      {recipientId ? (
         <>
           <ConversationThread
             messages={messages || []}
@@ -137,7 +138,7 @@ export function ConversationPanel({
           {/* Composer */}
           <div className="border-t border-border p-4">
             <MessageComposer
-              studentId={conversation.studentId}
+              studentId={recipientId}
               phoneNumber={conversation.phoneNumber}
               personName={conversation.studentName?.split(" ")[0]}
             />

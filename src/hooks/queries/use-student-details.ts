@@ -20,13 +20,14 @@ interface StudentParentInfo {
 }
 
 /**
- * Fetch parent info directly from a student record
+ * Fetch parent info - tries student_profiles first (new schema), falls back to students table
  */
 async function fetchStudentParents(studentId: string): Promise<StudentParentInfo> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from("students")
+  // Try new student_profiles table first
+  const { data: profileData } = await supabase
+    .from("student_profiles")
     .select(`
       mother_first_name,
       mother_last_name,
@@ -39,10 +40,37 @@ async function fetchStudentParents(studentId: string): Promise<StudentParentInfo
       parent_name,
       parent_phone
     `)
-    .eq("id", studentId)
+    .eq("profile_id", studentId)
     .single();
 
-  if (error) throw error;
+  // Use profile data if found, otherwise fall back to students table
+  let data = profileData;
+
+  if (!data) {
+    const { data: studentData, error } = await supabase
+      .from("students")
+      .select(`
+        mother_first_name,
+        mother_last_name,
+        mother_phone,
+        mother_email,
+        father_first_name,
+        father_last_name,
+        father_phone,
+        father_email,
+        parent_name,
+        parent_phone
+      `)
+      .eq("id", studentId)
+      .single();
+
+    if (error) throw error;
+    data = studentData;
+  }
+
+  if (!data) {
+    return { mother: null, father: null, guardian: null };
+  }
 
   // Build parent info objects, only if there's data
   const mother: ParentInfo | null =

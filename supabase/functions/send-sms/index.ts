@@ -21,7 +21,9 @@ serve(async (req) => {
       throw new Error("Missing Twilio configuration");
     }
 
-    const { to, body, studentId, organizationId, senderDisplayName } = await req.json();
+    const { to, body, studentId, profileId, organizationId, senderDisplayName } = await req.json();
+    // Use profileId if provided, fallback to studentId for backward compat
+    const recipientId = profileId || studentId || null;
 
     if (!to || !body) {
       throw new Error("Missing required fields: to, body");
@@ -85,7 +87,8 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from("sms_messages")
       .insert({
-        student_id: studentId || null,
+        profile_id: recipientId, // New: unified profile ID
+        student_id: recipientId, // Backward compatibility (same ID)
         organization_id: organizationId || null,
         direction: "outbound",
         body: messageBody,
@@ -105,7 +108,7 @@ serve(async (req) => {
     console.log("SMS_EVENT", JSON.stringify({
       event: "SMS_SENT",
       org_id: organizationId || null,
-      student_id: studentId || null,
+      profile_id: recipientId,
       sender_user_id: sentBy,
       sender_display_name: senderDisplayName || null,
       has_signature: hasSignature,

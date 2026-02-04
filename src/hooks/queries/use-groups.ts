@@ -44,6 +44,7 @@ export interface Group {
 export interface GroupMember {
   id: string;
   student_id: string;
+  profile_id?: string; // New: unified profile ID
   first_name: string;
   last_name: string;
   grade: string | null;
@@ -64,28 +65,44 @@ async function fetchGroups(organizationId: string): Promise<Group[]> {
       *,
       group_meeting_times(*),
       group_leaders(id, user_id, role),
-      group_members(student_id)
+      group_members(student_id),
+      group_memberships(profile_id)
     `)
     .eq("organization_id", organizationId)
     .order("name");
 
   if (error) throw error;
 
-  // Get students who need attention (30+ days absent)
+  // Get people who need attention (30+ days absent) - check both profile_id and student_id
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data: recentCheckIns } = await supabase
     .from("check_ins")
-    .select("student_id")
+    .select("profile_id, student_id")
     .eq("organization_id", organizationId)
     .gte("checked_in_at", thirtyDaysAgo.toISOString());
 
-  const activeStudentIds = new Set(recentCheckIns?.map((c) => c.student_id) || []);
+  // Build a set of active IDs (could be profile_id or student_id)
+  const activeIds = new Set<string>();
+  (recentCheckIns || []).forEach((c) => {
+    if (c.profile_id) activeIds.add(c.profile_id);
+    if (c.student_id) activeIds.add(c.student_id);
+  });
 
   return (groups || []).map((group) => {
-    const memberIds = (group.group_members || []).map((m: { student_id: string }) => m.student_id);
-    const needsAttention = memberIds.filter((id: string) => !activeStudentIds.has(id)).length;
+    // Try group_memberships first (new table), fallback to group_members
+    const memberships = group.group_memberships as Array<{ profile_id: string }> | null;
+    const oldMembers = group.group_members as Array<{ student_id: string }> | null;
+
+    let memberIds: string[];
+    if (memberships && memberships.length > 0) {
+      memberIds = memberships.map((m) => m.profile_id);
+    } else {
+      memberIds = (oldMembers || []).map((m) => m.student_id);
+    }
+
+    const needsAttention = memberIds.filter((id) => !activeIds.has(id)).length;
 
     return {
       id: group.id,
@@ -115,84 +132,167 @@ export function useGroups(organizationId: string | null) {
 async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
   const supabase = createClient();
 
-  // Get group members with student details
-  const { data: members, error } = await supabase
-    .from("group_members")
+  // Try new group_memberships table first
+  const { data: memberships } = await supabase
+    .from("group_memberships")
     .select(`
       id,
-      student_id,
-      students(
+      profile_id,
+      profiles(
         id,
         first_name,
-        last_name,
-        grade,
-        student_game_stats(total_points, current_rank)
-      )
+        last_name
+      ),
+      student_profiles(grade),
+      student_game_stats(total_points, current_rank)
     `)
-    .eq("group_id", groupId);
+    .eq("group_id", groupId)
+    .eq("role", "member");
 
-  if (error) throw error;
+  let memberData: GroupMember[] = [];
 
-  // Get last check-in for each student
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const studentIds = members?.map((m) => (m.students as any)?.id).filter(Boolean) || [];
+  if (memberships && memberships.length > 0) {
+    // Use profiles data
+    const profileIds = memberships.map((m) => m.profile_id).filter(Boolean);
 
-  if (studentIds.length === 0) {
-    return [];
+    // Get last check-in for each profile (check both profile_id and student_id)
+    const { data: checkIns } = await supabase
+      .from("check_ins")
+      .select("profile_id, student_id, checked_in_at")
+      .or(`profile_id.in.(${profileIds.join(",")}),student_id.in.(${profileIds.join(",")})`)
+      .order("checked_in_at", { ascending: false });
+
+    const lastCheckInMap = new Map<string, string>();
+    (checkIns || []).forEach((ci) => {
+      const id = ci.profile_id || ci.student_id;
+      if (id && !lastCheckInMap.has(id)) {
+        lastCheckInMap.set(id, ci.checked_in_at);
+      }
+    });
+
+    // Get streaks for each profile in this group
+    const streakPromises = profileIds.map((profileId) =>
+      supabase.rpc("get_student_group_streak", {
+        p_student_id: profileId,
+        p_group_id: groupId,
+      })
+    );
+
+    const streakResults = await Promise.all(streakPromises);
+    const streakMap = new Map<string, { current_streak: number; best_streak: number }>();
+    profileIds.forEach((profileId, index) => {
+      const result = streakResults[index];
+      if (result.data && result.data[0]) {
+        streakMap.set(profileId, {
+          current_streak: result.data[0].current_streak || 0,
+          best_streak: result.data[0].best_streak || 0,
+        });
+      }
+    });
+
+    memberData = memberships.map((m) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profile = m.profiles as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const studentProfile = m.student_profiles as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gameStats = m.student_game_stats as any;
+      const streak = streakMap.get(m.profile_id) || { current_streak: 0, best_streak: 0 };
+
+      return {
+        id: m.id,
+        student_id: m.profile_id,
+        profile_id: m.profile_id,
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
+        grade: studentProfile?.grade || null,
+        current_rank: gameStats?.current_rank || "Newcomer",
+        total_points: gameStats?.total_points || 0,
+        last_check_in: lastCheckInMap.get(m.profile_id) || null,
+        current_streak: streak.current_streak,
+        best_streak: streak.best_streak,
+      };
+    }).filter((m) => m.profile_id);
+  } else {
+    // Fallback to old group_members table
+    const { data: members, error } = await supabase
+      .from("group_members")
+      .select(`
+        id,
+        student_id,
+        students(
+          id,
+          first_name,
+          last_name,
+          grade,
+          student_game_stats(total_points, current_rank)
+        )
+      `)
+      .eq("group_id", groupId);
+
+    if (error) throw error;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const studentIds = members?.map((m) => (m.students as any)?.id).filter(Boolean) || [];
+
+    if (studentIds.length === 0) {
+      return [];
+    }
+
+    const { data: checkIns } = await supabase
+      .from("check_ins")
+      .select("student_id, checked_in_at")
+      .in("student_id", studentIds)
+      .order("checked_in_at", { ascending: false });
+
+    const lastCheckInMap = new Map<string, string>();
+    (checkIns || []).forEach((ci) => {
+      if (!lastCheckInMap.has(ci.student_id)) {
+        lastCheckInMap.set(ci.student_id, ci.checked_in_at);
+      }
+    });
+
+    const streakPromises = studentIds.map((studentId) =>
+      supabase.rpc("get_student_group_streak", {
+        p_student_id: studentId,
+        p_group_id: groupId,
+      })
+    );
+
+    const streakResults = await Promise.all(streakPromises);
+    const streakMap = new Map<string, { current_streak: number; best_streak: number }>();
+    studentIds.forEach((studentId, index) => {
+      const result = streakResults[index];
+      if (result.data && result.data[0]) {
+        streakMap.set(studentId, {
+          current_streak: result.data[0].current_streak || 0,
+          best_streak: result.data[0].best_streak || 0,
+        });
+      }
+    });
+
+    memberData = (members || []).map((member) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const student = member.students as any;
+      const gameStats = student?.student_game_stats?.[0];
+      const streak = streakMap.get(student?.id) || { current_streak: 0, best_streak: 0 };
+
+      return {
+        id: member.id,
+        student_id: student?.id || member.student_id,
+        first_name: student?.first_name || "",
+        last_name: student?.last_name || "",
+        grade: student?.grade || null,
+        current_rank: gameStats?.current_rank || "Newcomer",
+        total_points: gameStats?.total_points || 0,
+        last_check_in: lastCheckInMap.get(student?.id) || null,
+        current_streak: streak.current_streak,
+        best_streak: streak.best_streak,
+      };
+    }).filter((m) => m.student_id);
   }
 
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("student_id, checked_in_at")
-    .in("student_id", studentIds)
-    .order("checked_in_at", { ascending: false });
-
-  const lastCheckInMap = new Map<string, string>();
-  (checkIns || []).forEach((ci) => {
-    if (!lastCheckInMap.has(ci.student_id)) {
-      lastCheckInMap.set(ci.student_id, ci.checked_in_at);
-    }
-  });
-
-  // Get streaks for each student in this group
-  const streakPromises = studentIds.map((studentId) =>
-    supabase.rpc("get_student_group_streak", {
-      p_student_id: studentId,
-      p_group_id: groupId,
-    })
-  );
-
-  const streakResults = await Promise.all(streakPromises);
-  const streakMap = new Map<string, { current_streak: number; best_streak: number }>();
-  studentIds.forEach((studentId, index) => {
-    const result = streakResults[index];
-    if (result.data && result.data[0]) {
-      streakMap.set(studentId, {
-        current_streak: result.data[0].current_streak || 0,
-        best_streak: result.data[0].best_streak || 0,
-      });
-    }
-  });
-
-  return (members || []).map((member) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const student = member.students as any;
-    const gameStats = student?.student_game_stats?.[0];
-    const streak = streakMap.get(student?.id) || { current_streak: 0, best_streak: 0 };
-
-    return {
-      id: member.id,
-      student_id: student?.id || member.student_id,
-      first_name: student?.first_name || "",
-      last_name: student?.last_name || "",
-      grade: student?.grade || null,
-      current_rank: gameStats?.current_rank || "Newcomer",
-      total_points: gameStats?.total_points || 0,
-      last_check_in: lastCheckInMap.get(student?.id) || null,
-      current_streak: streak.current_streak,
-      best_streak: streak.best_streak,
-    };
-  }).filter((m) => m.student_id);
+  return memberData;
 }
 
 export function useGroupMembers(groupId: string | null) {
@@ -264,17 +364,30 @@ export function useAddStudentToGroup() {
 
   return useMutation({
     mutationFn: async ({ groupId, studentId, organizationId }: { groupId: string; studentId: string; organizationId: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { error } = await supabase
-        .from("group_members")
+      // Write to new group_memberships table (profile_id = studentId since we use same IDs)
+      const { error: newError } = await supabase
+        .from("group_memberships")
         .insert({
           group_id: groupId,
-          student_id: studentId,
-          added_by: user?.id,
+          profile_id: studentId,
+          role: "member",
         });
 
-      if (error) throw error;
+      // If new table insert failed (maybe table doesn't exist), try old table
+      if (newError) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const { error } = await supabase
+          .from("group_members")
+          .insert({
+            group_id: groupId,
+            student_id: studentId,
+            added_by: user?.id,
+          });
+
+        if (error) throw error;
+      }
+
       return { organizationId };
     },
     onSuccess: (result, { groupId }) => {
@@ -290,6 +403,14 @@ export function useRemoveStudentFromGroup() {
 
   return useMutation({
     mutationFn: async ({ groupId, studentId, organizationId }: { groupId: string; studentId: string; organizationId: string }) => {
+      // Delete from new group_memberships table
+      await supabase
+        .from("group_memberships")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("profile_id", studentId);
+
+      // Also delete from old group_members table (for backward compat)
       const { error } = await supabase
         .from("group_members")
         .delete()
@@ -312,17 +433,30 @@ export function useBulkAddStudentsToGroup() {
 
   return useMutation({
     mutationFn: async ({ groupId, studentIds, organizationId }: { groupId: string; studentIds: string[]; organizationId: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { error } = await supabase
-        .from("group_members")
+      // Write to new group_memberships table
+      const { error: newError } = await supabase
+        .from("group_memberships")
         .insert(studentIds.map(studentId => ({
           group_id: groupId,
-          student_id: studentId,
-          added_by: user?.id,
+          profile_id: studentId,
+          role: "member",
         })));
 
-      if (error) throw error;
+      // If new table failed, try old table
+      if (newError) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const { error } = await supabase
+          .from("group_members")
+          .insert(studentIds.map(studentId => ({
+            group_id: groupId,
+            student_id: studentId,
+            added_by: user?.id,
+          })));
+
+        if (error) throw error;
+      }
+
       return { organizationId };
     },
     onSuccess: (result, { groupId }) => {

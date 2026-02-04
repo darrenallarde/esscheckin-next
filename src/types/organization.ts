@@ -1,6 +1,7 @@
 // Organization-related types
+// Note: For the new unified profile system, see ./profiles.ts
 
-export type OrgRole = 'owner' | 'admin' | 'leader' | 'viewer';
+export type OrgRole = 'owner' | 'admin' | 'leader' | 'viewer' | 'student';
 
 export interface Organization {
   id: string;
@@ -43,6 +44,7 @@ export const roleDisplayNames: Record<OrgRole, string> = {
   admin: 'Admin',
   leader: 'Leader',
   viewer: 'Viewer',
+  student: 'Student',
 };
 
 // Helper to get role descriptions
@@ -51,14 +53,16 @@ export const roleDescriptions: Record<OrgRole, string> = {
   admin: 'Can manage team members, students, and all settings',
   leader: 'Can view students and pastoral data, manage check-ins',
   viewer: 'Read-only access to dashboards and data',
+  student: 'Participant who checks in at events',
 };
 
 // Role hierarchy for permission checks
 export const roleHierarchy: Record<OrgRole, number> = {
-  owner: 4,
-  admin: 3,
-  leader: 2,
-  viewer: 1,
+  owner: 5,
+  admin: 4,
+  leader: 3,
+  viewer: 2,
+  student: 1,
 };
 
 export function canManageRole(userRole: OrgRole, targetRole: OrgRole): boolean {

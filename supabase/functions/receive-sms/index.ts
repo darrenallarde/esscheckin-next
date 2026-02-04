@@ -465,6 +465,26 @@ async function findStudentByPhone(
   phone: string
 ): Promise<{ id: string; organization_id: string } | null> {
   const phoneDigits = phoneMatch(phone);
+
+  // Try profiles table first (new schema)
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select(`
+      id,
+      organization_memberships!inner(organization_id)
+    `)
+    .ilike("phone_number", `%${phoneDigits}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (profileData && profileData.organization_memberships?.[0]) {
+    return {
+      id: profileData.id,
+      organization_id: profileData.organization_memberships[0].organization_id,
+    };
+  }
+
+  // Fallback to students table
   const { data, error } = await supabase
     .from("students")
     .select("id, organization_id")
@@ -829,8 +849,10 @@ async function storeMessage(
     isLobbyMessage: boolean;
   }
 ): Promise<void> {
+  // Store with both profile_id and student_id (same value since IDs are preserved)
   const { error } = await supabase.from("sms_messages").insert({
-    student_id: msg.studentId,
+    profile_id: msg.studentId, // New: profile_id (same as student_id during migration)
+    student_id: msg.studentId, // Backward compatibility
     direction: msg.direction,
     body: msg.body,
     from_number: msg.from,
@@ -851,7 +873,7 @@ async function storeMessage(
       org_id: msg.organizationId,
       group_id: msg.groupId,
       is_lobby: msg.isLobbyMessage,
-      has_student: !!msg.studentId,
+      has_profile: !!msg.studentId,
       direction: msg.direction,
       timestamp: new Date().toISOString(),
     }));
