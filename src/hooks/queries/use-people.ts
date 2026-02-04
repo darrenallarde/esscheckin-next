@@ -36,6 +36,11 @@ export interface Person {
   grade: string | null;
   gender: string | null;
   high_school: string | null;
+  date_of_birth: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   last_check_in: string | null;
   total_check_ins: number;
   check_ins_last_4_weeks: number;
@@ -78,6 +83,11 @@ interface RpcPersonRow {
   grade: string | null;
   gender: string | null;
   high_school: string | null;
+  date_of_birth: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   last_check_in: string | null;
   total_check_ins: number;
   check_ins_last_4_weeks: number;

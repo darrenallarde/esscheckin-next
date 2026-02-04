@@ -31,6 +31,8 @@ import {
   Send,
   Heart,
   Pencil,
+  MapPin,
+  Cake,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -49,6 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Student } from "@/hooks/queries/use-students";
 import { useSmsConversation } from "@/hooks/queries/use-sms-conversation";
+import { usePersonHistory } from "@/hooks/queries/use-person-history";
 import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
 import { PersonPastoralContent } from "./PersonPastoralContent";
@@ -65,6 +68,12 @@ interface ExtendedStudent extends Student {
   role?: OrgRole;
   is_claimed?: boolean;
   linked_children_count?: number;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
 }
 
 interface PersonProfileModalProps {
@@ -120,6 +129,11 @@ export function PersonProfileModal({
 
   const { data: messages, isLoading: messagesLoading } = useSmsConversation(
     open && person ? person.id : null
+  );
+
+  const { data: personHistory, isLoading: historyLoading } = usePersonHistory(
+    open && person ? person.id : null,
+    open && !!person
   );
 
   const archiveStudent = useArchiveStudent();
@@ -327,6 +341,40 @@ export function PersonProfileModal({
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4 mt-4">
+            {/* Quick Demographics for Students */}
+            {isStudent && (
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    {/* Age */}
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {person.date_of_birth ? calculateAge(person.date_of_birth) : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Age</p>
+                    </div>
+                    {/* Grade */}
+                    <div>
+                      <p className="text-2xl font-bold">{person.grade || "—"}</p>
+                      <p className="text-xs text-muted-foreground">Grade</p>
+                    </div>
+                    {/* Gender */}
+                    <div>
+                      <p className="text-2xl font-bold capitalize">
+                        {person.gender ? (person.gender === "male" ? "M" : "F") : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Gender</p>
+                    </div>
+                    {/* Check-ins */}
+                    <div>
+                      <p className="text-2xl font-bold">{person.total_check_ins}</p>
+                      <p className="text-xs text-muted-foreground">Check-ins</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardContent className="pt-4 space-y-3">
                 {/* Contact Info */}
@@ -356,6 +404,33 @@ export function PersonProfileModal({
                   <div className="flex items-center gap-3">
                     <GraduationCap className="h-4 w-4 text-muted-foreground" />
                     <span>{person.high_school}</span>
+                  </div>
+                )}
+                {/* Address */}
+                {(person.address || person.city) && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {[
+                        person.address,
+                        person.city,
+                        person.state,
+                        person.zip
+                      ].filter(Boolean).join(", ")}
+                    </span>
+                  </div>
+                )}
+                {/* Birthday */}
+                {person.date_of_birth && (
+                  <div className="flex items-center gap-3">
+                    <Cake className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {new Date(person.date_of_birth).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
                   </div>
                 )}
                 {/* Last Check-in (for students and team who check in) */}
@@ -508,16 +583,82 @@ export function PersonProfileModal({
                 </CardContent>
               </Card>
 
-              {/* Streak placeholder */}
+              {/* Recent Check-ins */}
               <Card>
                 <CardContent className="pt-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Flame className="h-5 w-5 text-orange-500" />
-                    <span className="font-medium">Attendance Streak</span>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Calendar className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">Recent Attendance</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Check-in history and streaks coming soon
-                  </p>
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : personHistory?.recentCheckIns && personHistory.recentCheckIns.length > 0 ? (
+                    <div className="space-y-2">
+                      {personHistory.recentCheckIns.map((checkIn) => (
+                        <div key={checkIn.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
+                          <span>
+                            {new Date(checkIn.checked_in_at).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                          {checkIn.group_name && (
+                            <Badge variant="outline" className="text-xs">
+                              {checkIn.group_name}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No check-ins yet</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Interactions */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Heart className="h-5 w-5 text-pink-500" />
+                    <span className="font-medium">Recent Interactions</span>
+                  </div>
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : personHistory?.recentInteractions && personHistory.recentInteractions.length > 0 ? (
+                    <div className="space-y-2">
+                      {personHistory.recentInteractions.map((interaction) => (
+                        <div key={interaction.id} className="text-sm py-2 border-b last:border-0">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {interaction.interaction_type.replace(/_/g, " ")}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(interaction.created_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </div>
+                          {interaction.notes && (
+                            <p className="text-muted-foreground mt-1 line-clamp-2">{interaction.notes}</p>
+                          )}
+                          {interaction.created_by_name && (
+                            <p className="text-xs text-muted-foreground/70 mt-1">
+                              by {interaction.created_by_name}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No interactions recorded yet</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -690,4 +831,15 @@ function formatLastSeen(days: number | null): string {
   if (days < 7) return `${days} days ago`;
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
   return `${Math.floor(days / 30)} months ago`;
+}
+
+function calculateAge(dateOfBirth: string): number {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
 }

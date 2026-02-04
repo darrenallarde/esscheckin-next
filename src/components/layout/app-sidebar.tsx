@@ -81,6 +81,7 @@ const navSections: NavSection[] = [
     items: [
       { title: "Home", path: "/dashboard", icon: Home },
       { title: "Pastoral", path: "/pastoral", icon: Heart },
+      { title: "Curriculum", path: "/curriculum", icon: BookOpen },
     ],
   },
   {
@@ -112,7 +113,6 @@ const navSections: NavSection[] = [
     title: "Manage",
     icon: Settings,
     items: [
-      { title: "Curriculum", path: "/curriculum", icon: BookOpen },
       { title: "Settings", path: "/settings", icon: Settings, adminOnly: true },
     ],
   },

@@ -10,6 +10,12 @@ export interface Student {
   email: string | null;
   grade: string | null;
   high_school: string | null;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   user_type: string | null;
   total_points: number;
   current_rank: string;
