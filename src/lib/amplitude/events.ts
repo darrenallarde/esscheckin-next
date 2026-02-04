@@ -121,6 +121,18 @@ export const EVENTS = {
   REPORT_EXPORTED: "Report Exported",
 
   // ============================================
+  // CURRICULUM & DEVOTIONALS
+  // ============================================
+  CURRICULUM_PAGE_VIEWED: "Curriculum Page Viewed",
+  SERMON_UPLOADED: "Sermon Uploaded",
+  DEVOTIONAL_SERIES_CONFIGURED: "Devotional Series Configured",
+  DEVOTIONAL_GENERATION_STARTED: "Devotional Generation Started",
+  DEVOTIONAL_GENERATION_COMPLETED: "Devotional Generation Completed",
+  DEVOTIONAL_SERIES_ACTIVATED: "Devotional Series Activated",
+  DEVOTIONAL_VIEWED: "Devotional Viewed",
+  DEVOTIONAL_EDITED: "Devotional Edited",
+
+  // ============================================
   // FUTURE: AI & NATURAL LANGUAGE
   // Uncomment when features ship
   // ============================================

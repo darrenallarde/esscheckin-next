@@ -314,7 +314,28 @@ How admins interact with analytics features.
 
 **`chart_type` values**: `"attendance_trend"`, `"engagement_funnel"`, `"belonging_spectrum"`, `"check_in_by_day"`
 
-### 4.10 Future: AI & Natural Language
+### 4.10 Curriculum & Devotionals
+
+Sermon upload and AI-generated devotional content.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Curriculum Page Viewed` | Admin opened curriculum page | `org_slug` | |
+| `Sermon Uploaded` | Admin uploaded/pasted sermon | `source`, `content_length` | `file_type` |
+| `Devotional Series Configured` | Admin set schedule | `frequency`, `time_slots`, `total_devotionals` | `start_date` |
+| `Devotional Generation Started` | AI generation began | `series_id`, `devotional_count` | |
+| `Devotional Generation Completed` | AI finished generating | `series_id`, `duration_ms`, `success` | `error_type` |
+| `Devotional Series Activated` | Admin set series as current | `series_id` | |
+| `Devotional Viewed` | Admin viewed single devotional | `devotional_id`, `time_slot`, `day_number` | |
+| `Devotional Edited` | Admin edited AI content | `devotional_id`, `field_edited` | |
+
+**`source` values**: `"paste"`, `"file"`
+**`file_type` values**: `"txt"`, `"md"`, `"pdf"`
+**`frequency` values**: `"1x_week"`, `"3x_week"`, `"daily"`
+**`time_slots` values**: Array of `"morning"`, `"afternoon"`, `"evening"`
+**`field_edited` values**: `"title"`, `"scripture_reference"`, `"scripture_text"`, `"reflection"`, `"prayer_prompt"`, `"discussion_question"`
+
+### 4.11 Future: AI & Natural Language
 
 Events for "Ask Seedling" feature when it ships.
 
@@ -435,6 +456,16 @@ Don't manually track these - Amplitude handles them:
 | `tab_name` | String | `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"` | Profile tab events |
 | `template_used` | String | Template name or null | SMS events |
 | `theme_id` | String | Theme slug | Theme events |
+| `content_length` | Number | - | Sermon upload events |
+| `series_id` | UUID | - | Devotional events |
+| `devotional_id` | UUID | - | Devotional events |
+| `devotional_count` | Number | - | Generation events |
+| `total_devotionals` | Number | - | Configuration events |
+| `time_slot` | String | `"morning"`, `"afternoon"`, `"evening"` | Devotional events |
+| `time_slots` | Array | Array of time_slot values | Configuration events |
+| `duration_ms` | Number | - | Generation events |
+| `success` | Boolean | - | Generation events |
+| `field_edited` | String | Field name that was edited | Edit events |
 
 ---
 
