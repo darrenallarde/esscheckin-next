@@ -167,28 +167,22 @@ async function fetchNewStudentGrowth(
 ): Promise<NewStudentGrowthPoint[]> {
   const supabase = createClient();
 
-  // Get first check-in date for each student (their "join" date)
-  const { data: allCheckIns, error } = await supabase
-    .from("check_ins")
-    .select("student_id, checked_in_at")
+  // Get actual registration dates from profiles (via organization_memberships)
+  // This shows when students were REGISTERED, not when they first checked in
+  const { data: memberships, error } = await supabase
+    .from("organization_memberships")
+    .select("profile_id, created_at")
     .eq("organization_id", organizationId)
-    .order("checked_in_at", { ascending: true });
+    .eq("role", "student")
+    .order("created_at", { ascending: true });
 
   if (error) throw error;
 
-  // Find first check-in for each student
-  const firstCheckIns = new Map<string, string>();
-  (allCheckIns || []).forEach((ci) => {
-    if (!firstCheckIns.has(ci.student_id)) {
-      firstCheckIns.set(ci.student_id, ci.checked_in_at);
-    }
-  });
-
-  // Group first check-ins by week within range
+  // Group registrations by week within range
   const weeklyNewStudents = new Map<string, number>();
 
-  firstCheckIns.forEach((checkInDate) => {
-    const date = parseISO(checkInDate);
+  (memberships || []).forEach((m) => {
+    const date = parseISO(m.created_at);
     if (date >= dateRange.start && date <= dateRange.end) {
       const weekStart = startOfWeek(date, { weekStartsOn: 0 });
       const weekKey = format(weekStart, "yyyy-MM-dd");
@@ -201,9 +195,9 @@ async function fetchNewStudentGrowth(
   let currentWeek = startOfWeek(dateRange.start, { weekStartsOn: 0 });
   let cumulative = 0;
 
-  // Count students from before the date range
-  firstCheckIns.forEach((checkInDate) => {
-    const date = parseISO(checkInDate);
+  // Count students registered before the date range (total ministry reach)
+  (memberships || []).forEach((m) => {
+    const date = parseISO(m.created_at);
     if (date < dateRange.start) {
       cumulative++;
     }

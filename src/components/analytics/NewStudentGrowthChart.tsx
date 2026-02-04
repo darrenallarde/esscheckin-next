@@ -28,7 +28,7 @@ export function NewStudentGrowthChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>New Student Growth</CardTitle>
+          <CardTitle>New Registrations</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[250px] w-full" />
@@ -43,9 +43,9 @@ export function NewStudentGrowthChart({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">New Student Growth</CardTitle>
+        <CardTitle className="text-lg font-semibold">New Registrations</CardTitle>
         <CardDescription>
-          {totalNew} new students in period | {latestCumulative} total
+          {totalNew} new registrations in period | {latestCumulative} total ministry reach
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -84,7 +84,7 @@ export function NewStudentGrowthChart({
               <Bar
                 yAxisId="left"
                 dataKey="newStudents"
-                name="New Students"
+                name="New Registrations"
                 fill="#22c55e"
                 radius={[4, 4, 0, 0]}
               />
@@ -92,7 +92,7 @@ export function NewStudentGrowthChart({
                 yAxisId="right"
                 type="monotone"
                 dataKey="cumulative"
-                name="Total Students"
+                name="Total Reach"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 dot={false}

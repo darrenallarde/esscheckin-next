@@ -110,6 +110,12 @@ Grade mapping:
 - "7th grade" / "7th graders" = grade 7
 - "freshmen" = grade 9, "sophomores" = grade 10, "juniors" = grade 11, "seniors" = grade 12
 
+Gender mapping:
+- "boys" / "guys" / "men" / "male students" = gender: "male"
+- "girls" / "gals" / "women" / "female students" = gender: "female"
+- "HS boys" / "high school boys" = grades 9-12 AND gender: "male"
+- "MS girls" / "middle school girls" = grades 6-8 AND gender: "female"
+
 Activity mapping:
 - "active this month" = { type: "active", days: 30 }
 - "missing 3 weeks" / "haven't checked in for 3 weeks" = { type: "inactive", days: 21 }
