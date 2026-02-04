@@ -140,7 +140,7 @@ export function usePlatformStats() {
 export interface JoinOrgResult {
   success: boolean;
   message: string;
-  profile_id: string | null;
+  result_profile_id: string | null;
   organization_slug: string | null;
 }
 
