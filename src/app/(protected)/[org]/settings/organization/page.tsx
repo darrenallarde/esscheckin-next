@@ -453,36 +453,46 @@ export default function OrganizationSettingsPage() {
             )}
 
             {/* URLs Preview */}
-            {shortCode && !shortCodeChanged && (
+            {shortCode && (
               <div className="space-y-2 pt-2 border-t">
-                <p className="text-sm font-medium">Your URLs:</p>
+                <p className="text-sm font-medium">
+                  {shortCodeChanged ? "URLs will be:" : "Your URLs:"}
+                </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-muted rounded text-sm">{origin}/{shortCode}</code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleCopyUrl(`${origin}/${shortCode}`)}
-                  >
-                    {copiedUrl === `${origin}/${shortCode}` ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <code className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}>
+                    {origin}/{shortCode}
+                  </code>
+                  {!shortCodeChanged && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopyUrl(`${origin}/${shortCode}`)}
+                    >
+                      {copiedUrl === `${origin}/${shortCode}` ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-muted rounded text-sm">{origin}/c/{shortCode}</code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleCopyUrl(`${origin}/c/${shortCode}`)}
-                  >
-                    {copiedUrl === `${origin}/c/${shortCode}` ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <code className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}>
+                    {origin}/c/{shortCode}
+                  </code>
+                  {!shortCodeChanged && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopyUrl(`${origin}/c/${shortCode}`)}
+                    >
+                      {copiedUrl === `${origin}/c/${shortCode}` ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
