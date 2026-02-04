@@ -13,8 +13,8 @@ import {
  * - User logs in
  * - User switches organizations
  *
- * This sets the Amplitude user ID to the org ID (hybrid identity approach)
- * and sets persistent user properties.
+ * This sets the Amplitude user ID to the actual user ID (user-level identity)
+ * and sets persistent user properties including admin user info.
  *
  * @example
  * ```tsx
@@ -23,6 +23,11 @@ import {
  *   orgId: organization.id,
  *   orgSlug: organization.slug,
  *   role: membership.role,
+ *   userId: user.id,
+ *   email: user.email,
+ *   displayName: user.user_metadata?.name,
+ *   isSuperAdmin: false,
+ *   orgCount: orgs.length,
  * });
  * ```
  */
@@ -30,19 +35,32 @@ export function setOrgContext(params: {
   orgId: string;
   orgSlug: string;
   role: "admin" | "leader" | "viewer";
+  userId: string;
+  email: string;
+  displayName?: string;
+  isSuperAdmin: boolean;
+  orgCount?: number;
 }): void {
-  const { orgId, orgSlug, role } = params;
+  const { orgId, orgSlug, role, userId, email, displayName, isSuperAdmin, orgCount } = params;
 
-  // Set org ID as the Amplitude user ID (hybrid identity approach)
-  setAmplitudeUserId(orgId);
+  // Set USER ID as the Amplitude user ID (user-level identity)
+  // This allows per-admin analysis and proper session replay identification
+  setAmplitudeUserId(userId);
 
   // Set persistent user properties
   setAmplitudeUserProperties({
+    // Org context
     organization_id: orgId,
     organization_slug: orgSlug,
     role,
     is_public_session: false,
     app_version: process.env.NEXT_PUBLIC_APP_VERSION || "dev",
+    // User identity (admin users are consenting platform users)
+    user_id: userId,
+    email,
+    display_name: displayName || email.split("@")[0],
+    is_super_admin: isSuperAdmin,
+    ...(orgCount !== undefined && { org_count: orgCount }),
   });
 }
 

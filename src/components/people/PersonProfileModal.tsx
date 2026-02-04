@@ -23,12 +23,14 @@ import {
   Flame,
   Star,
   PhoneOff,
+  Users,
 } from "lucide-react";
 import { Student } from "@/hooks/queries/use-students";
 import { useSmsConversation } from "@/hooks/queries/use-sms-conversation";
 import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
 import { PersonPastoralContent } from "./PersonPastoralContent";
+import { FamilySection } from "@/components/families/FamilySection";
 
 interface PersonProfileModalProps {
   person: Student | null;
@@ -98,11 +100,15 @@ export function PersonProfileModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-1">
               <MessageCircle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Messages</span>
+            </TabsTrigger>
+            <TabsTrigger value="family" className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Family</span>
             </TabsTrigger>
             <TabsTrigger value="engagement">Engagement</TabsTrigger>
             <TabsTrigger value="pastoral">Pastoral</TabsTrigger>
@@ -209,6 +215,11 @@ export function PersonProfileModal({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Family Tab */}
+          <TabsContent value="family" className="mt-4">
+            <FamilySection studentId={person.id} />
           </TabsContent>
 
           {/* Engagement Tab */}

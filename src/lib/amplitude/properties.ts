@@ -27,6 +27,7 @@ export interface StandardProperties {
 // ============================================
 
 export interface UserProperties {
+  // Existing properties
   organization_id?: string;
   organization_slug?: string;
   role?: "admin" | "leader" | "viewer";
@@ -34,6 +35,12 @@ export interface UserProperties {
   device_id?: string;
   device_name?: string;
   app_version?: string;
+  // New admin user properties
+  user_id?: string;
+  email?: string;
+  display_name?: string;
+  is_super_admin?: boolean;
+  org_count?: number;
 }
 
 // ============================================
@@ -65,6 +72,7 @@ export interface CheckInCompletedProps {
   student_id: string;
   is_duplicate: boolean;
   points_earned?: number;
+  student_grade?: string;
 }
 
 export interface RegistrationStartedProps {

@@ -127,6 +127,7 @@ export function useCheckInTracking() {
       student_id: string;
       is_duplicate: boolean;
       points_earned?: number;
+      student_grade?: string;
     }) => track(EVENTS.CHECK_IN_COMPLETED, props),
 
     trackRegistrationStarted: () => track(EVENTS.REGISTRATION_STARTED),

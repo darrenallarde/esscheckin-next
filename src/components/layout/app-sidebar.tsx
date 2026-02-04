@@ -14,6 +14,7 @@ import {
   Dog,
   Heart,
   Shield,
+  UserCircle,
 } from "lucide-react";
 import { env } from "@/lib/env";
 import { PLATFORM_NAME } from "@/lib/copy";
@@ -58,6 +59,11 @@ const navItems = [
     title: "People",
     path: "/people",
     icon: Users,
+  },
+  {
+    title: "Families",
+    path: "/families",
+    icon: UserCircle,
   },
   {
     title: "Groups",
