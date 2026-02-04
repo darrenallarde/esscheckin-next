@@ -86,6 +86,13 @@ export const EVENTS = {
   SMS_SENT: "SMS Sent",
 
   // ============================================
+  // SMS INBOX (Dashboard)
+  // ============================================
+  MESSAGES_PAGE_VIEWED: "Messages Page Viewed",
+  CONVERSATION_OPENED: "Conversation Opened",
+  MESSAGE_REPLIED: "Message Replied",
+
+  // ============================================
   // SMS & NPC ROUTER (Inbound via Edge Function)
   // These events are logged by the Edge Function, not the frontend
   // ============================================
