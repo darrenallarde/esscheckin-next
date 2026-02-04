@@ -107,6 +107,7 @@ Respond with ONLY valid JSON:
 Grade mapping:
 - "middle school" / "MS" / "junior high" = grades 6-8
 - "high school" / "HS" = grades 9-12
+- "HS and MS" / "MS and HS" / "all grades" = grades 6-12 (BOTH middle and high school combined)
 - "7th grade" / "7th graders" = grade 7
 - "freshmen" = grade 9, "sophomores" = grade 10, "juniors" = grade 11, "seniors" = grade 12
 
@@ -115,6 +116,8 @@ Gender mapping:
 - "girls" / "gals" / "women" / "female students" = gender: "female"
 - "HS boys" / "high school boys" = grades 9-12 AND gender: "male"
 - "MS girls" / "middle school girls" = grades 6-8 AND gender: "female"
+- "HS and MS boys" / "all boys" = grades 6-12 AND gender: "male" (COMBINED, not separate)
+- "HS and MS girls" / "all girls" = grades 6-12 AND gender: "female" (COMBINED, not separate)
 
 Activity mapping:
 - "active this month" = { type: "active", days: 30 }
@@ -126,7 +129,10 @@ Engagement mapping:
 - "ultra core" / "most engaged" = belongingLevels: ["ultra_core"]
 - "new students" = belongingLevels: ["new"]
 
-If the query compares groups (e.g., "boys vs girls", "MS vs HS"), create multiple segments.
+IMPORTANT distinction:
+- "MS vs HS" or "boys vs girls" = COMPARISON, create MULTIPLE segments for side-by-side comparison
+- "MS and HS" or "HS and MS boys" = COMBINED LIST, create ONE segment with grades 6-12 (all grades)
+
 If no specific filter mentioned, use a single segment with minimal filters.`;
 }
 
