@@ -1,19 +1,102 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Users, CalendarCheck, Mail } from "lucide-react";
+import { ArrowLeft, Building2, Users, CalendarCheck, Mail, Pencil, Loader2, X, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAllOrganizations } from "@/hooks/queries/use-admin";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAllOrganizations, useSuperAdminUpdateOrg } from "@/hooks/queries/use-admin";
+import { useToast } from "@/hooks/use-toast";
+
+interface EditFormState {
+  name: string;
+  slug: string;
+  ownerEmail: string;
+  timezone: string;
+  status: string;
+}
 
 export default function OrganizationDetailPage() {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
   const { data: organizations, isLoading } = useAllOrganizations();
+  const updateOrg = useSuperAdminUpdateOrg();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditFormState>({
+    name: "",
+    slug: "",
+    ownerEmail: "",
+    timezone: "",
+    status: "",
+  });
 
   const organization = organizations?.find((org) => org.id === params.id);
+
+  const startEditing = () => {
+    if (organization) {
+      setEditForm({
+        name: organization.name,
+        slug: organization.slug,
+        ownerEmail: organization.owner_email || "",
+        timezone: organization.timezone || "America/Los_Angeles",
+        status: organization.status || "active",
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!organization) return;
+
+    // Only send changed values
+    const changes: Record<string, string> = {};
+    if (editForm.name !== organization.name) changes.name = editForm.name;
+    if (editForm.slug !== organization.slug) changes.slug = editForm.slug;
+    if (editForm.ownerEmail !== (organization.owner_email || "")) changes.ownerEmail = editForm.ownerEmail;
+    if (editForm.timezone !== (organization.timezone || "America/Los_Angeles")) changes.timezone = editForm.timezone;
+    if (editForm.status !== (organization.status || "active")) changes.status = editForm.status;
+
+    if (Object.keys(changes).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      await updateOrg.mutateAsync({
+        orgId: organization.id,
+        ...changes,
+      });
+      toast({
+        title: "Organization updated",
+        description: "Changes saved successfully.",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to update organization:", error);
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -156,39 +239,143 @@ export default function OrganizationDetailPage() {
 
       {/* Organization Details */}
       <Card>
-        <CardHeader>
-          <CardTitle>Organization Details</CardTitle>
-          <CardDescription>
-            View and manage organization settings
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Organization Details</CardTitle>
+            <CardDescription>
+              View and manage organization settings
+            </CardDescription>
+          </div>
+          {!isEditing && (
+            <Button variant="outline" size="sm" onClick={startEditing}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Name</p>
-              <p className="mt-1">{organization.name}</p>
+          {isEditing ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="Organization name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slug">Slug</Label>
+                  <Input
+                    id="slug"
+                    value={editForm.slug}
+                    onChange={(e) => setEditForm({ ...editForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                    placeholder="url-friendly-slug"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used in URLs: /{editForm.slug}/dashboard
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ownerEmail">Owner Email</Label>
+                  <Input
+                    id="ownerEmail"
+                    type="email"
+                    value={editForm.ownerEmail}
+                    onChange={(e) => setEditForm({ ...editForm, ownerEmail: e.target.value })}
+                    placeholder="owner@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select
+                    value={editForm.timezone}
+                    onValueChange={(value) => setEditForm({ ...editForm, timezone: value })}
+                  >
+                    <SelectTrigger id="timezone">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/Los_Angeles">Pacific (LA)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain (Denver)</SelectItem>
+                      <SelectItem value="America/Chicago">Central (Chicago)</SelectItem>
+                      <SelectItem value="America/New_York">Eastern (NY)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={(value) => setEditForm({ ...editForm, status: value })}
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="trial">Trial</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>ID</Label>
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">{organization.id}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={handleSave}
+                  disabled={updateOrg.isPending}
+                >
+                  {updateOrg.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Save Changes
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelEditing}
+                  disabled={updateOrg.isPending}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Name</p>
+                <p className="mt-1">{organization.name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Slug</p>
+                <p className="mt-1">{organization.slug}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Owner Email</p>
+                <p className="mt-1">{organization.owner_email || "Not set"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Timezone</p>
+                <p className="mt-1">{organization.timezone || "America/Los_Angeles"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <div className="mt-1">{getStatusBadge(organization.status)}</div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">ID</p>
+                <p className="mt-1 font-mono text-xs">{organization.id}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Slug</p>
-              <p className="mt-1">{organization.slug}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Owner Email</p>
-              <p className="mt-1">{organization.owner_email || "Not set"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Timezone</p>
-              <p className="mt-1">{organization.timezone || "America/Los_Angeles"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Status</p>
-              <div className="mt-1">{getStatusBadge(organization.status)}</div>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">ID</p>
-              <p className="mt-1 font-mono text-xs">{organization.id}</p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

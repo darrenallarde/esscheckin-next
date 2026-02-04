@@ -168,3 +168,47 @@ export function useSuperAdminJoinOrg() {
     },
   });
 }
+
+// Super admin update organization mutation
+export interface UpdateOrgInput {
+  orgId: string;
+  name?: string;
+  slug?: string;
+  ownerEmail?: string;
+  timezone?: string;
+  status?: string;
+}
+
+export interface UpdateOrgResult {
+  success: boolean;
+  message: string;
+  organization_id: string | null;
+}
+
+export function useSuperAdminUpdateOrg() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateOrgInput) => {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("super_admin_update_organization", {
+        p_org_id: input.orgId,
+        p_name: input.name || null,
+        p_slug: input.slug || null,
+        p_owner_email: input.ownerEmail || null,
+        p_timezone: input.timezone || null,
+        p_status: input.status || null,
+      });
+      if (error) throw error;
+      // RPC returns an array with one result
+      const result = (data as UpdateOrgResult[])?.[0];
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to update organization");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
+    },
+  });
+}
