@@ -166,7 +166,7 @@ export function PersonProfileModal({
 
   const fullName = `${person.first_name} ${person.last_name}`;
   const belongingStatus = getBelongingStatus(person.days_since_last_check_in);
-  const profileType = getProfileType(person.role || person.user_type);
+  const profileType = getProfileType(person.role || person.user_type || undefined);
   const isGuardian = profileType === "guardian";
   const isStudent = profileType === "student";
   const isTeam = profileType === "team";
