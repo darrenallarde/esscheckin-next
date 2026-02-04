@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, Trophy, Award, Loader2 } from "lucide-react";
+import { Download, Trophy, Award, Loader2, Users, CalendarCheck, TrendingUp, AlertCircle } from "lucide-react";
 import { DateRangePicker } from "@/components/analytics/DateRangePicker";
 import { AttendanceTrendChart } from "@/components/analytics/AttendanceTrendChart";
 import { DayBreakdownChart } from "@/components/analytics/DayBreakdownChart";
@@ -12,6 +12,8 @@ import { LeaderboardTable } from "@/components/analytics/LeaderboardTable";
 import { AchievementGrid } from "@/components/analytics/AchievementGrid";
 import { NewStudentGrowthChart } from "@/components/analytics/NewStudentGrowthChart";
 import { RetentionChart } from "@/components/analytics/RetentionChart";
+import { StatCard } from "@/components/analytics/StatCard";
+import { TodaysCheckInsModal } from "@/components/dashboard/TodaysCheckInsModal";
 import {
   useAttendanceData,
   useDayBreakdown,
@@ -25,16 +27,24 @@ import {
   useRankDistribution,
   useAchievementsSummary,
 } from "@/hooks/queries/use-gamification";
+import { useDashboardStats } from "@/hooks/queries/use-dashboard-stats";
+import { useTodaysCheckIns } from "@/hooks/queries/use-todays-checkins";
 import { useOrganization } from "@/hooks/useOrganization";
 
 export default function AnalyticsPage() {
   const [selectedWeeks, setSelectedWeeks] = useState(8);
   const [isExporting, setIsExporting] = useState(false);
+  const [showTodaysCheckIns, setShowTodaysCheckIns] = useState(false);
   const dateRange = getDateRangeFromPreset(selectedWeeks);
 
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
 
+  // Stats data
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(organizationId);
+  const { data: todaysCheckIns, isLoading: todaysLoading } = useTodaysCheckIns(organizationId);
+
+  // Chart data
   const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceData(organizationId, dateRange);
   const { data: dayBreakdown, isLoading: dayLoading } = useDayBreakdown(organizationId, dateRange);
   const { data: rankDistribution, isLoading: rankLoading } = useRankDistribution(organizationId);
@@ -42,6 +52,8 @@ export default function AnalyticsPage() {
   const { data: achievements, isLoading: achievementsLoading } = useAchievementsSummary(organizationId);
   const { data: newStudentData, isLoading: newStudentLoading } = useNewStudentGrowth(organizationId, dateRange);
   const { data: retentionData, isLoading: retentionLoading } = useRetentionData(organizationId, dateRange);
+
+  const isStatsLoading = orgLoading || statsLoading;
 
   const handleExport = async () => {
     if (!organizationId) return;
@@ -93,6 +105,41 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Stats Grid - 4 cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Students"
+          value={stats?.totalStudents ?? 0}
+          subtitle="Active in your organization"
+          icon={Users}
+          loading={isStatsLoading}
+        />
+        <StatCard
+          title="Check-ins Today"
+          value={stats?.checkInsToday ?? 0}
+          subtitle="Click to see who's here"
+          icon={CalendarCheck}
+          trend={stats?.todayTrend}
+          loading={isStatsLoading}
+          onClick={() => setShowTodaysCheckIns(true)}
+        />
+        <StatCard
+          title="Daily Average"
+          value={stats?.weeklyAverage ?? 0}
+          subtitle="Average over last 7 days"
+          icon={TrendingUp}
+          trend={stats?.weeklyTrend}
+          loading={isStatsLoading}
+        />
+        <StatCard
+          title="Needs Attention"
+          value={stats?.needsAttention ?? 0}
+          subtitle="Students missing 30+ days"
+          icon={AlertCircle}
+          loading={isStatsLoading}
+        />
+      </div>
+
       {/* Main Attendance Chart - Full Width */}
       <AttendanceTrendChart data={attendanceData ?? []} loading={orgLoading || attendanceLoading} />
 
@@ -134,6 +181,14 @@ export default function AnalyticsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Today's Check-ins Modal */}
+      <TodaysCheckInsModal
+        open={showTodaysCheckIns}
+        onOpenChange={setShowTodaysCheckIns}
+        checkIns={todaysCheckIns ?? []}
+        loading={todaysLoading}
+      />
     </div>
   );
 }
