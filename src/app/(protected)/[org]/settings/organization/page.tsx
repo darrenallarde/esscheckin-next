@@ -116,12 +116,6 @@ export default function OrganizationSettingsPage() {
   const handleSaveShortCode = async () => {
     if (!currentOrganization) return;
 
-    console.log("[ShortCode] Saving:", {
-      orgId: currentOrganization.id,
-      shortCode: shortCode.trim(),
-      originalShortCode
-    });
-
     setIsSavingShortCode(true);
     const supabase = createClient();
 
@@ -131,16 +125,13 @@ export default function OrganizationSettingsPage() {
         p_short_code: shortCode.trim() || null,
       });
 
-      console.log("[ShortCode] RPC response:", { data, error });
-
       if (error) throw error;
 
       const result = data as { success: boolean; error?: string };
 
       if (!result.success) {
-        console.log("[ShortCode] Failed:", result.error);
         toast({
-          title: "Unable to update short code",
+          title: "Unable to update code",
           description: result.error || "Please try again.",
           variant: "destructive",
         });
