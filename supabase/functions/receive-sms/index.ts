@@ -15,23 +15,36 @@ const INTERIM_RESPONSES = {
 };
 
 // Full NPC responses (used when INTERIM_MODE = false)
+// All responses include #CODE footer so users know their active org context
 const NPC_RESPONSES = {
-  welcome: `Hey! 👋 Text your group code to connect, or tell me which ministry you're looking for.`,
-  connected: (orgName: string) => `Connected to ${orgName}! A leader will text you back soon. 🙌`,
-  connectedWithGroups: (orgName: string, groups: { name: string; code: string | null }[]) => {
+  welcome: `Hey! 👋 Text your ministry code to connect (ask your leader for the code).`,
+  connected: (orgName: string, code: string) =>
+    `Connected to ${orgName}! A leader will text you back soon. 🙌\n\n#${code.toUpperCase()}`,
+  connectedWithGroups: (orgName: string, code: string, groups: { name: string; code: string | null }[]) => {
     const groupList = groups
       .map((g, i) => `${i + 1}. ${g.name}${g.code ? ` (${g.code.toUpperCase()})` : ''}`)
       .join('\n');
-    return `Welcome to ${orgName}! 🙌\n\nWhich group?\n${groupList}\n\nReply with the number or group code.`;
+    return `Welcome to ${orgName}! 🙌\n\nWhich group?\n${groupList}\n\nReply with the number or group code.\n\n#${code.toUpperCase()}`;
   },
-  groupSelected: (groupName: string) => `You're connected to ${groupName}! A leader will text back soon. 🙌`,
-  invalidSelection: `Hmm, I didn't catch that. Reply with a number from the list, or text HELP for options.`,
-  lobbyMessage: `Got it! Your message is in the lobby. A leader will reach out soon to connect you with a group.`,
-  waitingRoom: (orgName: string) => `Your message was sent to ${orgName}. A leader will reach out soon!`,
+  groupSelected: (groupName: string, code: string) =>
+    `You're connected to ${groupName}! A leader will text back soon. 🙌\n\n#${code.toUpperCase()}`,
+  invalidSelection: (code?: string) => {
+    const base = `Hmm, I didn't catch that. Reply with a number from the list, or text HELP for options.`;
+    return code ? `${base}\n\n#${code.toUpperCase()}` : base;
+  },
+  lobbyMessage: (code: string) =>
+    `Got it! A leader will reach out soon.\n\n#${code.toUpperCase()}`,
+  routed: (code: string) => `→ #${code.toUpperCase()}`,
+  waitingRoom: (orgName: string, code: string) =>
+    `Your message was sent to ${orgName}. A leader will reach out soon!\n\n#${code.toUpperCase()}`,
   unknownCode: `I don't recognize that code. Ask your leader for their ministry code and text it here. 👍`,
-  help: `Commands:\nEXIT - Leave current chat\nSWITCH [code] - Switch ministry/group\nGROUPS - List available groups\nHELP - Show this message`,
+  help: (code?: string) => {
+    const base = `Commands:\nEXIT - Leave current chat\nSWITCH [code] - Switch ministry\nHELP - Show this message`;
+    return code ? `${base}\n\n#${code.toUpperCase()}` : base;
+  },
   exited: `You've left the chat. Text a ministry code anytime to reconnect!`,
-  switched: (name: string) => `Switched to ${name}! 🔄`,
+  switched: (orgName: string, code: string) =>
+    `Switched to ${orgName}! 🔄\n\n#${code.toUpperCase()}`,
   multipleGroups: (groups: { org_name: string; group_name: string; group_code: string | null }[]) => {
     const list = groups.map((g, i) =>
       `${i + 1}. ${g.group_name} @ ${g.org_name}${g.group_code ? ` (${g.group_code.toUpperCase()})` : ''}`
@@ -39,6 +52,7 @@ const NPC_RESPONSES = {
     return `You're in multiple groups! Which one?\n${list}\n\nReply with a number.`;
   },
   replyRouted: null, // No response needed for auto-routed replies
+  error: `Oops! Something went wrong. Please try again.`,
 };
 
 // Normalize phone number to just digits
@@ -144,8 +158,12 @@ serve(async (req) => {
       return twimlResponse(NPC_RESPONSES.exited);
     }
 
+    // Get current session for HELP context
+    const currentSession = await getActiveSession(supabase, from);
+    const currentOrgCode = currentSession ? await getOrgCode(supabase, currentSession.organization_id) : null;
+
     if (upperBody === "HELP") {
-      return twimlResponse(NPC_RESPONSES.help);
+      return twimlResponse(NPC_RESPONSES.help(currentOrgCode || undefined));
     }
 
     if (upperBody.startsWith("SWITCH ")) {
@@ -159,103 +177,19 @@ serve(async (req) => {
       return twimlResponse(result.message);
     }
 
-    // STEP 2: Try auto-routing for replies
-    const recentConvo = await findRecentConversation(supabase, from);
-    if (recentConvo) {
-      console.log("Auto-routing reply to recent conversation:", recentConvo);
-      await storeMessage(supabase, {
-        from,
-        to,
-        body,
-        messageSid,
-        studentId: recentConvo.student_id,
-        organizationId: recentConvo.organization_id,
-        groupId: recentConvo.group_id,
-        direction: "inbound",
-        isLobbyMessage: false,
-      });
-      // No response needed - message is routed
-      return twimlResponse(null);
-    }
-
-    // STEP 3: Check for active session
-    const session = await getActiveSession(supabase, from);
-
-    if (session) {
-      if (session.status === "pending_group") {
-        const result = await handleGroupSelection(supabase, from, body, session);
-        return twimlResponse(result.message);
-      } else if (session.status === "active") {
-        const student = await findStudentByPhone(supabase, from);
-        await storeMessage(supabase, {
-          from,
-          to,
-          body,
-          messageSid,
-          studentId: student?.id || null,
-          organizationId: session.organization_id,
-          groupId: session.group_id,
-          direction: "inbound",
-          isLobbyMessage: !session.group_id,
-        });
-        await updateSessionActivity(supabase, session.session_id);
-        return twimlResponse(null);
-      }
-    }
-
-    // STEP 4: Check if known student
-    const studentGroups = await findStudentGroups(supabase, from);
-
-    if (studentGroups && studentGroups.length > 0) {
-      if (studentGroups.length === 1) {
-        const sg = studentGroups[0];
-        await createSession(supabase, from, sg.org_id, sg.group_id, "active");
-        await storeMessage(supabase, {
-          from,
-          to,
-          body,
-          messageSid,
-          studentId: sg.student_id,
-          organizationId: sg.org_id,
-          groupId: sg.group_id,
-          direction: "inbound",
-          isLobbyMessage: false,
-        });
-        return twimlResponse(null);
-      } else {
-        await createSession(supabase, from, studentGroups[0].org_id, null, "pending_group");
-        await storeGroupSelectionContext(supabase, from, studentGroups);
-        return twimlResponse(NPC_RESPONSES.multipleGroups(studentGroups));
-      }
-    }
-
-    // Check if student exists but not in any group (lobby case)
-    const student = await findStudentByPhone(supabase, from);
-    if (student) {
-      await storeMessage(supabase, {
-        from,
-        to,
-        body,
-        messageSid,
-        studentId: student.id,
-        organizationId: student.organization_id,
-        groupId: null,
-        direction: "inbound",
-        isLobbyMessage: true,
-      });
-      return twimlResponse(NPC_RESPONSES.lobbyMessage);
-    }
-
-    // STEP 5: Check if message is an org/group code
+    // STEP 2: Check if message is an org code (BEFORE recent convo check)
+    // This allows users to switch orgs by texting a new code even if they have recent activity
+    console.log("STEP 2: Checking if message is an org code...");
     const codeResult = await tryParseCode(supabase, body);
+    console.log("Code result:", codeResult);
 
     if (codeResult.type === "org") {
       // Org-level routing: Connect directly to org inbox (no group selection)
-      // Group-level routing is opt-in (user texts group code specifically)
       console.log("SMS_EVENT", JSON.stringify({
         event: "SMS_ORG_CONNECTED",
         org_id: codeResult.orgId,
         org_name: codeResult.orgName,
+        org_code: codeResult.orgCode,
         phone_last4: phoneMatch(from).slice(-4),
         timestamp: new Date().toISOString(),
       }));
@@ -273,10 +207,113 @@ serve(async (req) => {
         direction: "inbound",
         isLobbyMessage: false,
       });
-      return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!));
+      return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!, codeResult.orgCode!));
+    }
+
+    // STEP 3: Try auto-routing for replies (recent conversation)
+    console.log("STEP 3: Checking for recent conversation...");
+    const recentConvo = await findRecentConversation(supabase, from);
+    console.log("Recent convo result:", recentConvo);
+    if (recentConvo) {
+      console.log("Auto-routing reply to recent conversation:", recentConvo);
+      const orgCode = await getOrgCode(supabase, recentConvo.organization_id);
+      await storeMessage(supabase, {
+        from,
+        to,
+        body,
+        messageSid,
+        studentId: recentConvo.student_id,
+        organizationId: recentConvo.organization_id,
+        groupId: recentConvo.group_id,
+        direction: "inbound",
+        isLobbyMessage: false,
+      });
+      // Return footer showing which org they're connected to
+      return twimlResponse(orgCode ? NPC_RESPONSES.routed(orgCode) : null);
+    }
+
+    // STEP 4: Check for active session
+    console.log("STEP 4: Checking for active session...");
+    const session = await getActiveSession(supabase, from);
+    console.log("Session result:", session);
+
+    if (session) {
+      const sessionOrgCode = await getOrgCode(supabase, session.organization_id);
+
+      if (session.status === "pending_group") {
+        const result = await handleGroupSelection(supabase, from, body, session, sessionOrgCode);
+        return twimlResponse(result.message);
+      } else if (session.status === "active") {
+        const student = await findStudentByPhone(supabase, from);
+        await storeMessage(supabase, {
+          from,
+          to,
+          body,
+          messageSid,
+          studentId: student?.id || null,
+          organizationId: session.organization_id,
+          groupId: session.group_id,
+          direction: "inbound",
+          isLobbyMessage: !session.group_id,
+        });
+        await updateSessionActivity(supabase, session.session_id);
+        // Return footer showing which org they're connected to
+        return twimlResponse(sessionOrgCode ? NPC_RESPONSES.routed(sessionOrgCode) : null);
+      }
+    }
+
+    // STEP 5: Check if known student
+    console.log("STEP 5: Checking for known student groups...");
+    const studentGroups = await findStudentGroups(supabase, from);
+    console.log("Student groups result:", studentGroups);
+
+    if (studentGroups && studentGroups.length > 0) {
+      if (studentGroups.length === 1) {
+        const sg = studentGroups[0];
+        const orgCode = await getOrgCode(supabase, sg.org_id);
+        await createSession(supabase, from, sg.org_id, sg.group_id, "active");
+        await storeMessage(supabase, {
+          from,
+          to,
+          body,
+          messageSid,
+          studentId: sg.student_id,
+          organizationId: sg.org_id,
+          groupId: sg.group_id,
+          direction: "inbound",
+          isLobbyMessage: false,
+        });
+        // Return footer showing which org they're connected to
+        return twimlResponse(orgCode ? NPC_RESPONSES.routed(orgCode) : null);
+      } else {
+        await createSession(supabase, from, studentGroups[0].org_id, null, "pending_group");
+        await storeGroupSelectionContext(supabase, from, studentGroups);
+        return twimlResponse(NPC_RESPONSES.multipleGroups(studentGroups));
+      }
+    }
+
+    // Check if student exists but not in any group (lobby case)
+    console.log("STEP 5b: Checking if student exists (not in group)...");
+    const student = await findStudentByPhone(supabase, from);
+    console.log("Student result:", student);
+    if (student) {
+      const orgCode = await getOrgCode(supabase, student.organization_id);
+      await storeMessage(supabase, {
+        from,
+        to,
+        body,
+        messageSid,
+        studentId: student.id,
+        organizationId: student.organization_id,
+        groupId: null,
+        direction: "inbound",
+        isLobbyMessage: true,
+      });
+      return twimlResponse(orgCode ? NPC_RESPONSES.lobbyMessage(orgCode) : NPC_RESPONSES.lobbyMessage(""));
     }
 
     // STEP 6: Unknown contact - welcome message
+    console.log("STEP 6: Unknown contact, sending welcome message");
     await addToWaitingRoom(supabase, from, null, body);
     await storeMessage(supabase, {
       from,
@@ -294,7 +331,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error processing webhook:", error);
-    return twimlResponse(null);
+    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    // Return a friendly error message instead of silent failure
+    return twimlResponse("Oops! Something went wrong. Please try again or contact support.");
   }
 });
 
@@ -441,15 +480,38 @@ async function endSession(
 async function tryParseCode(
   supabase: ReturnType<typeof createClient>,
   text: string
-): Promise<{ type: "org" | "group" | "none"; orgId?: string; orgName?: string; groupId?: string; groupName?: string }> {
+): Promise<{ type: "org" | "group" | "none"; orgId?: string; orgName?: string; orgCode?: string; groupId?: string; groupName?: string }> {
   const code = text.trim().toLowerCase();
 
   const { data: orgData } = await supabase.rpc("find_org_by_code", { p_code: code });
   if (orgData?.[0]) {
-    return { type: "org", orgId: orgData[0].org_id, orgName: orgData[0].org_name || orgData[0].org_slug };
+    return {
+      type: "org",
+      orgId: orgData[0].org_id,
+      orgName: orgData[0].org_name || orgData[0].org_slug,
+      orgCode: orgData[0].org_code || code,
+    };
   }
 
   return { type: "none" };
+}
+
+// Get org short_code by org ID
+async function getOrgCode(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("short_code, slug")
+    .eq("id", orgId)
+    .single();
+
+  if (error) {
+    console.error("Error getting org code:", error);
+    return null;
+  }
+  return data?.short_code || data?.slug || null;
 }
 
 async function listOrgGroups(
@@ -472,7 +534,8 @@ async function handleGroupSelection(
   supabase: ReturnType<typeof createClient>,
   phone: string,
   input: string,
-  session: { session_id: string; organization_id: string }
+  session: { session_id: string; organization_id: string },
+  orgCode: string | null
 ): Promise<{ message: string }> {
   const groups = await listOrgGroups(supabase, session.organization_id);
   const trimmedInput = input.trim();
@@ -481,17 +544,17 @@ async function handleGroupSelection(
   if (!isNaN(num) && num >= 1 && num <= groups.length) {
     const selected = groups[num - 1];
     await updateSessionGroup(supabase, session.session_id, selected.group_id);
-    return { message: NPC_RESPONSES.groupSelected(selected.name) };
+    return { message: NPC_RESPONSES.groupSelected(selected.name, orgCode || "") };
   }
 
   const lowerInput = trimmedInput.toLowerCase();
   const matchingGroup = groups.find(g => g.code?.toLowerCase() === lowerInput);
   if (matchingGroup) {
     await updateSessionGroup(supabase, session.session_id, matchingGroup.group_id);
-    return { message: NPC_RESPONSES.groupSelected(matchingGroup.name) };
+    return { message: NPC_RESPONSES.groupSelected(matchingGroup.name, orgCode || "") };
   }
 
-  return { message: NPC_RESPONSES.invalidSelection };
+  return { message: NPC_RESPONSES.invalidSelection(orgCode || undefined) };
 }
 
 async function handleSwitch(
@@ -504,7 +567,7 @@ async function handleSwitch(
   if (result.type === "org") {
     // Org-level routing: Switch to org directly (no group selection)
     await createSession(supabase, phone, result.orgId!, null, "active");
-    return { message: NPC_RESPONSES.switched(result.orgName!) };
+    return { message: NPC_RESPONSES.switched(result.orgName!, result.orgCode || code) };
   }
 
   return { message: NPC_RESPONSES.unknownCode };
@@ -519,13 +582,16 @@ async function listGroups(
     return { message: "You're not connected to a ministry. Text a ministry code to connect!" };
   }
 
+  const orgCode = await getOrgCode(supabase, session.organization_id);
   const groups = await listOrgGroups(supabase, session.organization_id);
   if (groups.length === 0) {
-    return { message: "No groups available in this ministry." };
+    const msg = "No groups available in this ministry.";
+    return { message: orgCode ? `${msg}\n\n#${orgCode.toUpperCase()}` : msg };
   }
 
   const list = groups.map((g, i) => `${i + 1}. ${g.name}${g.code ? ` (${g.code.toUpperCase()})` : ''}`).join('\n');
-  return { message: `Available groups:\n${list}\n\nText SWITCH [code] to change groups.` };
+  const msg = `Available groups:\n${list}\n\nText SWITCH [code] to change groups.`;
+  return { message: orgCode ? `${msg}\n\n#${orgCode.toUpperCase()}` : msg };
 }
 
 async function addToWaitingRoom(
