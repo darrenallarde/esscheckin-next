@@ -4,7 +4,7 @@ import { PastoralQueue } from "@/components/pastoral/PastoralQueue";
 import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
-import { NextActionsCard } from "@/components/home/NextActionsCard";
+import { QuestBoard } from "@/components/home/QuestBoard";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
@@ -57,9 +57,9 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* AI-Suggested Next Actions */}
+      {/* Quest Board - Daily Habits & Priority Actions */}
       {organizationId && (
-        <NextActionsCard organizationId={organizationId} orgSlug={orgSlug} />
+        <QuestBoard organizationId={organizationId} orgSlug={orgSlug} />
       )}
 
       {/* Belonging Spectrum - Prominent placement */}

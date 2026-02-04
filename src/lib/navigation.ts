@@ -26,7 +26,8 @@ export function orgPath(orgSlug: string | undefined | null, path: string): strin
  */
 export const ROUTES = {
   // Protected routes (require org context)
-  dashboard: '/dashboard',
+  home: '/home',
+  dashboard: '/dashboard', // Legacy - redirects to /home
   students: '/students',
   pastoral: '/pastoral',
   analytics: '/analytics',

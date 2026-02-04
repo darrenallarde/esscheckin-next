@@ -46,11 +46,11 @@ function SetupPageContent() {
       // Check if there was a redirect param (e.g., from legacy path)
       const redirectPath = searchParams.get("redirect");
       if (redirectPath) {
-        // Extract just the route part (e.g., /dashboard from /dashboard)
-        const route = extractRouteFromPath(redirectPath) || "/dashboard";
+        // Extract just the route part (e.g., /home from /home)
+        const route = extractRouteFromPath(redirectPath) || "/home";
         router.push(`/${orgSlug}${route}`);
       } else {
-        router.push(`/${orgSlug}/dashboard`);
+        router.push(`/${orgSlug}/home`);
       }
       return;
     }
@@ -70,7 +70,7 @@ function SetupPageContent() {
 
       if (updatedOrgs && updatedOrgs.length > 0) {
         const firstOrg = updatedOrgs[0];
-        router.push(`/${firstOrg.organization_slug}/dashboard`);
+        router.push(`/${firstOrg.organization_slug}/home`);
         return;
       }
     }

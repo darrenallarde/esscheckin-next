@@ -29,21 +29,29 @@ import { useToast } from "@/hooks/use-toast";
 import { useGroups } from "@/hooks/queries/use-groups";
 import {
   useRecipientPreview,
+  useRecipientsByProfileIds,
   useCreateAndSendBroadcast,
   type BroadcastTargetType,
+  type BroadcastRecipient,
 } from "@/hooks/queries/use-broadcasts";
 
 interface BroadcastComposerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orgId: string | null;
+  preSelectedProfileIds?: string[];
 }
 
 const SMS_CHAR_LIMIT = 160;
 
-export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastComposerProps) {
+export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfileIds }: BroadcastComposerProps) {
   const { toast } = useToast();
-  const [targetType, setTargetType] = useState<BroadcastTargetType>("all");
+
+  // When we have pre-selected profiles, use "profiles" as target type
+  const hasPreSelectedProfiles = preSelectedProfileIds && preSelectedProfileIds.length > 0;
+  const [targetType, setTargetType] = useState<BroadcastTargetType>(
+    hasPreSelectedProfiles ? "profiles" : "all"
+  );
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [includeLeaders, setIncludeLeaders] = useState(true);
   const [includeMembers, setIncludeMembers] = useState(true);
@@ -53,14 +61,28 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
   const { data: groups } = useGroups(orgId);
   const createAndSend = useCreateAndSendBroadcast();
 
-  // Get recipient preview
-  const { data: recipients, isLoading: recipientsLoading } = useRecipientPreview(
+  // Get recipient preview for group-based targeting
+  const { data: groupRecipients, isLoading: groupRecipientsLoading } = useRecipientPreview(
     orgId,
     targetType,
     targetType === "groups" ? selectedGroupIds : [],
     includeLeaders,
     includeMembers
   );
+
+  // Get recipients by profile IDs when using "profiles" target type
+  const { data: profileRecipients, isLoading: profileRecipientsLoading } = useRecipientsByProfileIds(
+    orgId,
+    hasPreSelectedProfiles && targetType === "profiles" ? preSelectedProfileIds : []
+  );
+
+  // Determine which recipients to use based on target type
+  const recipients: BroadcastRecipient[] | undefined = targetType === "profiles"
+    ? profileRecipients
+    : groupRecipients;
+  const recipientsLoading = targetType === "profiles"
+    ? profileRecipientsLoading
+    : groupRecipientsLoading;
 
   // Count by role
   const recipientCounts = useMemo(() => {
@@ -74,13 +96,18 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
   const charCount = messageBody.length;
   const isOverLimit = charCount > SMS_CHAR_LIMIT;
 
-  // Validation
+  // Validation - different rules for profiles vs groups
   const isValid =
     messageBody.trim().length > 0 &&
     !isOverLimit &&
-    (includeLeaders || includeMembers) &&
-    (targetType === "all" || selectedGroupIds.length > 0) &&
-    recipientCounts.total > 0;
+    recipientCounts.total > 0 &&
+    (
+      targetType === "profiles" ||
+      (
+        (includeLeaders || includeMembers) &&
+        (targetType === "all" || selectedGroupIds.length > 0)
+      )
+    );
 
   const handleGroupToggle = (groupId: string) => {
     setSelectedGroupIds((prev) =>
@@ -99,6 +126,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
         messageBody: messageBody.trim(),
         targetType,
         targetGroupIds: targetType === "groups" ? selectedGroupIds : [],
+        targetProfileIds: targetType === "profiles" ? preSelectedProfileIds : [],
         includeLeaders,
         includeMembers,
       });
@@ -110,7 +138,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
 
       // Reset form
       setMessageBody("");
-      setTargetType("all");
+      setTargetType(hasPreSelectedProfiles ? "profiles" : "all");
       setSelectedGroupIds([]);
       setIncludeLeaders(true);
       setIncludeMembers(true);
@@ -138,83 +166,137 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
           </SheetHeader>
 
           <div className="space-y-6 mt-6">
-            {/* Target Selection */}
-            <div className="space-y-3">
-              <Label>Target Audience</Label>
-              <RadioGroup
-                value={targetType}
-                onValueChange={(v) => setTargetType(v as BroadcastTargetType)}
-                className="gap-3"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="target-all" />
-                  <Label htmlFor="target-all" className="font-normal cursor-pointer">
-                    All groups
-                  </Label>
+            {/* Pre-selected recipients from Insights */}
+            {hasPreSelectedProfiles && targetType === "profiles" && (
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Recipients from Insights</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {preSelectedProfileIds.length} people selected from your query results
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTargetType("all")}
+                  >
+                    Change
+                  </Button>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="groups" id="target-groups" />
-                  <Label htmlFor="target-groups" className="font-normal cursor-pointer">
-                    Select groups
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {/* Group Selection */}
-              {targetType === "groups" && (
-                <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
-                  {groups && groups.length > 0 ? (
-                    groups.map((group) => (
-                      <div key={group.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`group-${group.id}`}
-                          checked={selectedGroupIds.includes(group.id)}
-                          onCheckedChange={() => handleGroupToggle(group.id)}
-                        />
-                        <Label
-                          htmlFor={`group-${group.id}`}
-                          className="font-normal cursor-pointer text-sm"
+                {/* Show recipient names */}
+                {profileRecipients && profileRecipients.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-primary/10">
+                    <p className="text-xs text-muted-foreground mb-2">Sending to:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {profileRecipients.slice(0, 10).map((r) => (
+                        <span
+                          key={r.profileId}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted"
                         >
-                          {group.name}
-                          <span className="text-muted-foreground ml-1">
-                            ({group.member_count} members)
-                          </span>
+                          {r.firstName} {r.lastName}
+                        </span>
+                      ))}
+                      {profileRecipients.length > 10 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{profileRecipients.length - 10} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Target Selection - show when NOT using pre-selected profiles */}
+            {targetType !== "profiles" && (
+              <>
+                <div className="space-y-3">
+                  <Label>Target Audience</Label>
+                  <RadioGroup
+                    value={targetType}
+                    onValueChange={(v) => setTargetType(v as BroadcastTargetType)}
+                    className="gap-3"
+                  >
+                    {hasPreSelectedProfiles && (
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="profiles" id="target-profiles" />
+                        <Label htmlFor="target-profiles" className="font-normal cursor-pointer">
+                          Insights results ({preSelectedProfileIds.length} people)
                         </Label>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No groups available</p>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="all" id="target-all" />
+                      <Label htmlFor="target-all" className="font-normal cursor-pointer">
+                        All groups
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="groups" id="target-groups" />
+                      <Label htmlFor="target-groups" className="font-normal cursor-pointer">
+                        Select groups
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {/* Group Selection */}
+                  {targetType === "groups" && (
+                    <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
+                      {groups && groups.length > 0 ? (
+                        groups.map((group) => (
+                          <div key={group.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`group-${group.id}`}
+                              checked={selectedGroupIds.includes(group.id)}
+                              onCheckedChange={() => handleGroupToggle(group.id)}
+                            />
+                            <Label
+                              htmlFor={`group-${group.id}`}
+                              className="font-normal cursor-pointer text-sm"
+                            >
+                              {group.name}
+                              <span className="text-muted-foreground ml-1">
+                                ({group.member_count} members)
+                              </span>
+                            </Label>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No groups available</p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Role Selection */}
-            <div className="space-y-3">
-              <Label>Include</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-leaders"
-                    checked={includeLeaders}
-                    onCheckedChange={(checked) => setIncludeLeaders(!!checked)}
-                  />
-                  <Label htmlFor="include-leaders" className="font-normal cursor-pointer">
-                    Leaders
-                  </Label>
+                {/* Role Selection - only for group-based targeting */}
+                <div className="space-y-3">
+                  <Label>Include</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="include-leaders"
+                        checked={includeLeaders}
+                        onCheckedChange={(checked) => setIncludeLeaders(!!checked)}
+                      />
+                      <Label htmlFor="include-leaders" className="font-normal cursor-pointer">
+                        Leaders
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="include-members"
+                        checked={includeMembers}
+                        onCheckedChange={(checked) => setIncludeMembers(!!checked)}
+                      />
+                      <Label htmlFor="include-members" className="font-normal cursor-pointer">
+                        Members
+                      </Label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-members"
-                    checked={includeMembers}
-                    onCheckedChange={(checked) => setIncludeMembers(!!checked)}
-                  />
-                  <Label htmlFor="include-members" className="font-normal cursor-pointer">
-                    Members
-                  </Label>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
 
             {/* Recipient Preview */}
             <div className="rounded-lg bg-muted/50 p-4">
@@ -261,8 +343,8 @@ export function BroadcastComposer({ open, onOpenChange, orgId }: BroadcastCompos
               </div>
             </div>
 
-            {/* Validation Warning */}
-            {!includeLeaders && !includeMembers && (
+            {/* Validation Warning - only show for group targeting */}
+            {targetType !== "profiles" && !includeLeaders && !includeMembers && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>

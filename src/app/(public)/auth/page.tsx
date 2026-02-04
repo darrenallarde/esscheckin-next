@@ -171,8 +171,8 @@ function AuthForm() {
           console.log("User orgs:", orgs, orgsError);
 
           if (orgs && orgs.length > 0) {
-            // Redirect to their first org's dashboard
-            router.push(`/${orgs[0].organization_slug}/dashboard`);
+            // Redirect to their first org's home
+            router.push(`/${orgs[0].organization_slug}/home`);
             return;
           }
         }

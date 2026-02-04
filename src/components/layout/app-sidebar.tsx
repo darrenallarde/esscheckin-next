@@ -79,7 +79,7 @@ const navSections: NavSection[] = [
     title: "Act",
     icon: Zap,
     items: [
-      { title: "Home", path: "/dashboard", icon: Home },
+      { title: "Home", path: "/home", icon: Home },
       { title: "Pastoral", path: "/pastoral", icon: Heart },
       { title: "Curriculum", path: "/curriculum", icon: BookOpen },
     ],
@@ -221,7 +221,7 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
                             );
                             if (memberOrg) switchOrganization(memberOrg);
                           } else {
-                            router.push(`/${org.slug}/dashboard`);
+                            router.push(`/${org.slug}/home`);
                           }
                         }}
                         className={

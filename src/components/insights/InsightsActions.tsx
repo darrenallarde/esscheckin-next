@@ -19,6 +19,7 @@ interface InsightsActionsProps {
   people?: PersonResult[];
   chartData?: ChartResults | null;
   organizationId: string | null;
+  orgSlug?: string | null;
 }
 
 export function InsightsActions({
@@ -29,6 +30,7 @@ export function InsightsActions({
   people,
   chartData,
   organizationId,
+  orgSlug,
 }: InsightsActionsProps) {
   const track = useTrack();
   const [isExporting, setIsExporting] = useState(false);
@@ -40,15 +42,13 @@ export function InsightsActions({
       context: mode === "list" ? "list_view" : "chart_action",
     });
 
-    // TODO: Open BroadcastComposer with pre-filled recipients
-    // For now, we'll show an alert. In the full implementation,
-    // this would navigate to the broadcasts page with profile IDs
-    if (profileIds.length > 0) {
+    // Navigate to broadcasts page with pre-selected profile IDs
+    if (profileIds.length > 0 && orgSlug) {
       const params = new URLSearchParams({
         profileIds: profileIds.join(","),
         source: "insights",
       });
-      window.location.href = `/${organizationId}/broadcasts/new?${params}`;
+      window.location.href = `/${orgSlug}/broadcasts?${params}`;
     }
   };
 

@@ -189,6 +189,24 @@ export const EVENTS = {
   INSIGHTS_PERSON_CLICKED: "Insights Person Clicked",
   INSIGHTS_QUERY_CLEARED: "Insights Query Cleared",
   INSIGHTS_REFINEMENT_APPLIED: "Insights Refinement Applied",
+  INSIGHTS_QUERY_SAVED: "Insights Query Saved",
+  INSIGHTS_QUERY_STARRED: "Insights Query Starred",
+  INSIGHTS_QUERY_UNSTARRED: "Insights Query Unstarred",
+  INSIGHTS_SAVED_QUERY_USED: "Insights Saved Query Used",
+
+  // ============================================
+  // HOME & QUEST SYSTEM
+  // ============================================
+  HOME_PAGE_VIEWED: "Home Page Viewed",
+  QUEST_BOARD_LOADED: "Quest Board Loaded",
+  QUEST_COMPLETED: "Quest Completed",
+  QUEST_ACTION_CLICKED: "Quest Action Clicked",
+  QUEST_SKIPPED: "Quest Skipped",
+  ALL_QUESTS_COMPLETED: "All Quests Completed",
+  STREAK_MILESTONE_REACHED: "Streak Milestone Reached",
+  QUICK_MESSAGE_SENT: "Quick Message Sent",
+  HOME_PASTORAL_ACTION: "Home Pastoral Action",
+  HOME_NEW_STUDENT_ACTION: "Home New Student Action",
 
   // ============================================
   // FUTURE: AI & NATURAL LANGUAGE

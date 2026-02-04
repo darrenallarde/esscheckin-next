@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = searchParams.get("next") ?? "/home";
 
   if (code) {
     const cookieStore = await cookies();
@@ -53,11 +53,11 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/setup`);
         }
 
-        // Redirect to the first org's dashboard (or use next param if it's org-specific)
+        // Redirect to the first org's home (or use next param if it's org-specific)
         const firstOrg = orgs[0];
-        const redirectPath = next.startsWith("/") && !next.includes("/dashboard")
+        const redirectPath = next.startsWith("/") && !next.includes("/home")
           ? next
-          : `/${firstOrg.organization_slug}/dashboard`;
+          : `/${firstOrg.organization_slug}/home`;
         return NextResponse.redirect(`${origin}${redirectPath}`);
       }
 

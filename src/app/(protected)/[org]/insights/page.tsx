@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InsightsInput } from "@/components/insights/InsightsInput";
 import { QuickQueryChips } from "@/components/insights/QuickQueryChips";
 import { InsightsResults } from "@/components/insights/InsightsResults";
 import { ModeToggle } from "@/components/insights/ModeToggle";
+import { SavedQueries } from "@/components/insights/SavedQueries";
 import { PersonProfileModal } from "@/components/people/PersonProfileModal";
 import { useInsights } from "@/hooks/queries/use-insights";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useSaveQuery } from "@/hooks/queries/use-saved-queries";
 import { useTrack } from "@/lib/amplitude/hooks";
 import { EVENTS } from "@/lib/amplitude/events";
 import type { ChartType, TimeGranularity, OutputMode, PersonResult } from "@/lib/insights/types";
@@ -38,10 +40,27 @@ export default function InsightsPage() {
     effectiveMode,
   } = useInsights(organizationId, { modeOverride });
 
+  const saveQuery = useSaveQuery();
+
   // Track page view on mount
   useState(() => {
     track(EVENTS.INSIGHTS_PAGE_VIEWED, {});
   });
+
+  // Auto-save query when results come back
+  useEffect(() => {
+    if (results && query.trim() && organizationId) {
+      saveQuery.mutate({
+        orgId: organizationId,
+        queryText: query.trim(),
+      });
+
+      track(EVENTS.INSIGHTS_QUERY_SAVED, {
+        query_text: query,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, organizationId]);
 
   const handleSubmit = useCallback(() => {
     if (!query.trim()) return;
@@ -56,6 +75,24 @@ export default function InsightsPage() {
     setModeOverride(null);
     submitQuery(query);
   }, [query, submitQuery, track, parsedQuery]);
+
+  // Handle selecting a saved query
+  const handleSelectSavedQuery = useCallback(
+    (queryText: string) => {
+      setQuery(queryText);
+
+      track(EVENTS.INSIGHTS_QUERY_SUBMITTED, {
+        query_text: queryText,
+        source: "saved_query",
+        output_mode: "unknown",
+      });
+
+      // Reset mode override for new queries
+      setModeOverride(null);
+      submitQuery(queryText);
+    },
+    [submitQuery, track]
+  );
 
   const handleQuickReply = useCallback(
     (queryText: string, label: string) => {
@@ -228,21 +265,32 @@ export default function InsightsPage() {
           onGranularityChange={handleGranularityChange}
           onPersonClick={handlePersonClick}
           organizationId={organizationId}
+          orgSlug={currentOrganization?.slug}
         />
       ) : (
         !isLoading &&
         !isParsing && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick queries</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <QuickQueryChips
-                onSelect={handleQuickReply}
-                disabled={isLoading || isParsing}
-              />
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {/* Saved Queries */}
+            <SavedQueries
+              organizationId={organizationId}
+              onSelectQuery={handleSelectSavedQuery}
+              disabled={isLoading || isParsing}
+            />
+
+            {/* Quick Queries */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Quick queries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuickQueryChips
+                  onSelect={handleQuickReply}
+                  disabled={isLoading || isParsing}
+                />
+              </CardContent>
+            </Card>
+          </div>
         )
       )}
 

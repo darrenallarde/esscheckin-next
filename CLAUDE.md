@@ -154,11 +154,22 @@ Validation Helper Functions:
 - `is_valid_email(email)` - Returns true if email has valid format and is not a placeholder (unknown@unknown.com, etc.)
 
 SMS Broadcast Functions:
-- `get_broadcast_recipients(org_id, target_type, group_ids[], include_leaders, include_members)` - Get recipients based on targeting criteria
-- `create_broadcast(org_id, message, target_type, group_ids[], include_leaders, include_members)` - Create broadcast and populate recipients
+- `get_broadcast_recipients(org_id, target_type, group_ids[], include_leaders, include_members, profile_ids[])` - Get recipients based on targeting criteria (supports "profiles" target type for Insights integration)
+- `create_broadcast(org_id, message, target_type, group_ids[], include_leaders, include_members, profile_ids[])` - Create broadcast and populate recipients
 - `get_organization_broadcasts(org_id)` - List all broadcasts for an org
 - `get_broadcast_details(broadcast_id)` - Get broadcast with recipient details
 - `update_broadcast_status(broadcast_id, status, sent_count, failed_count)` - Update broadcast status (service_role only)
+
+Insights Saved Queries:
+- `save_insights_query(org_id, query_text, is_starred)` - Save or update a query (upserts on org+user+query)
+- `toggle_insights_query_star(query_id)` - Toggle star status
+- `get_insights_saved_queries(org_id, limit)` - Get saved queries for current user
+- `delete_insights_query(query_id)` - Delete a saved query
+
+Quest System:
+- `complete_quest(org_id, quest_type, quest_key)` - Mark a quest complete, updates streaks
+- `get_quest_board(org_id)` - Get today's completions, streak info, and context counts
+- `get_mia_students_for_quests(org_id, days_threshold, limit)` - Get MIA students for priority quests
 
 ### RPC Function Modification Rules (CRITICAL - PREVENTS REGRESSIONS)
 
@@ -253,22 +264,30 @@ src/
 │   │   ├── setup/          # Initial setup wizard
 │   │   └── page.tsx        # Landing/check-in page (JRPG themed)
 │   └── (protected)/        # Authenticated routes
-│       ├── dashboard/      # Main dashboard with stats
-│       ├── students/       # Group-based student management
-│       ├── pastoral/       # Kanban workflow (placeholder)
-│       ├── analytics/      # Charts and leaderboards
-│       ├── curriculum/     # Weekly content
-│       └── settings/       # Tabbed settings page
+│       ├── [org]/home/     # Command center (quests, belonging, pastoral)
+│       ├── [org]/people/   # Student management
+│       ├── [org]/families/ # Parent/guardian management
+│       ├── [org]/groups/   # Group management
+│       ├── [org]/messages/ # SMS inbox
+│       ├── [org]/broadcasts/ # SMS broadcasts
+│       ├── [org]/insights/ # AI-powered queries with saved queries
+│       ├── [org]/pastoral/ # Pastoral care queue
+│       ├── [org]/analytics/ # Stats, charts, leaderboards
+│       ├── [org]/curriculum/ # Weekly content
+│       └── [org]/settings/ # Tabbed settings page
 ├── components/
 │   ├── analytics/          # StatCard, Charts, Leaderboard
+│   ├── broadcasts/         # BroadcastComposer
 │   ├── checkin/            # JRPG check-in flow
 │   ├── groups/             # GroupCard, modals
-│   ├── layout/             # AppSidebar
-│   ├── pastoral/           # PastoralQueue
+│   ├── home/               # QuestBoard, QuickMessageWidget
+│   ├── insights/           # InsightsInput, SavedQueries, Results
+│   ├── layout/             # AppSidebar (categorized navigation)
+│   ├── pastoral/           # PastoralQueue, BelongingSpectrum
 │   ├── shared/             # StreakMeter, DrillDownModal
 │   └── ui/                 # shadcn/ui components
 ├── hooks/
-│   └── queries/            # React Query hooks
+│   └── queries/            # React Query hooks (use-quests, use-saved-queries, etc.)
 ├── lib/supabase/           # Supabase clients
 ├── utils/                  # gamificationDB, bibleVerses
 └── types/
@@ -276,14 +295,32 @@ src/
 
 ## Navigation Structure
 
+The sidebar is organized into **5 thematic sections** reflecting how ministry leaders work:
+
 ```
-Dashboard → /dashboard (stats, trend chart, leaderboard, pastoral queue)
-Students  → /students (group cards with drill-down)
-Pastoral  → /pastoral (Kanban workflow - Phase 4)
-Analytics → /analytics (all charts consolidated)
-Curriculum → /curriculum (Phase 5)
-Settings  → /settings (tabbed: Account, Team, Import)
+⚡ ACT
+  Home      → /home (quest board, belonging spectrum, pastoral queue, messages)
+  Pastoral  → /pastoral (care queue)
+  Curriculum → /curriculum
+
+💬 REACH
+  Messages   → /messages (SMS inbox)
+  Broadcasts → /broadcasts (bulk SMS)
+
+👥 PEOPLE
+  Students  → /people (student management)
+  Families  → /families (parent/guardian management)
+  Groups    → /groups (group management)
+
+📊 UNDERSTAND
+  Insights  → /insights (AI-powered queries with saved/starred queries)
+  Analytics → /analytics (stats, charts, leaderboards)
+
+⚙️ MANAGE
+  Settings  → /settings (admin only, tabbed: Account, Team, Import)
 ```
+
+**Note:** The `/dashboard` route is deprecated and redirects to `/home` via middleware.
 
 ## Implementation Status
 

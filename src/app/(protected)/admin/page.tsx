@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
   const recentOrgs = organizations?.slice(0, 5) || [];
 
   const handleJumpToOrg = (slug: string) => {
-    router.push(`/${slug}/dashboard`);
+    router.push(`/${slug}/home`);
   };
 
   return (

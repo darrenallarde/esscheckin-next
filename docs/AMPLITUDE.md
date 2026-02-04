@@ -532,6 +532,57 @@ Events for the AI Insights conversational data assistant - a natural language in
 - Never log actual student names, phones, or emails
 - Track timing for `parse_time_ms` to monitor LLM performance
 
+### 4.14 Insights Saved Queries
+
+Events for tracking saved and starred queries in the Insights feature.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Insights Query Saved` | Query auto-saved after results | `query_text` | `result_count` |
+| `Insights Query Starred` | User starred a query | `query_id`, `query_text` | |
+| `Insights Query Unstarred` | User unstarred a query | `query_id`, `query_text` | |
+| `Insights Saved Query Used` | User clicked a saved/recent query | `query_id`, `query_text`, `source` | |
+
+**Property Values:**
+
+| Property | Type | Allowed Values |
+|----------|------|----------------|
+| `query_id` | UUID | Database ID of the saved query |
+| `source` | String | `"starred"`, `"recent"` |
+
+### 4.15 Home Page & Quest System
+
+Events for the gamified Home page with daily quests, priority actions, and streak tracking.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Home Page Viewed` | User opened Home page | `org_slug` | `quest_count`, `streak_count` |
+| `Quest Board Loaded` | Quest board data loaded | `daily_quest_count`, `priority_quest_count` | `completed_count` |
+| `Quest Completed` | User completed a quest | `quest_id`, `quest_type`, `quest_title` | `completion_method` |
+| `Quest Action Clicked` | User clicked action button on quest | `quest_id`, `action_type` | `action_label` |
+| `Quest Skipped` | User skipped a priority quest | `quest_id`, `quest_title` | |
+| `All Quests Completed` | User completed all daily quests | `streak_count`, `total_completed` | |
+| `Streak Milestone Reached` | User hit a streak milestone | `streak_count`, `milestone_type` | |
+| `Quick Message Sent` | User sent SMS from Quick Message widget | `recipient_type` | |
+| `Home Pastoral Action` | User took pastoral action from home | `action_type` | `profile_id` |
+| `Home New Student Action` | User acted on new student from home | `action_type` | `profile_id` |
+
+**Property Values:**
+
+| Property | Type | Allowed Values |
+|----------|------|----------------|
+| `quest_type` | String | `"daily"`, `"priority"` |
+| `action_type` | String | `"navigate"`, `"inline"`, `"modal"`, `"skip"`, `"text"`, `"mark_done"`, `"view"`, `"triage"` |
+| `recipient_type` | String | `"student"`, `"parent"` |
+| `milestone_type` | String | `"5_days"`, `"10_days"`, `"30_days"`, `"100_days"` |
+| `completion_method` | String | `"checkbox"`, `"action_button"`, `"auto"` |
+
+**Implementation Notes:**
+- Quest data is fetched via `get_quest_board` RPC function
+- Streaks are tracked in `user_streaks` table
+- Daily quests reset at midnight (server time)
+- Priority quests are generated based on MIA students
+
 ---
 
 ## 5. Event Property Reference
@@ -668,13 +719,26 @@ Don't manually track these - Amplitude handles them:
 | `to_tab` | String | `"students"`, `"team"`, `"parents"` | People tab change events |
 | `active_tab` | String | `"students"`, `"team"`, `"parents"` | People page events |
 | `children_count` | Number | Number of linked children | Guardian events |
+| `completed_count` | Number | Number of completed quests | Quest events |
+| `completion_method` | String | `"checkbox"`, `"action_button"`, `"auto"` | Quest completion events |
 | `contact_method` | String | `"email"`, `"sms"`, `"both"` | Guardian invite events |
+| `daily_quest_count` | Number | Number of daily quests | Quest board events |
 | `template_used` | String | Template name or null | SMS events |
 | `theme_id` | String | Theme slug | Theme events |
 | `content_length` | Number | - | Sermon upload events |
+| `milestone_type` | String | `"5_days"`, `"10_days"`, `"30_days"`, `"100_days"` | Streak events |
+| `priority_quest_count` | Number | Number of priority quests | Quest board events |
+| `query_id` | UUID | Saved query database ID | Saved query events |
+| `quest_count` | Number | Total number of quests | Home page events |
+| `quest_id` | String | Quest identifier | Quest events |
+| `quest_title` | String | Quest display title | Quest events |
+| `quest_type` | String | `"daily"`, `"priority"` | Quest events |
+| `recipient_type` | String | `"student"`, `"parent"` | Quick message events |
 | `series_id` | UUID | - | Devotional events |
+| `streak_count` | Number | Current streak days | Quest/streak events |
 | `devotional_id` | UUID | - | Devotional events |
 | `devotional_count` | Number | - | Generation events |
+| `total_completed` | Number | Total quests completed | Quest completion events |
 | `total_devotionals` | Number | - | Configuration events |
 | `time_slot` | String | `"morning"`, `"afternoon"`, `"evening"` | Devotional events |
 | `time_slots` | Array | Array of time_slot values | Configuration events |
@@ -1068,6 +1132,24 @@ export const EVENTS = {
   GROUP_MEMBERSHIP_ADDED: 'Group Membership Added',
   GROUP_MEMBERSHIP_REMOVED: 'Group Membership Removed',
   GROUP_LEADER_PROMOTED: 'Group Leader Promoted',
+
+  // Insights Saved Queries
+  INSIGHTS_QUERY_SAVED: 'Insights Query Saved',
+  INSIGHTS_QUERY_STARRED: 'Insights Query Starred',
+  INSIGHTS_QUERY_UNSTARRED: 'Insights Query Unstarred',
+  INSIGHTS_SAVED_QUERY_USED: 'Insights Saved Query Used',
+
+  // Home & Quest System
+  HOME_PAGE_VIEWED: 'Home Page Viewed',
+  QUEST_BOARD_LOADED: 'Quest Board Loaded',
+  QUEST_COMPLETED: 'Quest Completed',
+  QUEST_ACTION_CLICKED: 'Quest Action Clicked',
+  QUEST_SKIPPED: 'Quest Skipped',
+  ALL_QUESTS_COMPLETED: 'All Quests Completed',
+  STREAK_MILESTONE_REACHED: 'Streak Milestone Reached',
+  QUICK_MESSAGE_SENT: 'Quick Message Sent',
+  HOME_PASTORAL_ACTION: 'Home Pastoral Action',
+  HOME_NEW_STUDENT_ACTION: 'Home New Student Action',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];
@@ -1300,5 +1382,5 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 
 ---
 
-*Last Updated: February 4, 2026*
+*Last Updated: February 5, 2026*
 *Maintainer: Engineering Team*

@@ -94,7 +94,7 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
             // Not a super admin and no access
             if (orgs && orgs.length > 0) {
               // Redirect to their first org
-              router.push(`/${orgs[0].organization_slug}/dashboard`);
+              router.push(`/${orgs[0].organization_slug}/home`);
             } else {
               router.push("/setup");
             }

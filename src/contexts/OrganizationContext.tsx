@@ -206,7 +206,7 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
 
     // Navigate to same route in new org (path-based routing)
     const currentRoute = extractRouteFromPath(pathname);
-    router.push(`/${org.slug}${currentRoute || '/dashboard'}`);
+    router.push(`/${org.slug}${currentRoute || '/home'}`);
   }, [router, pathname]);
 
   const refreshOrganizations = React.useCallback(async () => {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
-export type BroadcastTargetType = "all" | "groups" | "custom";
+export type BroadcastTargetType = "all" | "groups" | "profiles";
 export type BroadcastStatus = "draft" | "sending" | "sent" | "failed";
 
 export interface Broadcast {
@@ -211,6 +211,7 @@ export function useCreateAndSendBroadcast() {
       messageBody: string;
       targetType: BroadcastTargetType;
       targetGroupIds: string[];
+      targetProfileIds?: string[];
       includeLeaders: boolean;
       includeMembers: boolean;
     }) => {
@@ -220,6 +221,7 @@ export function useCreateAndSendBroadcast() {
         p_message_body: data.messageBody,
         p_target_type: data.targetType,
         p_target_group_ids: data.targetGroupIds,
+        p_target_profile_ids: data.targetProfileIds || [],
         p_include_leaders: data.includeLeaders,
         p_include_members: data.includeMembers,
       });
@@ -263,4 +265,49 @@ export function useRefreshBroadcasts() {
   return (orgId: string) => {
     queryClient.invalidateQueries({ queryKey: ["broadcasts", orgId] });
   };
+}
+
+// Fetch recipients by profile IDs
+async function fetchRecipientsByProfileIds(
+  orgId: string,
+  profileIds: string[]
+): Promise<BroadcastRecipient[]> {
+  const supabase = createClient();
+
+  // Query profiles directly to get phone numbers
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(`
+      id,
+      first_name,
+      last_name,
+      phone_number,
+      organization_memberships!inner(organization_id, role)
+    `)
+    .in("id", profileIds)
+    .eq("organization_memberships.organization_id", orgId)
+    .not("phone_number", "is", null);
+
+  if (error) throw error;
+
+  return (data || [])
+    .filter((p) => p.phone_number)
+    .map((p) => ({
+      profileId: p.id,
+      phoneNumber: p.phone_number!,
+      firstName: p.first_name || "",
+      lastName: p.last_name || "",
+      role: (p.organization_memberships as { role: string }[])?.[0]?.role === "leader" ? "leader" as const : "member" as const,
+    }));
+}
+
+export function useRecipientsByProfileIds(
+  orgId: string | null,
+  profileIds: string[]
+) {
+  return useQuery({
+    queryKey: ["broadcast-recipients-by-profile", orgId, profileIds],
+    queryFn: () => fetchRecipientsByProfileIds(orgId!, profileIds),
+    enabled: !!orgId && profileIds.length > 0,
+  });
 }

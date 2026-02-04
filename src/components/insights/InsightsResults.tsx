@@ -24,6 +24,7 @@ interface InsightsResultsProps {
   onGranularityChange: (granularity: TimeGranularity) => void;
   onPersonClick?: (person: PersonResult) => void;
   organizationId: string | null;
+  orgSlug?: string | null;
 }
 
 export function InsightsResults({
@@ -35,6 +36,7 @@ export function InsightsResults({
   onGranularityChange,
   onPersonClick,
   organizationId,
+  orgSlug,
 }: InsightsResultsProps) {
   const isListMode = results.mode === "list";
   const listResults = isListMode ? (results as ListResults) : null;
@@ -91,6 +93,7 @@ export function InsightsResults({
           people={listResults?.people}
           chartData={chartResults}
           organizationId={organizationId}
+          orgSlug={orgSlug}
         />
       </CardContent>
     </Card>

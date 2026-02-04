@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Radio, Plus, Send, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -158,9 +159,21 @@ function BroadcastHistoryTable({ broadcasts, loading }: { broadcasts: Broadcast[
 export default function BroadcastsPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const orgId = currentOrganization?.id || null;
+  const searchParams = useSearchParams();
 
   const { data: broadcasts, isLoading: broadcastsLoading } = useBroadcasts(orgId);
   const [composerOpen, setComposerOpen] = useState(false);
+
+  // Parse pre-selected profile IDs from URL (from Insights "Message All" action)
+  const profileIdsParam = searchParams.get("profileIds");
+  const preSelectedProfileIds = profileIdsParam ? profileIdsParam.split(",").filter(Boolean) : [];
+
+  // Auto-open composer if we have pre-selected profiles
+  useEffect(() => {
+    if (preSelectedProfileIds.length > 0) {
+      setComposerOpen(true);
+    }
+  }, [preSelectedProfileIds.length]);
 
   const isLoading = orgLoading || broadcastsLoading;
 
@@ -196,6 +209,7 @@ export default function BroadcastsPage() {
         open={composerOpen}
         onOpenChange={setComposerOpen}
         orgId={orgId}
+        preSelectedProfileIds={preSelectedProfileIds.length > 0 ? preSelectedProfileIds : undefined}
       />
     </div>
   );

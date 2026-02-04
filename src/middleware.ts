@@ -62,12 +62,19 @@ export async function middleware(request: NextRequest) {
   const potentialOrgSlug = segments[0];
   const routeAfterOrg = "/" + segments.slice(1).join("/");
 
-  const knownRoutes = ["/dashboard", "/students", "/attendance", "/curriculum", "/settings", "/analytics", "/pastoral"];
+  const knownRoutes = ["/home", "/dashboard", "/students", "/attendance", "/curriculum", "/settings", "/analytics", "/pastoral"];
   const isOrgPrefixedPath = potentialOrgSlug &&
     !publicPaths.some(p => pathname.startsWith(p)) &&
     !isAdminPath &&
     !isLegacyProtectedPath &&
     (knownRoutes.some(r => routeAfterOrg === r || routeAfterOrg.startsWith(r + "/")));
+
+  // Redirect /[org]/dashboard to /[org]/home
+  if (isOrgPrefixedPath && routeAfterOrg === "/dashboard") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${potentialOrgSlug}/home`;
+    return NextResponse.redirect(url);
+  }
 
   // Authentication check for protected routes
   if (!user) {
