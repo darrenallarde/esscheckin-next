@@ -1,5 +1,10 @@
--- Fix update_org_short_code function to properly check permissions and handle duplicates
--- Previous version was calling auth_has_org_role with wrong argument types
+-- Fix update_org_short_code function
+--
+-- Issues fixed:
+-- 1. Was calling auth_has_org_role with wrong argument types
+-- 2. Was uppercasing code, but constraint requires lowercase: ^[a-z0-9]{2,10}$
+-- 3. Now validates format BEFORE attempting update
+-- 4. Returns user-friendly error messages
 
 DROP FUNCTION IF EXISTS update_org_short_code(UUID, TEXT);
 
@@ -16,6 +21,7 @@ DECLARE
   v_user_id UUID;
   v_is_member BOOLEAN;
   v_existing_org_id UUID;
+  v_clean_code TEXT;
 BEGIN
   -- Get current user
   v_user_id := auth.uid();
@@ -46,29 +52,49 @@ BEGIN
   END IF;
 
   -- If clearing the short code, just do it
-  IF p_short_code IS NULL OR p_short_code = '' THEN
+  IF p_short_code IS NULL OR TRIM(p_short_code) = '' THEN
     UPDATE organizations SET short_code = NULL WHERE id = p_org_id;
     RETURN json_build_object('success', true);
+  END IF;
+
+  -- Clean and LOWERCASE the code (constraint requires lowercase)
+  v_clean_code := LOWER(TRIM(p_short_code));
+
+  -- Validate format: 2-10 lowercase alphanumeric characters
+  IF LENGTH(v_clean_code) < 2 THEN
+    RETURN json_build_object('success', false, 'error', 'Code must be at least 2 characters');
+  END IF;
+
+  IF LENGTH(v_clean_code) > 10 THEN
+    RETURN json_build_object('success', false, 'error', 'Code must be 10 characters or less');
+  END IF;
+
+  IF v_clean_code !~ '^[a-z0-9]+$' THEN
+    RETURN json_build_object('success', false, 'error', 'Code can only contain lowercase letters and numbers');
   END IF;
 
   -- Check if short code is already taken by another org
   SELECT id INTO v_existing_org_id
   FROM organizations
-  WHERE LOWER(short_code) = LOWER(p_short_code)
+  WHERE LOWER(short_code) = v_clean_code
     AND id != p_org_id;
 
   IF v_existing_org_id IS NOT NULL THEN
     RETURN json_build_object('success', false, 'error', 'This code is already taken by another organization');
   END IF;
 
-  -- Update the short code
+  -- Update the short code (stored as lowercase)
   UPDATE organizations
-  SET short_code = UPPER(p_short_code)
+  SET short_code = v_clean_code
   WHERE id = p_org_id;
 
   RETURN json_build_object('success', true);
+EXCEPTION
+  WHEN unique_violation THEN
+    RETURN json_build_object('success', false, 'error', 'This code is already taken');
+  WHEN OTHERS THEN
+    RETURN json_build_object('success', false, 'error', 'Unable to save. Please try a different code.');
 END;
 $$;
 
--- Grant execute permission
 GRANT EXECUTE ON FUNCTION update_org_short_code(UUID, TEXT) TO authenticated;
