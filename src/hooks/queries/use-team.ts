@@ -8,6 +8,7 @@ export interface TeamMember {
   member_id: string;
   user_id: string;
   email: string;
+  display_name: string | null;
   role: OrgRole;
   status: string;
   invited_at: string | null;
@@ -36,6 +37,7 @@ async function fetchTeamMembers(organizationId: string): Promise<TeamMember[]> {
     member_id: string;
     user_id: string;
     email: string;
+    display_name: string | null;
     role: OrgRole;
     status: string;
     invited_at: string;
@@ -44,6 +46,7 @@ async function fetchTeamMembers(organizationId: string): Promise<TeamMember[]> {
     member_id: member.member_id,
     user_id: member.user_id,
     email: member.email,
+    display_name: member.display_name,
     role: member.role,
     status: member.status,
     invited_at: member.invited_at,

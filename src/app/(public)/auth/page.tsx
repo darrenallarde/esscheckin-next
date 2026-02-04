@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Mail, ArrowLeft, Users } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ function AuthForm() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -154,10 +156,11 @@ function AuthForm() {
         console.log("User after verify:", user?.id, user?.email);
 
         if (user && user.email) {
-          // Accept invitations
+          // Accept invitations with display name if provided
           const { error: acceptError } = await supabase.rpc("accept_pending_invitations", {
             p_user_id: user.id,
             p_user_email: user.email,
+            p_display_name: displayName.trim() || null,
           });
           console.log("Accept invitations result:", acceptError ? acceptError.message : "success");
 
@@ -287,9 +290,7 @@ function AuthForm() {
         ) : (
           <form onSubmit={handleSendOTP} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email Address
-              </label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
@@ -306,6 +307,25 @@ function AuthForm() {
                 </p>
               )}
             </div>
+
+            {/* Display Name field - shown only during invite acceptance */}
+            {invitation && (
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Your Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="Pastor Mike"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  disabled={isLoading}
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  This is how you&apos;ll appear when sending messages to students.
+                </p>
+              </div>
+            )}
 
             {/* Inline status message for Safari compatibility (toasts may not show) */}
             {statusMessage && (

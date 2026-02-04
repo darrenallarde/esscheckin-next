@@ -93,28 +93,155 @@ System: "Connected to MS Boys! A leader will text you back soon. 🙌"
 | `phone_number` | text | Phone number |
 | `organization_id` | uuid | Organization context |
 | `group_id` | uuid | Group context (nullable) |
-| `status` | text | pending_group / active |
+| `status` | text | pending_group / active / pending_switch / ended |
 | `started_at` | timestamptz | Session start |
+| `is_first_message` | boolean | True until first message routed (for welcome vs footer) |
+| `pending_switch_org_id` | uuid | Target org when awaiting YES confirmation |
 
 ## NPC Router System
 
-### Personas
+The NPC router provides a clean, MUD-style command interface for SMS routing.
 
-| NPC | Trigger | Behavior |
-|-----|---------|----------|
-| **ROUTER** | Known phone, no session | Present group selection menu |
-| **UNKNOWN** | Unknown phone | Request organization code |
+### Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `HELP` | Show available commands and current connection | `HELP` |
+| `EXIT` | Disconnect and start fresh | `EXIT` |
+| `SWITCH [code]` | Connect to a different ministry | `SWITCH youth` |
+
+### User Experience Flows
+
+**New Unknown Number:**
+```
+User: "Hey"
+NPC:  "Welcome! Text your ministry code to connect.
+       Type HELP for commands."
+```
+
+**First Connection to Org:**
+```
+User: "echo"
+NPC:  "Welcome to Echo Students! Type HELP anytime for options.
+
+       Your messages now go directly to our team.
+       The #ECHO tag below shows you're connected.
+
+       #ECHO"
+```
+
+**Subsequent Messages (Conversation Mode):**
+```
+User: "Can I bring a friend Wednesday?"
+NPC:  "#ECHO"
+```
+- Message silently routes to inbox
+- User sees minimal footer confirming connection
+- No "a leader will reach out" noise
+
+**HELP Command:**
+```
+User: "HELP"
+NPC:  "Commands:
+       - HELP - Show this menu
+       - EXIT - Disconnect and start fresh
+       - SWITCH [code] - Connect to a different ministry
+
+       Currently connected to: Echo Students #ECHO"
+```
+
+**EXIT Command:**
+```
+User: "EXIT"
+NPC:  "Disconnected. Text a ministry code to reconnect.
+       Type HELP for commands."
+```
+
+**SWITCH Command:**
+```
+User: "SWITCH youth"
+NPC:  "Switched! Welcome to Youth Group.
+
+       #YOUTH"
+```
+
+**Auto-Detect Code (With Confirmation):**
+When a user texts what looks like an org code while already connected:
+```
+User: "youth"  (while connected to ECHO)
+NPC:  "Switch to Youth Group? Reply YES to confirm, or continue your message."
+
+User: "YES"
+NPC:  "Switched! Welcome to Youth Group. #YOUTH"
+```
+
+Or if they meant to send a message:
+```
+User: "No I was asking about youth group events"
+NPC:  "#ECHO"  (routes as normal message)
+```
 
 ### Routing Logic
 
-1. **Check recent conversation** — If leader texted student in last 24h, auto-route reply to that group
-2. **Check active session** — If session exists, route to session group
-3. **Present menu** — If multiple groups, ask student to select
-4. **Create session** — Lock in group for conversation duration
+1. **Check for pending switch** — If awaiting YES confirmation, handle the response
+2. **Check for commands** — EXIT, HELP, SWITCH
+3. **Check if org code** — If already connected to different org, prompt for switch confirmation
+4. **Check recent conversation** — If leader texted student in last 24h, auto-route reply
+5. **Check active session** — If session exists, route to session group
+6. **Check known student** — Auto-route based on student's groups
+7. **Unknown contact** — Send welcome message
+
+### Session Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending_group` | User needs to select a group |
+| `active` | Connected and routing messages |
+| `pending_switch` | Awaiting YES confirmation for org switch |
+| `ended` | Session closed via EXIT or expiration |
 
 ### Session Expiration
 
 Sessions expire after 24 hours of inactivity.
+
+## Sender Identity
+
+Every outgoing SMS includes sender identification:
+
+### SMS Signatures
+
+When a team member sends an SMS, their display name is automatically appended:
+```
+Hey! We missed you Wednesday.
+
+- Pastor Mike
+```
+
+Team members set their display name when:
+1. Accepting a team invitation (prompted during signup)
+2. Editing their profile in Settings → Account
+
+### Dashboard Visibility
+
+Conversations show which team member sent each message:
+```
+┌─────────────────────────────────────┐
+│ 📤 Hey! We missed you Wednesday.    │
+│    Pastor Mike · 2:30 PM · sent     │
+│                                     │
+│    👋 Yeah I was sick. Coming Sun!  │ 📥
+│    3:45 PM                          │
+│                                     │
+│ 📤 Great! Feel better!              │
+│    Sarah Johnson · 3:47 PM · sent   │
+└─────────────────────────────────────┘
+```
+
+### Fallback Behavior
+
+- If no display name is set, messages are sent without a signature
+- In the dashboard, "Staff" is shown for senders without display names
+- "You" is shown for messages sent by the current user
 
 ## Conversation Threads
 
@@ -123,13 +250,13 @@ Displayed in student profile → Messages tab:
 ```
 ┌─────────────────────────────────────┐
 │ 📤 Hey! We missed you Wednesday.    │
-│    - Pastor Mike, 2:30 PM           │
+│    Pastor Mike · 2:30 PM            │
 │                                     │
 │    👋 Yeah I was sick. Coming Sun!  │ 📥
 │    3:45 PM                          │
 │                                     │
 │ 📤 Great! Feel better!              │
-│    - Pastor Mike, 3:47 PM           │
+│    Pastor Mike · 3:47 PM            │
 └─────────────────────────────────────┘
 ```
 
@@ -219,19 +346,35 @@ Required:
 
 SMS events are logged by the Edge Function with structured `SMS_EVENT` console logs:
 
+### Outbound SMS Events (send-sms function)
+
+| Event | When | Key Properties |
+|-------|------|----------------|
+| `SMS_SENT` | Team member sent SMS | `org_id`, `student_id`, `sender_user_id`, `sender_display_name`, `has_signature`, `phone_last4`, `body_length` |
+
+### Inbound SMS Events (receive-sms function)
+
 | Event | When | Key Properties |
 |-------|------|----------------|
 | `SMS_RECEIVED` | Every inbound SMS | `phone_last4`, `body_length` |
 | `SMS_SESSION_STARTED` | New session created | `org_id`, `group_id`, `status` |
-| `SMS_ORG_CONNECTED` | Student texts valid org code | `org_id`, `org_name` |
+| `SMS_ORG_CONNECTED` | Student texts valid org code | `org_id`, `org_name`, `is_first_connection` |
 | `SMS_MESSAGE_ROUTED` | Message stored with routing | `org_id`, `group_id`, `is_lobby` |
+| `SMS_EXIT_COMMAND` | User typed EXIT | `org_id`, `phone_last4` |
+| `SMS_SWITCH_COMMAND` | User typed SWITCH [code] | `org_id`, `org_name`, `phone_last4` |
+| `SMS_SWITCH_PROMPTED` | Auto-detected org code, awaiting confirmation | `current_org_id`, `target_org_id`, `target_org_name` |
+| `SMS_SWITCH_CONFIRMED` | User confirmed switch with YES | `from_org_id`, `to_org_id`, `phone_last4` |
 
 These can be extracted from Supabase Edge Function logs for analytics.
 
 ## Known Issues / Future Plans
 
 - [x] Complete NPC router edge function (org-level routing)
+- [x] MUD-style command interface (HELP, EXIT, SWITCH)
+- [x] Auto-detect org code with confirmation flow
+- [x] First-message welcome vs subsequent footer
 - [ ] Group-level routing (text group code directly)
+- [ ] AI-powered responses for unanswered questions
 - [ ] Group broadcast messaging
 - [ ] Message templates
 - [ ] Scheduled messages

@@ -6,6 +6,7 @@ import { StatCard } from "@/components/analytics/StatCard";
 import { MiniTrendChart } from "@/components/analytics/MiniTrendChart";
 import { LeaderboardPreview } from "@/components/analytics/LeaderboardPreview";
 import { PastoralQueue } from "@/components/pastoral/PastoralQueue";
+import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import { EncouragingMessage } from "@/components/shared/EncouragingMessage";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { TodaysCheckInsModal } from "@/components/dashboard/TodaysCheckInsModal";
@@ -14,6 +15,7 @@ import { useLeaderboard } from "@/hooks/queries/use-gamification";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useTodaysCheckIns } from "@/hooks/queries/use-todays-checkins";
+import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 import { BelongingStatus } from "@/types/pastoral";
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(organizationId, 5);
   const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
   const { data: todaysCheckIns, isLoading: todaysLoading } = useTodaysCheckIns(organizationId);
+  const { data: smsInbox, isLoading: smsLoading } = useSmsInbox(organizationId);
 
   const isLoading = orgLoading || statsLoading;
 
@@ -40,6 +43,12 @@ export default function DashboardPage() {
       // Navigate to People page with filter applied
       window.location.href = orgPath(orgSlug, `/people?status=${encodeURIComponent(status)}`);
     }
+  };
+
+  // Handle clicking on a message conversation
+  const handleConversationClick = (conv: SmsConversation) => {
+    // Navigate to messages page with the phone number as a query param
+    window.location.href = orgPath(orgSlug, `/messages?phone=${encodeURIComponent(conv.phoneNumber)}`);
   };
 
   return (
@@ -110,8 +119,14 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Right Column - Trend Chart & Leaderboard */}
+        {/* Right Column - Messages, Trend Chart & Leaderboard */}
         <div className="flex flex-col gap-6 lg:col-span-2">
+          <RecentMessages
+            data={smsInbox ?? []}
+            loading={orgLoading || smsLoading}
+            viewAllHref={orgPath(orgSlug, "/messages")}
+            onConversationClick={handleConversationClick}
+          />
           <MiniTrendChart
             data={weeklyData ?? []}
             loading={orgLoading || weeklyLoading}

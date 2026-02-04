@@ -44,6 +44,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useAllOrganizations } from "@/hooks/queries/use-admin";
+import { useMyOrgProfile } from "@/hooks/queries/use-my-profile";
 
 interface AppSidebarProps {
   userEmail?: string;
@@ -100,6 +101,9 @@ export function AppSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { currentOrganization, organizations, isSuperAdmin, switchOrganization } = useOrganization();
+
+  // Fetch current user's profile for display name
+  const { data: profile } = useMyOrgProfile(currentOrganization?.id || null);
 
   // For super admins, also fetch ALL organizations
   const { data: allOrganizations } = useAllOrganizations();
@@ -267,11 +271,16 @@ export function AppSidebar({
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
-              {userEmail?.charAt(0).toUpperCase() || "U"}
+              {(profile?.display_name || userEmail)?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm">{userEmail || "User"}</span>
+            <span className="truncate text-sm font-medium">
+              {profile?.display_name || userEmail || "User"}
+            </span>
+            {profile?.display_name && userEmail && (
+              <span className="truncate text-xs text-sidebar-foreground/70">{userEmail}</span>
+            )}
             {isSuperAdmin && (
               <span className="text-xs text-sidebar-foreground/50">Super Admin</span>
             )}

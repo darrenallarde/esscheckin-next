@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -34,9 +33,8 @@ const newStudentSchema = z.object({
   email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
-  isStudentLeader: z.boolean(),
-  grade: z.string().trim().optional().or(z.literal("")),
-  highSchool: z.string().trim().optional().or(z.literal("")),
+  grade: z.string().trim().min(1, "Grade is required"),
+  highSchool: z.string().trim().min(1, "School is required"),
   address: z.string().trim().optional().or(z.literal("")),
   city: z.string().trim().optional().or(z.literal("")),
   state: z.string().trim().optional().or(z.literal("")),
@@ -47,23 +45,6 @@ const newStudentSchema = z.object({
   motherFirstName: z.string().trim().optional().or(z.literal("")),
   motherLastName: z.string().trim().optional().or(z.literal("")),
   motherPhone: z.string().trim().optional().or(z.literal("")),
-}).superRefine((data, ctx) => {
-  if (!data.isStudentLeader) {
-    if (!data.grade || data.grade.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["grade"],
-        message: "Grade is required for students",
-      });
-    }
-    if (!data.highSchool || data.highSchool.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["highSchool"],
-        message: "High school is required for students",
-      });
-    }
-  }
 });
 
 type NewStudentFormData = z.infer<typeof newStudentSchema>;
@@ -147,7 +128,6 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       email: "",
       dateOfBirth: "",
       instagramHandle: "",
-      isStudentLeader: false,
       grade: "",
       highSchool: "",
       address: "",
@@ -162,8 +142,6 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       motherPhone: "",
     },
   });
-
-  const isStudentLeader = form.watch("isStudentLeader");
 
   const onSubmit = async (data: NewStudentFormData) => {
     // Clear any previous errors
@@ -195,15 +173,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           p_email: data.email || null,
           p_date_of_birth: data.dateOfBirth,
           p_instagram_handle: data.instagramHandle || null,
-          p_user_type: data.isStudentLeader ? 'student_leader' : 'student',
-          p_grade: data.isStudentLeader ? null : data.grade,
-          p_high_school: data.isStudentLeader ? null : data.highSchool,
-          p_father_first_name: data.isStudentLeader ? null : data.fatherFirstName || null,
-          p_father_last_name: data.isStudentLeader ? null : data.fatherLastName || null,
-          p_father_phone: data.isStudentLeader ? null : data.fatherPhone || null,
-          p_mother_first_name: data.isStudentLeader ? null : data.motherFirstName || null,
-          p_mother_last_name: data.isStudentLeader ? null : data.motherLastName || null,
-          p_mother_phone: data.isStudentLeader ? null : data.motherPhone || null,
+          p_user_type: 'student',
+          p_grade: data.grade,
+          p_high_school: data.highSchool,
+          p_father_first_name: data.fatherFirstName || null,
+          p_father_last_name: data.fatherLastName || null,
+          p_father_phone: data.fatherPhone || null,
+          p_mother_first_name: data.motherFirstName || null,
+          p_mother_last_name: data.motherLastName || null,
+          p_mother_phone: data.motherPhone || null,
           p_address: data.address || null,
           p_city: data.city || null,
           p_state: data.state || 'California',
@@ -234,7 +212,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             first_name: data.firstName,
             last_name: data.lastName,
             email: data.email || null,
-            user_type: data.isStudentLeader ? 'student_leader' : 'student',
+            user_type: 'student',
             grade: data.grade || null,
             high_school: data.highSchool || null,
           },
@@ -287,33 +265,6 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           tabIndex={-1}
           autoComplete="off"
           aria-hidden="true"
-        />
-
-        {/* Student Leader Toggle */}
-        <FormField
-          control={form.control}
-          name="isStudentLeader"
-          render={({ field }) => (
-            <FormItem className={isGamified
-              ? "flex flex-row items-center justify-between p-4 bg-green-100/50 border-2 border-green-600/50"
-              : "flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/50"
-            }>
-              <div className="space-y-0.5">
-                <FormLabel className={isGamified ? "jrpg-font text-xs text-gray-700" : "text-base font-medium"}>
-                  {isGamified ? "I'M A LEADER" : "I'm a Student Leader"}
-                </FormLabel>
-                <p className={isGamified ? "text-xs text-gray-600" : "text-sm text-muted-foreground"}>
-                  {isGamified ? "Toggle if you're a volunteer" : "Toggle this if you're a volunteer or adult leader"}
-                </p>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
         />
 
         {/* REQUIRED FIELDS */}
@@ -400,50 +351,48 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           />
 
           {/* Grade & School */}
-          {!isStudentLeader && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="grade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "GRADE *" : "Grade *"}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={inputClass}>
-                          <SelectValue placeholder="Select grade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="6">6th Grade</SelectItem>
-                        <SelectItem value="7">7th Grade</SelectItem>
-                        <SelectItem value="8">8th Grade</SelectItem>
-                        <SelectItem value="9">9th Grade</SelectItem>
-                        <SelectItem value="10">10th Grade</SelectItem>
-                        <SelectItem value="11">11th Grade</SelectItem>
-                        <SelectItem value="12">12th Grade</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="highSchool"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "SCHOOL *" : "School Name *"}</FormLabel>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="grade"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>{isGamified ? "GRADE *" : "Grade *"}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input placeholder="Enter your school" className={inputClass} {...field} />
+                      <SelectTrigger className={inputClass}>
+                        <SelectValue placeholder="Select grade" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
-                  </FormItem>
-                )}
-              />
-            </div>
-          )}
+                    <SelectContent>
+                      <SelectItem value="6">6th Grade</SelectItem>
+                      <SelectItem value="7">7th Grade</SelectItem>
+                      <SelectItem value="8">8th Grade</SelectItem>
+                      <SelectItem value="9">9th Grade</SelectItem>
+                      <SelectItem value="10">10th Grade</SelectItem>
+                      <SelectItem value="11">11th Grade</SelectItem>
+                      <SelectItem value="12">12th Grade</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="highSchool"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>{isGamified ? "SCHOOL *" : "School Name *"}</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your school" className={inputClass} {...field} />
+                  </FormControl>
+                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         {/* OPTIONAL FIELDS */}
@@ -533,103 +482,101 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           </div>
 
           {/* Parent Info */}
-          {!isStudentLeader && (
-            <div className="space-y-4">
-              <h4 className={isGamified ? "jrpg-font text-xs text-gray-600" : "text-sm font-medium text-muted-foreground"}>
-                {isGamified ? "PARENT INFO" : "Parent/Guardian Information"}
-              </h4>
+          <div className="space-y-4">
+            <h4 className={isGamified ? "jrpg-font text-xs text-gray-600" : "text-sm font-medium text-muted-foreground"}>
+              {isGamified ? "PARENT INFO" : "Parent/Guardian Information"}
+            </h4>
 
-              {/* Father */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FormField
-                  control={form.control}
-                  name="fatherFirstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "DAD FIRST" : "Father's First Name"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="First name" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Father */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="fatherFirstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "DAD FIRST" : "Father's First Name"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="fatherLastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "DAD LAST" : "Father's Last Name"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Last name" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="fatherLastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "DAD LAST" : "Father's Last Name"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="fatherPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "DAD PHONE" : "Father's Phone"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Mother */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FormField
-                  control={form.control}
-                  name="motherFirstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "MOM FIRST" : "Mother's First Name"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="First name" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="motherLastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "MOM LAST" : "Mother's Last Name"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Last name" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="motherPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={labelClass}>{isGamified ? "MOM PHONE" : "Mother's Phone"}</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="fatherPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "DAD PHONE" : "Father's Phone"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          )}
+
+            {/* Mother */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="motherFirstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "MOM FIRST" : "Mother's First Name"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="motherLastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "MOM LAST" : "Mother's Last Name"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="motherPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>{isGamified ? "MOM PHONE" : "Mother's Phone"}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Error Display */}
@@ -671,10 +618,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           >
             {isSubmitting
               ? (isGamified ? "LOADING..." : "Registering...")
-              : (isGamified
-                  ? `REGISTER${isStudentLeader ? ' AS LEADER' : ''}`
-                  : `Register & Check In${isStudentLeader ? ' as Leader' : ''}`
-                )
+              : (isGamified ? "REGISTER" : "Register & Check In")
             }
           </Button>
         </div>

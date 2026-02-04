@@ -26,7 +26,8 @@ async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
       from_number,
       to_number,
       status,
-      sent_by
+      sent_by,
+      organization_id
     `)
     .eq("student_id", studentId)
     .order("created_at", { ascending: true });
@@ -43,18 +44,32 @@ async function fetchSmsConversation(studentId: string): Promise<SmsMessage[]> {
   let senderNames: Record<string, string> = {};
 
   if (senderIds.length > 0) {
-    // Get user emails from auth.users via organization_members
-    const { data: members } = await supabase
-      .from("organization_members")
-      .select("user_id")
-      .in("user_id", senderIds);
+    // Get organization ID from first message
+    const orgId = messages?.find((m) => m.organization_id)?.organization_id;
 
-    // For now, just use "You" or show the user ID
-    // In a real app, you'd join to a profiles table
-    senderNames = senderIds.reduce((acc, id) => {
-      acc[id] = "Staff";
-      return acc;
-    }, {} as Record<string, string>);
+    if (orgId) {
+      // Fetch display names from organization_members
+      const { data: members } = await supabase
+        .from("organization_members")
+        .select("user_id, display_name")
+        .eq("organization_id", orgId)
+        .in("user_id", senderIds);
+
+      if (members) {
+        members.forEach((member) => {
+          if (member.user_id) {
+            senderNames[member.user_id] = member.display_name || "Staff";
+          }
+        });
+      }
+    }
+
+    // Fall back to "Staff" for any sender without a display name
+    senderIds.forEach((id) => {
+      if (!senderNames[id]) {
+        senderNames[id] = "Staff";
+      }
+    });
   }
 
   // Get current user to show "You" for their messages

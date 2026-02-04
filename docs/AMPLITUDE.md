@@ -267,11 +267,16 @@ Parent/guardian management and sibling detection.
 
 SMS, notes, recommendations - the core pastoral workflow.
 
-#### Outbound SMS (Admin Dashboard)
+#### Outbound SMS (Edge Function)
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
-| `SMS Sent` | Admin sent text message | `student_id` | `template_used`, `automated` |
+| `SMS Sent` | Team member sent text message | `student_id`, `sender_user_id`, `sender_display_name`, `has_signature` | `template_used`, `automated` |
+
+**Note:** This event is logged by the `send-sms` Edge Function as a structured console log with the format:
+```
+console.log("SMS_EVENT", JSON.stringify({ event: "SMS_SENT", ... }));
+```
 
 #### Inbound SMS & NPC Router (Edge Function)
 
@@ -281,8 +286,12 @@ These events are logged by the Supabase Edge Function, not the frontend. They ap
 |-------|-------------|------------|
 | `SMS Received` | Every inbound SMS received | `phone_last4`, `body_length` |
 | `SMS Session Started` | New SMS session created | `org_id`, `group_id`, `status`, `phone_last4` |
-| `SMS Org Connected` | User texted valid org code | `org_id`, `org_name`, `phone_last4` |
+| `SMS Org Connected` | User texted valid org code | `org_id`, `org_name`, `org_code`, `phone_last4`, `is_first_connection` |
 | `SMS Message Routed` | Message stored with routing context | `org_id`, `group_id`, `is_lobby`, `has_student`, `direction` |
+| `SMS Exit Command` | User typed EXIT to disconnect | `org_id`, `phone_last4` |
+| `SMS Switch Command` | User typed SWITCH [code] | `org_id`, `org_name`, `phone_last4` |
+| `SMS Switch Prompted` | Auto-detected org code while connected | `current_org_id`, `target_org_id`, `target_org_name`, `phone_last4` |
+| `SMS Switch Confirmed` | User confirmed switch with YES | `from_org_id`, `to_org_id`, `phone_last4` |
 
 **Implementation:** These are console.log statements in the Edge Function with format:
 ```
@@ -339,6 +348,8 @@ Org configuration, team management.
 | `Display Name Changed` | Changed org display name | | |
 | `Team Member Invited` | Admin invited team member | `invited_role` | |
 | `Team Member Removed` | Admin removed team member | | |
+| `Invitation Accepted` | Member accepted invite | `role`, `display_name_set` | `display_name_length` |
+| `Profile Updated` | Member updated their profile | `fields_changed` | `display_name_set` |
 
 **`section` values**: `"account"`, `"team"`, `"organization"`, `"org_tools"`
 
@@ -508,6 +519,12 @@ Don't manually track these - Amplitude handles them:
 | `students_updated` | Number | - | Import events |
 | `tab_name` | String | `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"` | Profile tab events |
 | `template_used` | String | Template name or null | SMS events |
+| `sender_user_id` | UUID | Auth user who sent message | SMS events |
+| `sender_display_name` | String | Sender's display name | SMS events |
+| `has_signature` | Boolean | Whether signature was appended | SMS events |
+| `display_name_set` | Boolean | User has set display name | Profile/invite events |
+| `display_name_length` | Number | Character count of display name | Profile/invite events |
+| `fields_changed` | Array | Fields modified in update | Edit events |
 | `theme_id` | String | Theme slug | Theme events |
 | `content_length` | Number | - | Sermon upload events |
 | `series_id` | UUID | - | Devotional events |

@@ -133,7 +133,7 @@ export function TeamMembersList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
+            <TableHead>Name</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Joined</TableHead>
@@ -147,7 +147,16 @@ export function TeamMembersList({
 
             return (
               <TableRow key={member.member_id}>
-                <TableCell className="font-medium">{member.email}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      {member.display_name || member.email}
+                    </span>
+                    {member.display_name && (
+                      <span className="text-xs text-muted-foreground">{member.email}</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant="secondary"

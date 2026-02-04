@@ -15,36 +15,60 @@ const INTERIM_RESPONSES = {
 };
 
 // Full NPC responses (used when INTERIM_MODE = false)
-// All responses include #CODE footer so users know their active org context
+// MUD-style: clean commands, minimal chatter, transparent routing
 const NPC_RESPONSES = {
-  welcome: `Hey! 👋 Text your ministry code to connect (ask your leader for the code).`,
-  connected: (orgName: string, code: string) =>
-    `Connected to ${orgName}! A leader will text you back soon. 🙌\n\n#${code.toUpperCase()}`,
+  // New unknown user - prompt for code
+  welcome: () =>
+    `Welcome! Text your ministry code to connect.\nType HELP for commands.`,
+
+  // First connection to an org - explain how it works
+  firstConnection: (orgName: string, code: string) =>
+    `Welcome to ${orgName}! Type HELP anytime for options.\n\n` +
+    `Your messages now go directly to our team.\n` +
+    `The #${code.toUpperCase()} tag below shows you're connected.\n\n` +
+    `#${code.toUpperCase()}`,
+
+  // Subsequent messages - just show the footer
+  messageRouted: (code: string) =>
+    `#${code.toUpperCase()}`,
+
+  // HELP command response
+  help: (orgName: string | null, code: string | null) =>
+    `Commands:\n` +
+    `- HELP - Show this menu\n` +
+    `- EXIT - Disconnect and start fresh\n` +
+    `- SWITCH [code] - Connect to a different ministry` +
+    (orgName ? `\n\nCurrently connected to: ${orgName} #${code?.toUpperCase()}` : `\n\nNot connected to any ministry.`),
+
+  // EXIT command response
+  disconnected: () =>
+    `Disconnected. Text a ministry code to reconnect.\nType HELP for commands.`,
+
+  // SWITCH command success
+  switched: (orgName: string, code: string) =>
+    `Switched! Welcome to ${orgName}.\n\n#${code.toUpperCase()}`,
+
+  // Auto-detected code while connected - ask for confirmation
+  confirmSwitch: (orgName: string) =>
+    `Switch to ${orgName}? Reply YES to confirm, or continue your message.`,
+
+  // Invalid code
+  invalidCode: () =>
+    `Code not found. Type HELP for commands.`,
+
+  // Group selection (future feature)
   connectedWithGroups: (orgName: string, code: string, groups: { name: string; code: string | null }[]) => {
     const groupList = groups
       .map((g, i) => `${i + 1}. ${g.name}${g.code ? ` (${g.code.toUpperCase()})` : ''}`)
       .join('\n');
-    return `Welcome to ${orgName}! 🙌\n\nWhich group?\n${groupList}\n\nReply with the number or group code.\n\n#${code.toUpperCase()}`;
+    return `Welcome to ${orgName}!\n\nWhich group?\n${groupList}\n\nReply with the number or group code.\n\n#${code.toUpperCase()}`;
   },
   groupSelected: (groupName: string, code: string) =>
-    `You're connected to ${groupName}! A leader will text back soon. 🙌\n\n#${code.toUpperCase()}`,
+    `Connected to ${groupName}!\n\n#${code.toUpperCase()}`,
   invalidSelection: (code?: string) => {
-    const base = `Hmm, I didn't catch that. Reply with a number from the list, or text HELP for options.`;
+    const base = `Didn't catch that. Reply with a number from the list, or text HELP for options.`;
     return code ? `${base}\n\n#${code.toUpperCase()}` : base;
   },
-  lobbyMessage: (code: string) =>
-    `Got it! A leader will reach out soon.\n\n#${code.toUpperCase()}`,
-  routed: (code: string) => `→ #${code.toUpperCase()}`,
-  waitingRoom: (orgName: string, code: string) =>
-    `Your message was sent to ${orgName}. A leader will reach out soon!\n\n#${code.toUpperCase()}`,
-  unknownCode: `I don't recognize that code. Ask your leader for their ministry code and text it here. 👍`,
-  help: (code?: string) => {
-    const base = `Commands:\nEXIT - Leave current chat\nSWITCH [code] - Switch ministry\nHELP - Show this message`;
-    return code ? `${base}\n\n#${code.toUpperCase()}` : base;
-  },
-  exited: `You've left the chat. Text a ministry code anytime to reconnect!`,
-  switched: (orgName: string, code: string) =>
-    `Switched to ${orgName}! 🔄\n\n#${code.toUpperCase()}`,
   multipleGroups: (groups: { org_name: string; group_name: string; group_code: string | null }[]) => {
     const list = groups.map((g, i) =>
       `${i + 1}. ${g.group_name} @ ${g.org_name}${g.group_code ? ` (${g.group_code.toUpperCase()})` : ''}`
@@ -52,7 +76,7 @@ const NPC_RESPONSES = {
     return `You're in multiple groups! Which one?\n${list}\n\nReply with a number.`;
   },
   replyRouted: null, // No response needed for auto-routed replies
-  error: `Oops! Something went wrong. Please try again.`,
+  error: `Something went wrong. Please try again.`,
 };
 
 // Normalize phone number to just digits
@@ -152,18 +176,56 @@ serve(async (req) => {
     // FULL MODE: NPC Router (when dedicated number is active)
     // ============================================
 
+    // Get current session for context
+    const currentSession = await getActiveSession(supabase, from);
+    const currentOrgCode = currentSession ? await getOrgCode(supabase, currentSession.organization_id) : null;
+    const currentOrgName = currentSession ? await getOrgName(supabase, currentSession.organization_id) : null;
+
+    // STEP 0: Check for pending switch confirmation (YES/NO response)
+    if (currentSession?.status === "pending_switch" && currentSession.pending_switch_org_id) {
+      if (upperBody === "YES") {
+        // Confirm the switch
+        const switchOrgId = currentSession.pending_switch_org_id;
+        const switchOrgName = await getOrgName(supabase, switchOrgId);
+        const switchOrgCode = await getOrgCode(supabase, switchOrgId);
+
+        // Create new session for the switched org
+        await createSession(supabase, from, switchOrgId, null, "active");
+
+        // Analytics log
+        console.log("SMS_EVENT", JSON.stringify({
+          event: "SMS_SWITCH_CONFIRMED",
+          from_org_id: currentSession.organization_id,
+          to_org_id: switchOrgId,
+          phone_last4: from.slice(-4),
+          timestamp: new Date().toISOString(),
+        }));
+
+        return twimlResponse(NPC_RESPONSES.switched(switchOrgName || "ministry", switchOrgCode || ""));
+      } else {
+        // Not YES - clear pending switch and route as normal message
+        await clearPendingSwitch(supabase, currentSession.session_id);
+        // Continue to route the message normally below
+      }
+    }
+
     // STEP 1: Check for commands
     if (upperBody === "EXIT") {
       await endSession(supabase, from);
-      return twimlResponse(NPC_RESPONSES.exited);
+
+      // Analytics log
+      console.log("SMS_EVENT", JSON.stringify({
+        event: "SMS_EXIT_COMMAND",
+        org_id: currentSession?.organization_id || null,
+        phone_last4: from.slice(-4),
+        timestamp: new Date().toISOString(),
+      }));
+
+      return twimlResponse(NPC_RESPONSES.disconnected());
     }
 
-    // Get current session for HELP context
-    const currentSession = await getActiveSession(supabase, from);
-    const currentOrgCode = currentSession ? await getOrgCode(supabase, currentSession.organization_id) : null;
-
     if (upperBody === "HELP") {
-      return twimlResponse(NPC_RESPONSES.help(currentOrgCode || undefined));
+      return twimlResponse(NPC_RESPONSES.help(currentOrgName, currentOrgCode));
     }
 
     if (upperBody.startsWith("SWITCH ")) {
@@ -178,12 +240,31 @@ serve(async (req) => {
     }
 
     // STEP 2: Check if message is an org code (BEFORE recent convo check)
-    // This allows users to switch orgs by texting a new code even if they have recent activity
+    // If already connected, prompt for confirmation before switching
     console.log("STEP 2: Checking if message is an org code...");
     const codeResult = await tryParseCode(supabase, body);
     console.log("Code result:", codeResult);
 
     if (codeResult.type === "org") {
+      // Check if already connected to a DIFFERENT org
+      if (currentSession && currentSession.status === "active" && currentSession.organization_id !== codeResult.orgId) {
+        // Auto-detected a different org code while connected - prompt for confirmation
+        await setPendingSwitch(supabase, currentSession.session_id, codeResult.orgId!);
+
+        // Analytics log
+        console.log("SMS_EVENT", JSON.stringify({
+          event: "SMS_SWITCH_PROMPTED",
+          current_org_id: currentSession.organization_id,
+          target_org_id: codeResult.orgId,
+          target_org_name: codeResult.orgName,
+          phone_last4: from.slice(-4),
+          timestamp: new Date().toISOString(),
+        }));
+
+        return twimlResponse(NPC_RESPONSES.confirmSwitch(codeResult.orgName!));
+      }
+
+      // Not connected yet, or same org - connect normally
       // Org-level routing: Connect directly to org inbox (no group selection)
       console.log("SMS_EVENT", JSON.stringify({
         event: "SMS_ORG_CONNECTED",
@@ -191,6 +272,7 @@ serve(async (req) => {
         org_name: codeResult.orgName,
         org_code: codeResult.orgCode,
         phone_last4: phoneMatch(from).slice(-4),
+        is_first_connection: !currentSession,
         timestamp: new Date().toISOString(),
       }));
 
@@ -207,7 +289,9 @@ serve(async (req) => {
         direction: "inbound",
         isLobbyMessage: false,
       });
-      return twimlResponse(NPC_RESPONSES.connected(codeResult.orgName!, codeResult.orgCode!));
+
+      // First connection gets full welcome, subsequent gets minimal footer
+      return twimlResponse(NPC_RESPONSES.firstConnection(codeResult.orgName!, codeResult.orgCode!));
     }
 
     // STEP 3: Try auto-routing for replies (recent conversation)
@@ -228,8 +312,8 @@ serve(async (req) => {
         direction: "inbound",
         isLobbyMessage: false,
       });
-      // Return footer showing which org they're connected to
-      return twimlResponse(orgCode ? NPC_RESPONSES.routed(orgCode) : null);
+      // Return minimal footer showing which org they're connected to
+      return twimlResponse(orgCode ? NPC_RESPONSES.messageRouted(orgCode) : null);
     }
 
     // STEP 4: Check for active session
@@ -239,6 +323,7 @@ serve(async (req) => {
 
     if (session) {
       const sessionOrgCode = await getOrgCode(supabase, session.organization_id);
+      const sessionOrgName = await getOrgName(supabase, session.organization_id);
 
       if (session.status === "pending_group") {
         const result = await handleGroupSelection(supabase, from, body, session, sessionOrgCode);
@@ -256,9 +341,16 @@ serve(async (req) => {
           direction: "inbound",
           isLobbyMessage: !session.group_id,
         });
-        await updateSessionActivity(supabase, session.session_id);
-        // Return footer showing which org they're connected to
-        return twimlResponse(sessionOrgCode ? NPC_RESPONSES.routed(sessionOrgCode) : null);
+
+        // Check if this is the first message after connecting
+        const isFirst = session.is_first_message;
+        await updateSessionActivity(supabase, session.session_id, false); // Mark as no longer first message
+
+        // First message gets welcome explanation, subsequent messages get minimal footer
+        if (isFirst) {
+          return twimlResponse(NPC_RESPONSES.firstConnection(sessionOrgName || "ministry", sessionOrgCode || ""));
+        }
+        return twimlResponse(sessionOrgCode ? NPC_RESPONSES.messageRouted(sessionOrgCode) : null);
       }
     }
 
@@ -283,8 +375,8 @@ serve(async (req) => {
           direction: "inbound",
           isLobbyMessage: false,
         });
-        // Return footer showing which org they're connected to
-        return twimlResponse(orgCode ? NPC_RESPONSES.routed(orgCode) : null);
+        // First connection - show welcome with explanation
+        return twimlResponse(NPC_RESPONSES.firstConnection(sg.org_name, orgCode || ""));
       } else {
         await createSession(supabase, from, studentGroups[0].org_id, null, "pending_group");
         await storeGroupSelectionContext(supabase, from, studentGroups);
@@ -298,6 +390,8 @@ serve(async (req) => {
     console.log("Student result:", student);
     if (student) {
       const orgCode = await getOrgCode(supabase, student.organization_id);
+      const orgName = await getOrgName(supabase, student.organization_id);
+      await createSession(supabase, from, student.organization_id, null, "active");
       await storeMessage(supabase, {
         from,
         to,
@@ -309,7 +403,8 @@ serve(async (req) => {
         direction: "inbound",
         isLobbyMessage: true,
       });
-      return twimlResponse(orgCode ? NPC_RESPONSES.lobbyMessage(orgCode) : NPC_RESPONSES.lobbyMessage(""));
+      // First connection - show welcome
+      return twimlResponse(NPC_RESPONSES.firstConnection(orgName || "ministry", orgCode || ""));
     }
 
     // STEP 6: Unknown contact - welcome message
@@ -327,7 +422,7 @@ serve(async (req) => {
       isLobbyMessage: false,
     });
 
-    return twimlResponse(NPC_RESPONSES.welcome);
+    return twimlResponse(NPC_RESPONSES.welcome());
 
   } catch (error) {
     console.error("Error processing webhook:", error);
@@ -386,13 +481,38 @@ async function findStudentByPhone(
 async function getActiveSession(
   supabase: ReturnType<typeof createClient>,
   phone: string
-): Promise<{ session_id: string; organization_id: string; group_id: string | null; status: string } | null> {
-  const { data, error } = await supabase.rpc("get_active_sms_session", { p_phone: phone });
+): Promise<{
+  session_id: string;
+  organization_id: string;
+  group_id: string | null;
+  status: string;
+  is_first_message: boolean;
+  pending_switch_org_id: string | null;
+} | null> {
+  // Query directly to get all columns including new ones
+  const { data, error } = await supabase
+    .from("sms_sessions")
+    .select("id, organization_id, group_id, status, is_first_message, pending_switch_org_id")
+    .eq("phone_number", phone)
+    .in("status", ["pending_group", "active", "pending_switch"])
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   if (error) {
     console.error("Error getting active session:", error);
     return null;
   }
-  return data?.[0] || null;
+  if (!data) return null;
+
+  return {
+    session_id: data.id,
+    organization_id: data.organization_id,
+    group_id: data.group_id,
+    status: data.status,
+    is_first_message: data.is_first_message ?? true,
+    pending_switch_org_id: data.pending_switch_org_id,
+  };
 }
 
 async function createSession(
@@ -428,16 +548,74 @@ async function createSession(
 
 async function updateSessionActivity(
   supabase: ReturnType<typeof createClient>,
-  sessionId: string
+  sessionId: string,
+  isFirstMessage: boolean = true
 ): Promise<void> {
   const { error } = await supabase
     .from("sms_sessions")
-    .update({ last_activity: new Date().toISOString() })
+    .update({
+      last_activity: new Date().toISOString(),
+      is_first_message: isFirstMessage,
+    })
     .eq("id", sessionId);
 
   if (error) {
     console.error("Error updating session activity:", error);
   }
+}
+
+async function setPendingSwitch(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  targetOrgId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("sms_sessions")
+    .update({
+      status: "pending_switch",
+      pending_switch_org_id: targetOrgId,
+      last_activity: new Date().toISOString(),
+    })
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error("Error setting pending switch:", error);
+  }
+}
+
+async function clearPendingSwitch(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("sms_sessions")
+    .update({
+      status: "active",
+      pending_switch_org_id: null,
+      last_activity: new Date().toISOString(),
+    })
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error("Error clearing pending switch:", error);
+  }
+}
+
+async function getOrgName(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("display_name, name")
+    .eq("id", orgId)
+    .single();
+
+  if (error) {
+    console.error("Error getting org name:", error);
+    return null;
+  }
+  return data?.display_name || data?.name || null;
 }
 
 async function updateSessionGroup(
@@ -467,10 +645,11 @@ async function endSession(
     .from("sms_sessions")
     .update({
       status: "ended",
-      ended_at: new Date().toISOString()
+      ended_at: new Date().toISOString(),
+      pending_switch_org_id: null,
     })
     .eq("phone_number", phone)
-    .in("status", ["pending_group", "active"]);
+    .in("status", ["pending_group", "active", "pending_switch"]);
 
   if (error) {
     console.error("Error ending session:", error);
@@ -567,10 +746,20 @@ async function handleSwitch(
   if (result.type === "org") {
     // Org-level routing: Switch to org directly (no group selection)
     await createSession(supabase, phone, result.orgId!, null, "active");
+
+    // Analytics log
+    console.log("SMS_EVENT", JSON.stringify({
+      event: "SMS_SWITCH_COMMAND",
+      org_id: result.orgId,
+      org_name: result.orgName,
+      phone_last4: phone.slice(-4),
+      timestamp: new Date().toISOString(),
+    }));
+
     return { message: NPC_RESPONSES.switched(result.orgName!, result.orgCode || code) };
   }
 
-  return { message: NPC_RESPONSES.unknownCode };
+  return { message: NPC_RESPONSES.invalidCode() };
 }
 
 async function listGroups(

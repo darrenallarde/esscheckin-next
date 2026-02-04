@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@/lib/supabase/client';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useMyOrgProfile } from '@/hooks/queries/use-my-profile';
 
 interface SendSmsParams {
   to: string;
@@ -18,6 +20,10 @@ export function useSendSms() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { currentOrganization } = useOrganization();
+  const { data: profile } = useMyOrgProfile(currentOrganization?.id || null);
+  const supabase = createClient();
+
   const sendSms = async ({ to, body, studentId }: SendSmsParams): Promise<SendSmsResult> => {
     setIsSending(true);
     setError(null);
@@ -26,7 +32,13 @@ export function useSendSms() {
       const { data: { session } } = await supabase.auth.getSession();
 
       const response = await supabase.functions.invoke('send-sms', {
-        body: { to, body, studentId },
+        body: {
+          to,
+          body,
+          studentId,
+          organizationId: currentOrganization?.id || null,
+          senderDisplayName: profile?.display_name || null,
+        },
         headers: session?.access_token
           ? { Authorization: `Bearer ${session.access_token}` }
           : undefined,

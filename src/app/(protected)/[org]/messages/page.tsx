@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { ConversationList } from "@/components/messages/ConversationList";
 import { ConversationPanel } from "@/components/messages/ConversationPanel";
@@ -8,11 +9,24 @@ import { useSmsInbox, type SmsConversation } from "@/hooks/queries/use-sms-inbox
 import { useOrganization } from "@/hooks/useOrganization";
 
 export default function MessagesPage() {
+  const searchParams = useSearchParams();
+  const phoneParam = searchParams.get("phone");
+
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const orgId = currentOrganization?.id || null;
 
   const { data: conversations, isLoading: inboxLoading } = useSmsInbox(orgId);
   const [selectedConversation, setSelectedConversation] = useState<SmsConversation | null>(null);
+
+  // Auto-select conversation from URL param
+  useEffect(() => {
+    if (phoneParam && conversations && conversations.length > 0 && !selectedConversation) {
+      const match = conversations.find((c) => c.phoneNumber === phoneParam);
+      if (match) {
+        setSelectedConversation(match);
+      }
+    }
+  }, [phoneParam, conversations, selectedConversation]);
 
   const isLoading = orgLoading || inboxLoading;
 

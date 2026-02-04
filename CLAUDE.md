@@ -79,13 +79,16 @@ Dashboards:
 - Staging: https://supabase.com/dashboard/project/vilpdnwkfsmvqsiktqdf
 - Production: https://supabase.com/dashboard/project/hhjvsvezinrbxeropeyl
 
-### Database Tables (as of Jan 2026)
+### Database Tables (as of Feb 2026)
 
 Core:
 - `organizations`, `organization_members`, `organization_invitations`
 - `students`, `check_ins`
 - `student_game_stats`, `student_achievements`, `game_transactions`
 - `curriculum_weeks`, `ai_recommendations`, `interactions`
+
+**Key columns in `organization_members`:**
+- `display_name` - Team member's display name for messaging (e.g., "Pastor Mike"). Shown in SMS signatures and conversation threads.
 
 Groups System (Phase 3):
 - `campuses` - Future multi-campus support
@@ -101,6 +104,10 @@ RPC Functions:
 - `get_all_organizations()` - Super admin: list all orgs
 - `create_organization(name, owner_email, slug, timezone)` - Super admin: create new org
 - `is_super_admin(user_id)` - Check if user is super admin
+- `get_organization_members(org_id)` - Team members with display_name, email, role
+- `get_my_org_profile(org_id)` - Current user's profile in an org
+- `update_member_display_name(org_id, user_id, display_name)` - Update member's display name
+- `accept_pending_invitations(user_id, email, display_name)` - Accept invites with optional display name
 
 ### RLS Architecture (IMPORTANT)
 

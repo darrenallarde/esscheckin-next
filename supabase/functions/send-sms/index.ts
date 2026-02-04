@@ -21,7 +21,7 @@ serve(async (req) => {
       throw new Error("Missing Twilio configuration");
     }
 
-    const { to, body, studentId } = await req.json();
+    const { to, body, studentId, organizationId, senderDisplayName } = await req.json();
 
     if (!to || !body) {
       throw new Error("Missing required fields: to, body");
@@ -37,6 +37,14 @@ serve(async (req) => {
       cleanTo = "+" + cleanTo;
     }
 
+    // Append sender signature to message body if display name provided
+    let messageBody = body;
+    let hasSignature = false;
+    if (senderDisplayName && senderDisplayName.trim()) {
+      messageBody = `${body}\n\n- ${senderDisplayName.trim()}`;
+      hasSignature = true;
+    }
+
     // Send SMS via Twilio
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
@@ -49,7 +57,7 @@ serve(async (req) => {
       body: new URLSearchParams({
         To: cleanTo,
         From: TWILIO_PHONE_NUMBER,
-        Body: body,
+        Body: messageBody,
       }),
     });
 
@@ -78,8 +86,9 @@ serve(async (req) => {
       .from("sms_messages")
       .insert({
         student_id: studentId || null,
+        organization_id: organizationId || null,
         direction: "outbound",
-        body: body,
+        body: messageBody,
         from_number: twilioData.from || TWILIO_PHONE_NUMBER,
         to_number: cleanTo,
         twilio_sid: twilioData.sid,
@@ -91,6 +100,19 @@ serve(async (req) => {
       console.error("Database error:", dbError);
       // Don't throw - SMS was sent successfully, just logging failed
     }
+
+    // Log analytics event
+    console.log("SMS_EVENT", JSON.stringify({
+      event: "SMS_SENT",
+      org_id: organizationId || null,
+      student_id: studentId || null,
+      sender_user_id: sentBy,
+      sender_display_name: senderDisplayName || null,
+      has_signature: hasSignature,
+      phone_last4: cleanTo.slice(-4),
+      body_length: body.length,
+      timestamp: new Date().toISOString(),
+    }));
 
     return new Response(
       JSON.stringify({

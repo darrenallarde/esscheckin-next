@@ -15,7 +15,7 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [user, setUser] = useState<{ email?: string } | null>(null);
+  const [user, setUser] = useState<{ email?: string; displayName?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
