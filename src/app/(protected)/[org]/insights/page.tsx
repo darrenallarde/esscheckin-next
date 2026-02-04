@@ -7,11 +7,13 @@ import { InsightsInput } from "@/components/insights/InsightsInput";
 import { QuickQueryChips } from "@/components/insights/QuickQueryChips";
 import { InsightsResults } from "@/components/insights/InsightsResults";
 import { ModeToggle } from "@/components/insights/ModeToggle";
+import { PersonProfileModal } from "@/components/people/PersonProfileModal";
 import { useInsights } from "@/hooks/queries/use-insights";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useTrack } from "@/lib/amplitude/hooks";
 import { EVENTS } from "@/lib/amplitude/events";
-import type { ChartType, TimeGranularity, OutputMode } from "@/lib/insights/types";
+import type { ChartType, TimeGranularity, OutputMode, PersonResult } from "@/lib/insights/types";
+import type { Student } from "@/hooks/queries/use-students";
 
 export default function InsightsPage() {
   const track = useTrack();
@@ -22,6 +24,8 @@ export default function InsightsPage() {
   const [chartType, setChartType] = useState<ChartType>("line");
   const [granularity, setGranularity] = useState<TimeGranularity>("weekly");
   const [modeOverride, setModeOverride] = useState<OutputMode | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const {
     results,
@@ -127,6 +131,34 @@ export default function InsightsPage() {
   const hasResults = !!results;
   const outputMode = effectiveMode;
 
+  // Handle clicking on a person in results
+  const handlePersonClick = useCallback((person: PersonResult) => {
+    // Convert PersonResult to Student type for the modal
+    const studentData: Student = {
+      id: person.profileId,
+      profile_id: person.profileId,
+      first_name: person.firstName,
+      last_name: person.lastName,
+      phone_number: person.phone || null,
+      email: person.email || null,
+      grade: person.grade?.toString() || null,
+      high_school: null,
+      user_type: "student",
+      total_points: 0,
+      current_rank: "Newcomer",
+      last_check_in: person.lastCheckIn || null,
+      days_since_last_check_in: null,
+      total_check_ins: person.checkInCount || 0,
+      groups: person.groups?.map(g => ({
+        id: g.id,
+        name: g.name,
+        color: null,
+      })) || [],
+    };
+    setSelectedPerson(studentData);
+    setProfileModalOpen(true);
+  }, []);
+
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
       {/* Page Header */}
@@ -194,6 +226,7 @@ export default function InsightsPage() {
           granularity={granularity}
           onChartTypeChange={handleChartTypeChange}
           onGranularityChange={handleGranularityChange}
+          onPersonClick={handlePersonClick}
           organizationId={organizationId}
         />
       ) : (
@@ -212,6 +245,14 @@ export default function InsightsPage() {
           </Card>
         )
       )}
+
+      {/* Person Profile Modal */}
+      <PersonProfileModal
+        person={selectedPerson}
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        organizationId={organizationId || undefined}
+      />
     </div>
   );
 }

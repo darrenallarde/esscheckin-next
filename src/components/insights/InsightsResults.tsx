@@ -12,6 +12,7 @@ import type {
   TimeGranularity,
   ListResults,
   ChartResults,
+  PersonResult,
 } from "@/lib/insights/types";
 
 interface InsightsResultsProps {
@@ -21,6 +22,7 @@ interface InsightsResultsProps {
   granularity: TimeGranularity;
   onChartTypeChange: (type: ChartType) => void;
   onGranularityChange: (granularity: TimeGranularity) => void;
+  onPersonClick?: (person: PersonResult) => void;
   organizationId: string | null;
 }
 
@@ -31,6 +33,7 @@ export function InsightsResults({
   granularity,
   onChartTypeChange,
   onGranularityChange,
+  onPersonClick,
   organizationId,
 }: InsightsResultsProps) {
   const isListMode = results.mode === "list";
@@ -68,6 +71,7 @@ export function InsightsResults({
           <InsightsListView
             people={listResults.people}
             organizationId={organizationId}
+            onPersonClick={onPersonClick}
           />
         ) : chartResults ? (
           <InsightsChartView
