@@ -222,19 +222,38 @@ Admin interactions with the main dashboard.
 
 ### 4.3 People & Profiles
 
-Viewing and managing profile records.
+Viewing and managing profile records across Students, Team, and Parents tabs.
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
-| `People Page Viewed` | Admin opened People tab | `org_slug` | |
-| `People Searched` | Admin searched people | `search_term_length` | `result_count`, `filters_applied` |
-| `People Filtered` | Admin applied filters | `filter_type` | `filter_value` |
-| `Student Profile Viewed` | Admin opened profile modal | `profile_id`, `source` | |
-| `Profile Tab Changed` | Admin switched tab in profile | `profile_id`, `tab_name` | |
+| `People Page Viewed` | Admin opened People page | `org_slug`, `active_tab` | |
+| `People Tab Changed` | Admin switched tab (Students/Team/Parents) | `from_tab`, `to_tab` | |
+| `People Searched` | Admin searched people | `search_term_length`, `active_tab` | `result_count`, `filters_applied` |
+| `People Filtered` | Admin applied filters | `filter_type`, `active_tab` | `filter_value` |
+| `Student Profile Viewed` | Admin opened student profile modal | `profile_id`, `source` | |
+| `Profile Tab Changed` | Admin switched tab in profile modal | `profile_id`, `tab_name`, `profile_type` | |
 | `Student Edited` | Admin edited profile info | `profile_id` | `fields_changed` |
 
-**`source` values**: `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"`
-**`tab_name` values**: `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"`
+**`active_tab` values**: `"students"`, `"team"`, `"parents"`
+**`source` values**: `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"`, `"people_list"`
+**`tab_name` values**: `"overview"`, `"messages"`, `"children"`, `"family"`, `"engagement"`, `"pastoral"`, `"groups"`
+**`profile_type` values**: `"student"`, `"team"`, `"guardian"`
+
+### 4.3.1 Guardians & Parent Links
+
+Events for the guardian profile system, including auto-created guardian profiles and profile claiming.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Guardian Profile Viewed` | Admin opened guardian profile modal | `profile_id`, `source`, `is_claimed` | `children_count` |
+| `Guardian Invite Sent` | Admin sent invitation to claim profile | `profile_id` | `contact_method` |
+| `Guardian Profile Claimed` | Guardian claimed their profile | `profile_id` | |
+| `Parent Link Created` | Admin linked parent to student | `parent_profile_id`, `student_profile_id`, `relationship` | `is_primary` |
+| `Parent Link Removed` | Admin unlinked parent from student | `parent_profile_id`, `student_profile_id` | |
+| `Guardians Auto Created` | System auto-created guardian profiles | `student_profile_id` | `father_created`, `mother_created`, `guardian_created` |
+
+**`relationship` values**: `"father"`, `"mother"`, `"guardian"`, `"other"`
+**`contact_method` values**: `"email"`, `"sms"`, `"both"`
 
 ### 4.4 Groups
 
@@ -557,10 +576,13 @@ Don't manually track these - Amplitude handles them:
 | `errors` | Number | - | Import events |
 | `field_edited` | String | Field name that was edited | Edit events |
 | `fields_changed` | Array | `["name", "email", ...]` | Edit events |
-| `filter_type` | String | `"grade"`, `"group"`, `"belonging"` | Filter events |
+| `father_created` | Boolean | Whether father profile was created | Guardian auto-create events |
+| `filter_type` | String | `"grade"`, `"group"`, `"belonging"`, `"claimed"` | Filter events |
+| `from_tab` | String | `"students"`, `"team"`, `"parents"` | People tab change events |
 | `format` | String | `"csv"`, `"pdf"` | Export events |
 | `group_id` | UUID | - | Group events |
 | `group_type` | String | `"small_group"`, `"ministry"`, `"class"` | Group events |
+| `guardian_created` | Boolean | Whether guardian profile was created | Guardian auto-create events |
 | `has_email` | Boolean | - | Registration |
 | `has_parent_info` | Boolean | - | Registration |
 | `has_profile` | Boolean | Message has associated profile | SMS routing events |
@@ -568,19 +590,24 @@ Don't manually track these - Amplitude handles them:
 | `has_student_profile` | Boolean | Profile has student_profiles extension | Check-in, profile events |
 | `has_user_id` | Boolean | Profile linked to auth account | Profile events |
 | `invited_role` | String | `"admin"`, `"leader"`, `"viewer"` | Team events |
+| `is_claimed` | Boolean | Whether profile has been claimed | Guardian events |
 | `is_duplicate` | Boolean | - | Check-in events |
+| `is_primary` | Boolean | Whether this is primary contact | Parent link events |
 | `is_new_profile` | Boolean | First-time registration | Check-in events |
 | `kept_profile_id` | UUID | Profile kept in merge | Merge events |
 | `last_section_completed` | String | `"name"`, `"contact"`, `"optional"` | Registration abandon |
 | `level` | String | `"ultra_core"`, `"core"`, `"connected"`, `"fringe"`, `"missing"` | Belonging events |
 | `member_count` | Number | - | Group events |
+| `mother_created` | Boolean | Whether mother profile was created | Guardian auto-create events |
 | `membership_role` | String | `"owner"`, `"admin"`, `"leader"`, `"viewer"`, `"student"`, `"member"` | Membership events |
 | `method` | String | `"manual"`, `"bulk"`, `"import"` | Member add events |
 | `new_role` | String | Role after change | Membership update events |
 | `note_type` | String | `"general"`, `"prayer_request"`, `"follow_up"`, `"milestone"` | Note events |
 | `old_role` | String | Role before change | Membership update events |
 | `period` | String | `"weekly"`, `"monthly"`, `"all_time"` | Leaderboard events |
+| `parent_profile_id` | UUID | Parent's profile ID | Parent link events |
 | `points_earned` | Number | - | Check-in, achievement events |
+| `profile_type` | String | `"student"`, `"team"`, `"guardian"` | Profile events |
 | `previous_theme_id` | String | - | Theme change events |
 | `profile_a_id` | UUID | First profile in merge preview | Merge preview events |
 | `profile_b_id` | UUID | Second profile in merge preview | Merge preview events |
@@ -588,6 +615,7 @@ Don't manually track these - Amplitude handles them:
 | `profiles_added` | Number | - | Cleanup events |
 | `profiles_imported` | Number | - | Import events |
 | `profiles_updated` | Number | - | Import events |
+| `relationship` | String | `"father"`, `"mother"`, `"guardian"`, `"other"` | Parent link events |
 | `recommendation_type` | String | `"missing"`, `"fringe"`, `"new_student"`, `"celebration"` | Recommendation events |
 | `records_merged` | Number | - | Merge events |
 | `result_count` | Number | - | Search events |
@@ -602,7 +630,12 @@ Don't manually track these - Amplitude handles them:
 | `source` | String | `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"`, `"kiosk"`, `"invite"`, `"import"`, `"admin"` | Profile/membership events |
 | `stat_type` | String | `"total_checkins"`, `"unique_students"`, `"new_students"` | Stat events |
 | `student_grade` | String | `"6"` - `"12"` | Registration events |
-| `tab_name` | String | `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"` | Profile tab events |
+| `student_profile_id` | UUID | Student's profile ID | Parent link events |
+| `tab_name` | String | `"overview"`, `"messages"`, `"children"`, `"family"`, `"engagement"`, `"pastoral"`, `"groups"` | Profile tab events |
+| `to_tab` | String | `"students"`, `"team"`, `"parents"` | People tab change events |
+| `active_tab` | String | `"students"`, `"team"`, `"parents"` | People page events |
+| `children_count` | Number | Number of linked children | Guardian events |
+| `contact_method` | String | `"email"`, `"sms"`, `"both"` | Guardian invite events |
 | `template_used` | String | Template name or null | SMS events |
 | `theme_id` | String | Theme slug | Theme events |
 | `content_length` | Number | - | Sermon upload events |
@@ -1234,5 +1267,5 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 
 ---
 
-*Last Updated: February 3, 2026*
+*Last Updated: February 4, 2026*
 *Maintainer: Engineering Team*

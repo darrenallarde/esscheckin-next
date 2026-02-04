@@ -10,7 +10,7 @@ Multi-tenant PostgreSQL database with Row Level Security (RLS). All tables use U
 
 ```mermaid
 erDiagram
-    %% Identity System (New)
+    %% Identity System
     profiles ||--o{ organization_memberships : "has"
     profiles ||--o{ group_memberships : "has"
     profiles ||--o| student_profiles : "extends"
@@ -22,11 +22,17 @@ erDiagram
     profiles ||--o{ interactions : "has"
     profiles ||--o{ student_notes : "has"
     profiles ||--o{ sms_messages : "sends/receives"
+    profiles ||--o{ parent_student_links : "parent links"
+    profiles ||--o{ parent_student_links : "student links"
 
     organizations ||--o{ organization_memberships : "has"
     organizations ||--o{ check_ins : "has"
     organizations ||--o{ groups : "has"
+    organizations ||--o{ campuses : "has"
     organizations ||--o{ sms_messages : "has"
+
+    campuses ||--o{ organization_memberships : "scopes"
+    campuses ||--o{ groups : "scopes"
 
     groups ||--o{ group_memberships : "has"
     groups ||--o{ group_meeting_times : "has"
@@ -150,12 +156,39 @@ Defines what role a profile has in each organization.
 | `id` | uuid | Primary key |
 | `profile_id` | uuid | FK to profiles |
 | `organization_id` | uuid | FK to organizations |
-| `role` | text | owner, admin, leader, viewer, student |
-| `status` | text | active, pending, suspended |
+| `role` | text | owner, admin, leader, viewer, student, guardian |
+| `status` | text | active, pending, suspended, archived |
+| `campus_id` | uuid | FK to campuses (nullable - NULL = all campuses) |
 | `created_at` | timestamptz | When joined |
 | `updated_at` | timestamptz | Last modification |
 
 **Constraint:** UNIQUE on `(profile_id, organization_id)`
+
+**Roles:**
+| Role | Description |
+|------|-------------|
+| owner | Org owner with billing access |
+| admin | Full admin access, can manage all data (within campus scope if set) |
+| leader | Can manage their groups and check-in |
+| viewer | Read-only access to dashboards |
+| student | Students who check in and participate |
+| guardian | Non-attending parents who receive communications and view linked children |
+
+### `parent_student_links`
+
+Links guardian profiles to student profiles (family relationships).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `parent_profile_id` | uuid | FK to profiles (guardian) |
+| `student_profile_id` | uuid | FK to profiles (student) |
+| `relationship` | text | father, mother, guardian, other |
+| `is_primary` | boolean | Whether this is the primary contact for this student |
+| `created_at` | timestamptz | When link was created |
+| `created_by` | uuid | FK to auth.users (who created the link) |
+
+**Constraint:** UNIQUE on `(parent_profile_id, student_profile_id)`
 
 ### `group_memberships`
 
@@ -514,6 +547,19 @@ USING (organization_id IN (SELECT auth_user_org_ids(auth.uid())));
 | `get_group_members(group_id)` | Returns group_memberships + profiles |
 | `add_group_member(profile_id, group_id, role)` | Creates group_membership |
 | `get_student_group_streak(profile_id, group_id)` | Per-group streak calculation |
+
+### People & Guardian Functions
+
+| Function | Purpose |
+|----------|---------|
+| `get_organization_people(org_id, role_filter, campus_id, include_archived)` | Unified people list with filters |
+| `get_parent_children(parent_profile_id, org_id)` | Get children linked to a guardian |
+| `get_student_parents(student_profile_id, org_id)` | Get parents linked to a student |
+| `link_parent_to_student(parent_id, student_id, relationship, is_primary)` | Create parent-student link |
+| `unlink_parent_from_student(parent_id, student_id)` | Remove parent-student link |
+| `create_guardian_profiles_from_student(student_id, org_id, campus_id)` | Auto-create guardian profiles from student_profiles data |
+| `invite_guardian_to_claim(guardian_id, org_id, invited_by)` | Create invitation for guardian to claim profile |
+| `accept_invitation_and_claim_profile(token, user_id, display_name)` | Claim existing profile via invitation |
 
 ---
 

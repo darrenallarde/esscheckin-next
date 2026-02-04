@@ -83,21 +83,32 @@ Dashboards:
 
 **Identity System (Phase 4):**
 - `profiles` - ONE record per human (name, email, phone, optional user_id link to auth)
-- `organization_memberships` - Role in org (owner/admin/leader/viewer/student)
+- `organization_memberships` - Role in org (owner/admin/leader/viewer/student/guardian) + campus_id for scoping
 - `group_memberships` - Participation in groups (leader/member role)
 - `student_profiles` - Student-specific extension (grade, school, parents)
+- `parent_student_links` - Family relationships (links guardian profiles to student profiles)
 
 Key principle: ONE profile per person, multiple memberships define roles. An admin who is also a group member uses the SAME profile.
 
+**Roles in organization_memberships:**
+| Role | Description |
+|------|-------------|
+| owner | Org owner with billing access |
+| admin | Full admin access (within campus scope if campus_id is set) |
+| leader | Can manage their groups and check-in |
+| viewer | Read-only access to dashboards |
+| student | Students who check in and participate |
+| guardian | Non-attending parents who receive communications and view linked children |
+
 Core:
-- `organizations`, `organization_invitations`
-- `check_ins` - Now references profile_id
-- `student_game_stats`, `student_achievements`, `game_transactions` - Now reference profile_id
-- `curriculum_weeks`, `ai_recommendations`, `interactions` - Now reference profile_id
+- `organizations`, `organization_invitations` (invitations now have profile_id for claiming)
+- `check_ins` - References profile_id
+- `student_game_stats`, `student_achievements`, `game_transactions` - Reference profile_id
+- `curriculum_weeks`, `ai_recommendations`, `interactions` - Reference profile_id
 
 Groups System:
-- `campuses` - Future multi-campus support
-- `groups` - Student groups (MS Boys, HS Girls, etc.)
+- `campuses` - Multi-campus support (scopes org_memberships and groups)
+- `groups` - Student groups (MS Boys, HS Girls, etc.) with optional campus_id
 - `group_meeting_times` - Meeting schedule per group
 
 **Legacy tables (deprecated, will be removed):**
@@ -106,8 +117,8 @@ Groups System:
 - `group_members`, `group_leaders` - Replaced by group_memberships
 
 RPC Functions:
-- `search_student_for_checkin(term)` - Searches profiles + student_profiles by phone/name
-- `register_student_and_checkin(...)` - Creates profile → student_profile → org_membership → check_in
+- `search_student_for_checkin(term)` - Searches profiles + student_profiles by phone/name (includes leaders with group_membership)
+- `register_student_and_checkin(...)` - Creates profile → student_profile → org_membership → check_in → guardian profiles
 - `checkin_student(profile_id)` - Idempotent daily check-in
 - `get_student_group_streak(profile_id, group_id)` - Per-group streak calculation
 - `get_user_organizations(user_id)` - User's orgs via profile → organization_memberships
@@ -119,6 +130,16 @@ RPC Functions:
 - `get_my_org_profile(org_id)` - Current user's profile in an org
 - `accept_pending_invitations(user_id, email, display_name)` - Creates profile + organization_membership
 
+People & Guardian Functions:
+- `get_organization_people(org_id, role_filter, campus_id, include_archived)` - Unified people list for Students/Team/Parents tabs
+- `get_parent_children(parent_profile_id, org_id)` - Get children linked to a guardian
+- `get_student_parents(student_profile_id, org_id)` - Get parents linked to a student
+- `link_parent_to_student(...)` - Create parent-student link
+- `unlink_parent_from_student(...)` - Remove parent-student link
+- `create_guardian_profiles_from_student(...)` - Auto-create guardian profiles from student_profiles data
+- `invite_guardian_to_claim(...)` - Create invitation for guardian to claim profile
+- `accept_invitation_and_claim_profile(...)` - Claim existing profile via invitation
+
 ### RLS Architecture (IMPORTANT)
 
 **All RLS policies use SECURITY DEFINER helper functions to prevent infinite recursion.**
@@ -128,6 +149,7 @@ Helper functions (bypass RLS):
 - `auth_user_org_ids(user_id)` - Get org IDs user belongs to (legacy)
 - `auth_profile_org_ids(user_id)` - Get org IDs via profiles system (preferred)
 - `auth_has_org_role(org_id, roles[])` - Check if user has specific role in org
+- `auth_can_manage_parent_links(parent_id, student_id, user_id)` - Check if user can manage parent-student links
 
 **Reference file:** `supabase/rls-policies.sql` - canonical policy definitions
 

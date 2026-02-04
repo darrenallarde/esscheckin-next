@@ -28,6 +28,8 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
+  Send,
+  Heart,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -50,9 +52,20 @@ import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
 import { PersonPastoralContent } from "./PersonPastoralContent";
 import { FamilySection } from "@/components/families/FamilySection";
+import { ParentChildrenTab } from "./ParentChildrenTab";
+import { InviteGuardianModal } from "./InviteGuardianModal";
+import { RoleBadge, ClaimedBadge } from "./RoleBadge";
+import type { OrgRole } from "@/hooks/queries/use-people";
+
+// Extended Student type that includes role information
+interface ExtendedStudent extends Student {
+  role?: OrgRole;
+  is_claimed?: boolean;
+  linked_children_count?: number;
+}
 
 interface PersonProfileModalProps {
-  person: Student | null;
+  person: ExtendedStudent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSendText?: (person: Student) => void;
@@ -76,6 +89,15 @@ const rankEmojis: Record<string, string> = {
   "Legend": "🌟",
 };
 
+// Determine profile type based on role
+type ProfileType = "student" | "team" | "guardian";
+
+function getProfileType(role?: string): ProfileType {
+  if (!role || role === "student") return "student";
+  if (role === "guardian") return "guardian";
+  return "team";
+}
+
 export function PersonProfileModal({
   person,
   open,
@@ -85,6 +107,7 @@ export function PersonProfileModal({
 }: PersonProfileModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const { toast } = useToast();
 
   const { data: messages, isLoading: messagesLoading } = useSmsConversation(
@@ -102,15 +125,15 @@ export function PersonProfileModal({
         organizationId,
       });
       toast({
-        title: "Student archived",
-        description: `${person.first_name} has been archived. They can check in again to be restored.`,
+        title: "Person archived",
+        description: `${person.first_name} has been archived.`,
       });
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to archive:", error);
       toast({
         title: "Error",
-        description: "Failed to archive student. Please try again.",
+        description: "Failed to archive. Please try again.",
         variant: "destructive",
       });
     }
@@ -124,8 +147,8 @@ export function PersonProfileModal({
         organizationId,
       });
       toast({
-        title: "Student deleted",
-        description: result.message || "Student has been permanently deleted.",
+        title: "Person deleted",
+        description: result.message || "Person has been permanently deleted.",
       });
       setShowDeleteConfirm(false);
       onOpenChange(false);
@@ -133,7 +156,7 @@ export function PersonProfileModal({
       console.error("Failed to delete:", error);
       toast({
         title: "Error",
-        description: "Failed to delete student. Please try again.",
+        description: "Failed to delete. Please try again.",
         variant: "destructive",
       });
     }
@@ -143,6 +166,18 @@ export function PersonProfileModal({
 
   const fullName = `${person.first_name} ${person.last_name}`;
   const belongingStatus = getBelongingStatus(person.days_since_last_check_in);
+  const profileType = getProfileType(person.role || person.user_type);
+  const isGuardian = profileType === "guardian";
+  const isStudent = profileType === "student";
+  const isTeam = profileType === "team";
+  const isUnclaimed = person.is_claimed === false;
+
+  // Determine which tabs to show based on profile type
+  const showEngagement = isStudent || (isTeam && person.total_check_ins > 0);
+  const showPastoral = isStudent;
+  const showFamily = isStudent;
+  const showChildren = isGuardian;
+  const showGroups = isStudent || isTeam;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,38 +188,89 @@ export function PersonProfileModal({
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span>{fullName}</span>
-                {person.grade && (
+                {/* Role badge for non-students */}
+                {!isStudent && person.role && (
+                  <RoleBadge role={person.role} size="sm" />
+                )}
+                {/* Grade for students */}
+                {isStudent && person.grade && (
                   <Badge variant="secondary">Grade {person.grade}</Badge>
                 )}
+                {/* Claimed status for guardians */}
+                {isGuardian && (
+                  <ClaimedBadge isClaimed={!isUnclaimed} size="sm" />
+                )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className={belongingStatusColors[belongingStatus] || "bg-gray-500"}>
-                  {belongingStatus}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {rankEmojis[person.current_rank] || "🌱"} {person.current_rank}
-                </span>
-              </div>
+              {/* Status line for students */}
+              {isStudent && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className={belongingStatusColors[belongingStatus] || "bg-gray-500"}>
+                    {belongingStatus}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {rankEmojis[person.current_rank] || "🌱"} {person.current_rank}
+                  </span>
+                </div>
+              )}
+              {/* Children count for guardians */}
+              {isGuardian && person.linked_children_count !== undefined && person.linked_children_count > 0 && (
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <Heart className="h-3.5 w-3.5" />
+                  <span>
+                    {person.linked_children_count} {person.linked_children_count === 1 ? "child" : "children"}
+                  </span>
+                </div>
+              )}
             </div>
           </DialogTitle>
         </DialogHeader>
 
+        {/* Invite to Claim button for unclaimed guardians */}
+        {isGuardian && isUnclaimed && organizationId && (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInviteModal(true)}
+              className="w-full"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Invite to Claim Profile
+            </Button>
+          </div>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-6">
+          {/* Dynamic tab list based on profile type */}
+          <TabsList className={`grid w-full ${getTabsGridCols(profileType, showEngagement)}`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-1">
               <MessageCircle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Messages</span>
             </TabsTrigger>
-            <TabsTrigger value="family" className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Family</span>
-            </TabsTrigger>
-            <TabsTrigger value="engagement">Engagement</TabsTrigger>
-            <TabsTrigger value="pastoral">Pastoral</TabsTrigger>
-            <TabsTrigger value="groups">Groups</TabsTrigger>
+            {showChildren && (
+              <TabsTrigger value="children" className="flex items-center gap-1">
+                <Heart className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Children</span>
+              </TabsTrigger>
+            )}
+            {showFamily && (
+              <TabsTrigger value="family" className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Family</span>
+              </TabsTrigger>
+            )}
+            {showEngagement && (
+              <TabsTrigger value="engagement">Engagement</TabsTrigger>
+            )}
+            {showPastoral && (
+              <TabsTrigger value="pastoral">Pastoral</TabsTrigger>
+            )}
+            {showGroups && (
+              <TabsTrigger value="groups">Groups</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Messages Tab */}
@@ -250,15 +336,17 @@ export function PersonProfileModal({
                     <span>{person.high_school}</span>
                   </div>
                 )}
-                {/* Last Check-in */}
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {person.last_check_in
-                      ? `Last seen: ${formatLastSeen(person.days_since_last_check_in)}`
-                      : "Never checked in"}
-                  </span>
-                </div>
+                {/* Last Check-in (for students and team who check in) */}
+                {(isStudent || person.last_check_in) && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {person.last_check_in
+                        ? `Last seen: ${formatLastSeen(person.days_since_last_check_in)}`
+                        : "Never checked in"}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -299,9 +387,9 @@ export function PersonProfileModal({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">Archive Student</p>
+                        <p className="text-sm font-medium">Archive</p>
                         <p className="text-xs text-muted-foreground">
-                          Hide from lists. They can check in again to restore.
+                          Hide from lists. {isStudent ? "They can check in again to restore." : "Can be restored later."}
                         </p>
                       </div>
                       <Button
@@ -340,105 +428,126 @@ export function PersonProfileModal({
             )}
           </TabsContent>
 
-          {/* Family Tab */}
-          <TabsContent value="family" className="mt-4">
-            <FamilySection studentId={person.id} />
-          </TabsContent>
+          {/* Children Tab (Guardians only) */}
+          {showChildren && (
+            <TabsContent value="children" className="mt-4">
+              <ParentChildrenTab
+                parentProfileId={person.id}
+                onChildClick={(childId) => {
+                  // Could open child's profile - for now just log
+                  console.log("View child:", childId);
+                }}
+              />
+            </TabsContent>
+          )}
+
+          {/* Family Tab (Students only) */}
+          {showFamily && (
+            <TabsContent value="family" className="mt-4">
+              <FamilySection studentId={person.id} />
+            </TabsContent>
+          )}
 
           {/* Engagement Tab */}
-          <TabsContent value="engagement" className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Points */}
-              <Card>
-                <CardContent className="pt-4 text-center">
-                  <Trophy className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
-                  <p className="text-2xl font-bold">{person.total_points}</p>
-                  <p className="text-sm text-muted-foreground">Total Points</p>
-                </CardContent>
-              </Card>
-              {/* Total Check-ins */}
-              <Card>
-                <CardContent className="pt-4 text-center">
-                  <Calendar className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                  <p className="text-2xl font-bold">{person.total_check_ins}</p>
-                  <p className="text-sm text-muted-foreground">Total Check-ins</p>
-                </CardContent>
-              </Card>
-            </div>
+          {showEngagement && (
+            <TabsContent value="engagement" className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Points */}
+                <Card>
+                  <CardContent className="pt-4 text-center">
+                    <Trophy className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
+                    <p className="text-2xl font-bold">{person.total_points}</p>
+                    <p className="text-sm text-muted-foreground">Total Points</p>
+                  </CardContent>
+                </Card>
+                {/* Total Check-ins */}
+                <Card>
+                  <CardContent className="pt-4 text-center">
+                    <Calendar className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                    <p className="text-2xl font-bold">{person.total_check_ins}</p>
+                    <p className="text-sm text-muted-foreground">Total Check-ins</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Rank */}
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{rankEmojis[person.current_rank] || "🌱"}</span>
-                    <div>
-                      <p className="font-medium">{person.current_rank}</p>
-                      <p className="text-sm text-muted-foreground">Current Rank</p>
+              {/* Rank */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{rankEmojis[person.current_rank] || "🌱"}</span>
+                      <div>
+                        <p className="font-medium">{person.current_rank}</p>
+                        <p className="text-sm text-muted-foreground">Current Rank</p>
+                      </div>
                     </div>
+                    <Star className="h-6 w-6 text-yellow-500" />
                   </div>
-                  <Star className="h-6 w-6 text-yellow-500" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Streak placeholder - would need streak data */}
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Flame className="h-5 w-5 text-orange-500" />
-                  <span className="font-medium">Attendance Streak</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Check-in history and streaks coming soon
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              {/* Streak placeholder */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Flame className="h-5 w-5 text-orange-500" />
+                    <span className="font-medium">Attendance Streak</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Check-in history and streaks coming soon
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-          {/* Pastoral Tab */}
-          <TabsContent value="pastoral" className="mt-4">
-            <PersonPastoralContent
-              student={person}
-              onSendText={onSendText}
-            />
-          </TabsContent>
+          {/* Pastoral Tab (Students only) */}
+          {showPastoral && (
+            <TabsContent value="pastoral" className="mt-4">
+              <PersonPastoralContent
+                student={person}
+                onSendText={onSendText}
+              />
+            </TabsContent>
+          )}
 
           {/* Groups Tab */}
-          <TabsContent value="groups" className="space-y-4 mt-4">
-            {person.groups && person.groups.length > 0 ? (
-              <div className="space-y-3">
-                {person.groups.map((group) => (
-                  <Card key={group.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-10 rounded"
-                          style={{ backgroundColor: group.color || "#6b7280" }}
-                        />
-                        <div>
-                          <p className="font-medium">{group.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Member
-                          </p>
+          {showGroups && (
+            <TabsContent value="groups" className="space-y-4 mt-4">
+              {person.groups && person.groups.length > 0 ? (
+                <div className="space-y-3">
+                  {person.groups.map((group) => (
+                    <Card key={group.id}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-10 rounded"
+                            style={{ backgroundColor: group.color || "#6b7280" }}
+                          />
+                          <div>
+                            <p className="font-medium">{group.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Member
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <UsersRound className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground">Not in any groups yet</p>
-                  <Button variant="outline" className="mt-4">
-                    Add to Group
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <UsersRound className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">Not in any groups yet</p>
+                    <Button variant="outline" className="mt-4">
+                      Add to Group
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
 
@@ -448,18 +557,19 @@ export function PersonProfileModal({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Permanently Delete Student?
+              Permanently Delete?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
                 This will permanently delete <strong>{fullName}</strong> and all their data:
               </p>
               <ul className="list-disc list-inside text-sm space-y-1 mt-2">
-                <li>All check-in history</li>
-                <li>Points and achievements</li>
+                {isStudent && <li>All check-in history</li>}
+                {isStudent && <li>Points and achievements</li>}
                 <li>SMS message history</li>
-                <li>Group memberships</li>
-                <li>Pastoral notes and recommendations</li>
+                {showGroups && <li>Group memberships</li>}
+                {isStudent && <li>Pastoral notes and recommendations</li>}
+                {isGuardian && <li>Links to children</li>}
               </ul>
               <p className="font-medium text-destructive mt-3">
                 This action cannot be undone.
@@ -490,8 +600,34 @@ export function PersonProfileModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invite Guardian Modal */}
+      {isGuardian && (
+        <InviteGuardianModal
+          open={showInviteModal}
+          onOpenChange={setShowInviteModal}
+          guardianProfileId={person.id}
+          guardianName={fullName}
+          guardianEmail={person.email}
+          guardianPhone={person.phone_number}
+        />
+      )}
     </Dialog>
   );
+}
+
+// Helper to get grid columns based on tabs shown
+function getTabsGridCols(profileType: ProfileType, showEngagement: boolean): string {
+  if (profileType === "guardian") {
+    // Overview, Messages, Children = 3 tabs
+    return "grid-cols-3";
+  }
+  if (profileType === "team") {
+    // Overview, Messages, Groups + possibly Engagement = 3-4 tabs
+    return showEngagement ? "grid-cols-4" : "grid-cols-3";
+  }
+  // Student: Overview, Messages, Family, Engagement, Pastoral, Groups = 6 tabs
+  return "grid-cols-6";
 }
 
 // Helper functions
@@ -499,7 +635,7 @@ function getBelongingStatus(daysSinceLastCheckIn: number | null): string {
   if (daysSinceLastCheckIn === null) return "Missing";
   if (daysSinceLastCheckIn >= 60) return "Missing";
   if (daysSinceLastCheckIn >= 30) return "On the Fringe";
-  if (daysSinceLastCheckIn <= 7) return "Core"; // Approximation - would need 8-week data
+  if (daysSinceLastCheckIn <= 7) return "Core";
   return "Connected";
 }
 
@@ -511,4 +647,3 @@ function formatLastSeen(days: number | null): string {
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
   return `${Math.floor(days / 30)} months ago`;
 }
-

@@ -50,11 +50,22 @@ export const EVENTS = {
   // PEOPLE & PROFILES
   // ============================================
   PEOPLE_PAGE_VIEWED: "People Page Viewed",
+  PEOPLE_TAB_CHANGED: "People Tab Changed",
   PEOPLE_SEARCHED: "People Searched",
   PEOPLE_FILTERED: "People Filtered",
   STUDENT_PROFILE_VIEWED: "Student Profile Viewed",
   PROFILE_TAB_CHANGED: "Profile Tab Changed",
   STUDENT_EDITED: "Student Edited",
+
+  // ============================================
+  // GUARDIANS & PARENT LINKS
+  // ============================================
+  GUARDIAN_PROFILE_VIEWED: "Guardian Profile Viewed",
+  GUARDIAN_INVITE_SENT: "Guardian Invite Sent",
+  GUARDIAN_PROFILE_CLAIMED: "Guardian Profile Claimed",
+  PARENT_LINK_CREATED: "Parent Link Created",
+  PARENT_LINK_REMOVED: "Parent Link Removed",
+  GUARDIANS_AUTO_CREATED: "Guardians Auto Created",
 
   // ============================================
   // GROUPS
