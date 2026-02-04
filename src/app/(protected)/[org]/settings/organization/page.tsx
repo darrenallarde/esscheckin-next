@@ -151,10 +151,10 @@ export default function OrganizationSettingsPage() {
       await refreshOrganizations();
 
       toast({
-        title: "Short code updated",
+        title: "Code updated",
         description: shortCode.trim()
-          ? `Your short URL is now active at /c/${shortCode.trim()}`
-          : "Short code removed",
+          ? `Your URL is now /${shortCode.trim()} and SMS code is ${shortCode.trim().toUpperCase()}`
+          : "Code removed",
       });
     } catch (error) {
       console.error("Error saving short code:", error);
@@ -407,66 +407,36 @@ export default function OrganizationSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label className="text-muted-foreground">Organization ID</Label>
-                <p className="font-mono text-lg mt-1">
-                  #{currentOrganization.orgNumber || "—"}
-                </p>
-                <p className="text-xs text-muted-foreground">Reference this when contacting support</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Slug</Label>
-                <p className="font-mono text-sm mt-1 p-2 bg-muted rounded">
-                  {currentOrganization.slug}
-                </p>
-              </div>
+            <div>
+              <Label className="text-muted-foreground">Organization ID</Label>
+              <p className="font-mono text-lg mt-1">
+                #{currentOrganization.orgNumber || "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">Reference this when contacting support</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Public Check-in URL */}
+        {/* Organization Code & URL */}
         <Card>
           <CardHeader>
-            <CardTitle>Public Check-in URL</CardTitle>
+            <CardTitle>Organization Code</CardTitle>
             <CardDescription>
-              Share this link for students to check in
+              This code is used for your URL and SMS. Changing it updates both.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Full URL */}
-            <div>
-              <Label className="text-muted-foreground">Full URL</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <code className="flex-1 p-2 bg-muted rounded text-sm break-all">
-                  {origin}/{currentOrganization.slug}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleCopyUrl(`${origin}/${currentOrganization.slug}`)}
-                >
-                  {copiedUrl === `${origin}/${currentOrganization.slug}` ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Short URL */}
-            {canEdit && (
+            {/* Code Input */}
+            {canEdit ? (
               <div>
-                <Label>Short URL (optional)</Label>
+                <Label>Code</Label>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-muted-foreground text-sm whitespace-nowrap">{origin}/c/</span>
                   <Input
                     value={shortCode}
                     onChange={(e) => setShortCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
-                    placeholder="abc"
+                    placeholder="myorg"
                     maxLength={10}
-                    className="w-32 font-mono"
+                    className="w-40 font-mono text-lg"
                   />
                   <Button
                     onClick={handleSaveShortCode}
@@ -481,24 +451,48 @@ export default function OrganizationSettingsPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  2-10 lowercase letters/numbers. Can be changed once per day.
+                  2-10 lowercase letters/numbers
                 </p>
-                {shortCode && !shortCodeChanged && (
-                  <div className="flex items-center gap-2 mt-3 p-2 bg-muted rounded">
-                    <code className="flex-1 text-sm break-all">{origin}/c/{shortCode}</code>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleCopyUrl(`${origin}/c/${shortCode}`)}
-                    >
-                      {copiedUrl === `${origin}/c/${shortCode}` ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                )}
+              </div>
+            ) : (
+              <div>
+                <Label className="text-muted-foreground">Code</Label>
+                <p className="font-mono text-lg mt-1">{shortCode || "Not set"}</p>
+              </div>
+            )}
+
+            {/* URLs Preview */}
+            {shortCode && !shortCodeChanged && (
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-sm font-medium">Your URLs:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 p-2 bg-muted rounded text-sm">{origin}/{shortCode}</code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopyUrl(`${origin}/${shortCode}`)}
+                  >
+                    {copiedUrl === `${origin}/${shortCode}` ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 p-2 bg-muted rounded text-sm">{origin}/c/{shortCode}</code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopyUrl(`${origin}/c/${shortCode}`)}
+                  >
+                    {copiedUrl === `${origin}/c/${shortCode}` ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

@@ -213,6 +213,7 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
           student_id: student.id,
           is_duplicate: isAlreadyCheckedIn,
           points_earned: result[0].points_earned || 0,
+          student_grade: student.grade || undefined,
         });
 
         setViewState({ type: 'success', student, checkInId, profilePin });

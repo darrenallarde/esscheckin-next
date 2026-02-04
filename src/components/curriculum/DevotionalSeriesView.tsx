@@ -16,6 +16,10 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
+  BookOpen,
+  Lightbulb,
+  Heart,
+  MessageCircle,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -53,6 +57,70 @@ const TIME_SLOT_ICONS: Record<DevotionalTimeSlot, React.ReactNode> = {
   afternoon: <Cloud className="h-4 w-4" />,
   evening: <Moon className="h-4 w-4" />,
 };
+
+// Section styling configuration for enhanced visual design
+const SECTION_STYLES = {
+  scripture: {
+    icon: BookOpen,
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    border: "border-l-blue-500",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    label: "Scripture",
+  },
+  reflection: {
+    icon: Lightbulb,
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    border: "border-l-amber-500",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    label: "Reflection",
+  },
+  prayer: {
+    icon: Heart,
+    bg: "bg-rose-50 dark:bg-rose-950/30",
+    border: "border-l-rose-500",
+    iconColor: "text-rose-600 dark:text-rose-400",
+    label: "Prayer Prompt",
+  },
+  discussion: {
+    icon: MessageCircle,
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    border: "border-l-emerald-500",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    label: "Discussion",
+  },
+} as const;
+
+function DevotionalSection({
+  type,
+  content,
+  subContent,
+}: {
+  type: keyof typeof SECTION_STYLES;
+  content: string;
+  subContent?: string;
+}) {
+  const style = SECTION_STYLES[type];
+  const Icon = style.icon;
+
+  return (
+    <div
+      className={`p-3 rounded-lg ${style.bg} border-l-4 ${style.border}`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`h-4 w-4 ${style.iconColor}`} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {style.label}
+        </span>
+      </div>
+      {subContent && (
+        <p className="text-xs text-muted-foreground mb-1">{subContent}</p>
+      )}
+      <p className={`text-sm ${type === "scripture" ? "italic" : ""}`}>
+        {content}
+      </p>
+    </div>
+  );
+}
 
 function DevotionalCard({
   devotional,
@@ -101,36 +169,29 @@ function DevotionalCard({
         </div>
 
         {expanded && (
-          <div className="mt-4 space-y-3 text-sm">
+          <div className="mt-4 space-y-3">
             {devotional.scripture_text && (
-              <div>
-                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                  Scripture
-                </p>
-                <p className="mt-1 italic">{devotional.scripture_text}</p>
-              </div>
+              <DevotionalSection
+                type="scripture"
+                content={devotional.scripture_text}
+                subContent={devotional.scripture_reference || undefined}
+              />
             )}
-            <div>
-              <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                Reflection
-              </p>
-              <p className="mt-1 whitespace-pre-wrap">{devotional.reflection}</p>
-            </div>
+            <DevotionalSection
+              type="reflection"
+              content={devotional.reflection}
+            />
             {devotional.prayer_prompt && (
-              <div>
-                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                  Prayer Prompt
-                </p>
-                <p className="mt-1">{devotional.prayer_prompt}</p>
-              </div>
+              <DevotionalSection
+                type="prayer"
+                content={devotional.prayer_prompt}
+              />
             )}
             {devotional.discussion_question && (
-              <div>
-                <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                  Discussion Question
-                </p>
-                <p className="mt-1">{devotional.discussion_question}</p>
-              </div>
+              <DevotionalSection
+                type="discussion"
+                content={devotional.discussion_question}
+              />
             )}
           </div>
         )}

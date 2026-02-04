@@ -17,15 +17,19 @@ import {
   useActivateDevotionalSeries,
   useUpdateDevotionalSeries,
   useDeleteDevotionalSeries,
+  useUpdateDevotional,
   DevotionalFrequency,
   DevotionalTimeSlot,
   DevotionalSeries,
+  Devotional,
   getTotalDevotionals,
 } from "@/hooks/queries/use-devotionals";
 import { useToast } from "@/hooks/use-toast";
 import { safeTrack } from "@/lib/amplitude";
 import { EVENTS } from "@/lib/amplitude/events";
 import { createClient } from "@/lib/supabase/client";
+import { GenerationProgressModal } from "@/components/curriculum/GenerationProgressModal";
+import { EditDevotionalModal } from "@/components/curriculum/EditDevotionalModal";
 
 export default function CurriculumPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
@@ -49,6 +53,10 @@ export default function CurriculumPage() {
   const [activeTab, setActiveTab] = useState<"create" | "active" | "history">(
     "create"
   );
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [editingDevotional, setEditingDevotional] = useState<Devotional | null>(
+    null
+  );
 
   // Queries
   const { data: allSeries, isLoading: seriesLoading } =
@@ -62,6 +70,7 @@ export default function CurriculumPage() {
   const activateSeries = useActivateDevotionalSeries();
   const updateSeries = useUpdateDevotionalSeries();
   const deleteSeries = useDeleteDevotionalSeries();
+  const updateDevotional = useUpdateDevotional();
 
   // Get devotionals for active series
   const { data: activeDevotionals } = useDevotionals(activeSeries?.id || null);
@@ -102,6 +111,9 @@ export default function CurriculumPage() {
       total_devotionals: totalDevotionals,
     });
 
+    // Show the generation modal immediately
+    setIsGenerating(true);
+
     try {
       // Track generation start
       safeTrack(EVENTS.DEVOTIONAL_GENERATION_STARTED, {
@@ -121,15 +133,14 @@ export default function CurriculumPage() {
         startDate,
       });
 
-      toast({
-        title: "Series created!",
-        description:
-          "Generating devotionals... This may take up to a minute.",
-      });
-
       // Call edge function to generate devotionals
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      let generationSuccess = false;
+      let devotionalsCreated = 0;
 
       if (session?.access_token) {
         const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-devotionals`;
@@ -146,7 +157,6 @@ export default function CurriculumPage() {
         if (!genResponse.ok) {
           const errorData = await genResponse.json();
           console.error("Edge function error:", errorData);
-          // Don't throw - series was created, just show warning
           toast({
             title: "Partial success",
             description:
@@ -156,6 +166,8 @@ export default function CurriculumPage() {
         } else {
           const result = await genResponse.json();
           console.log("Generation complete:", result);
+          generationSuccess = true;
+          devotionalsCreated = result.devotionals_created;
 
           toast({
             title: "Devotionals generated!",
@@ -170,7 +182,8 @@ export default function CurriculumPage() {
         org_slug: currentOrganization?.slug,
         series_id: series.id,
         duration_ms: Date.now() - startTime,
-        success: true,
+        success: generationSuccess,
+        devotionals_created: devotionalsCreated,
       });
 
       // Clear form and switch to history tab
@@ -195,6 +208,9 @@ export default function CurriculumPage() {
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      // Always hide the generation modal
+      setIsGenerating(false);
     }
   };
 
@@ -277,6 +293,45 @@ export default function CurriculumPage() {
 
   const pastSeries = allSeries?.filter((s) => s.status !== "active") || [];
 
+  const handleEditDevotional = async (updates: Partial<Devotional>) => {
+    if (!editingDevotional) return;
+
+    try {
+      await updateDevotional.mutateAsync({
+        devotionalId: editingDevotional.id,
+        seriesId: editingDevotional.series_id,
+        title: updates.title,
+        scriptureReference: updates.scripture_reference ?? undefined,
+        scriptureText: updates.scripture_text ?? undefined,
+        reflection: updates.reflection,
+        prayerPrompt: updates.prayer_prompt ?? undefined,
+        discussionQuestion: updates.discussion_question ?? undefined,
+      });
+
+      safeTrack(EVENTS.DEVOTIONAL_EDITED, {
+        org_id: organizationId,
+        org_slug: currentOrganization?.slug,
+        devotional_id: editingDevotional.id,
+        series_id: editingDevotional.series_id,
+        fields_changed: Object.keys(updates),
+      });
+
+      toast({
+        title: "Devotional updated",
+        description: "Your changes have been saved.",
+      });
+
+      setEditingDevotional(null);
+    } catch (error) {
+      console.error("Failed to update devotional:", error);
+      toast({
+        title: "Update failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
       {/* Page Header */}
@@ -343,23 +398,14 @@ export default function CurriculumPage() {
                 onClick={handleGenerate}
                 disabled={
                   !sermonContent.trim() ||
-                  createSeries.isPending ||
+                  isGenerating ||
                   !organizationId
                 }
                 size="lg"
                 className="w-full gap-2"
               >
-                {createSeries.isPending ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-5 w-5" />
-                    Generate Devotionals
-                  </>
-                )}
+                <Sparkles className="h-5 w-5" />
+                Generate Devotionals
               </Button>
             </div>
           </div>
@@ -373,6 +419,7 @@ export default function CurriculumPage() {
               devotionals={activeDevotionals || []}
               isLoading={orgLoading}
               onArchive={() => handleArchive(activeSeries)}
+              onEditDevotional={setEditingDevotional}
             />
           ) : (
             <Card>
@@ -461,6 +508,7 @@ export default function CurriculumPage() {
                           pastSeries.find((s) => s.id === selectedSeriesId)!
                         )
                       }
+                      onEditDevotional={setEditingDevotional}
                       isActivating={activateSeries.isPending}
                     />
                   )}
@@ -470,6 +518,21 @@ export default function CurriculumPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Generation Progress Modal */}
+      <GenerationProgressModal
+        isOpen={isGenerating}
+        sermonTitle={sermonTitle || undefined}
+      />
+
+      {/* Edit Devotional Modal */}
+      <EditDevotionalModal
+        devotional={editingDevotional}
+        isOpen={!!editingDevotional}
+        onClose={() => setEditingDevotional(null)}
+        onSave={handleEditDevotional}
+        isSaving={updateDevotional.isPending}
+      />
     </div>
   );
 }
