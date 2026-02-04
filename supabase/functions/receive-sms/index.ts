@@ -354,61 +354,13 @@ serve(async (req) => {
       }
     }
 
-    // STEP 5: Check if known student
-    console.log("STEP 5: Checking for known student groups...");
-    const studentGroups = await findStudentGroups(supabase, from);
-    console.log("Student groups result:", studentGroups);
+    // STEP 5: REMOVED - No auto-routing based on phone number matching
+    // Security: New contacts MUST text an org code first to connect.
+    // This prevents accidental routing to wrong orgs and ensures intentional connection.
+    // Once connected via code, we can look up their profile for personalized greeting.
 
-    if (studentGroups && studentGroups.length > 0) {
-      if (studentGroups.length === 1) {
-        const sg = studentGroups[0];
-        const orgCode = await getOrgCode(supabase, sg.org_id);
-        await createSession(supabase, from, sg.org_id, sg.group_id, "active");
-        await storeMessage(supabase, {
-          from,
-          to,
-          body,
-          messageSid,
-          studentId: sg.student_id,
-          organizationId: sg.org_id,
-          groupId: sg.group_id,
-          direction: "inbound",
-          isLobbyMessage: false,
-        });
-        // First connection - show welcome with explanation
-        return twimlResponse(NPC_RESPONSES.firstConnection(sg.org_name, orgCode || ""));
-      } else {
-        await createSession(supabase, from, studentGroups[0].org_id, null, "pending_group");
-        await storeGroupSelectionContext(supabase, from, studentGroups);
-        return twimlResponse(NPC_RESPONSES.multipleGroups(studentGroups));
-      }
-    }
-
-    // Check if student exists but not in any group (lobby case)
-    console.log("STEP 5b: Checking if student exists (not in group)...");
-    const student = await findStudentByPhone(supabase, from);
-    console.log("Student result:", student);
-    if (student) {
-      const orgCode = await getOrgCode(supabase, student.organization_id);
-      const orgName = await getOrgName(supabase, student.organization_id);
-      await createSession(supabase, from, student.organization_id, null, "active");
-      await storeMessage(supabase, {
-        from,
-        to,
-        body,
-        messageSid,
-        studentId: student.id,
-        organizationId: student.organization_id,
-        groupId: null,
-        direction: "inbound",
-        isLobbyMessage: true,
-      });
-      // First connection - show welcome
-      return twimlResponse(NPC_RESPONSES.firstConnection(orgName || "ministry", orgCode || ""));
-    }
-
-    // STEP 6: Unknown contact - welcome message
-    console.log("STEP 6: Unknown contact, sending welcome message");
+    // STEP 6: Unknown contact - welcome message (requires org code)
+    console.log("STEP 6: Unknown contact, sending welcome message - requires org code to connect");
     await addToWaitingRoom(supabase, from, null, body);
     await storeMessage(supabase, {
       from,

@@ -111,6 +111,13 @@ Groups System:
 - `groups` - Student groups (MS Boys, HS Girls, etc.) with optional campus_id
 - `group_meeting_times` - Meeting schedule per group
 
+SMS System:
+- `sms_messages` - Individual SMS messages (inbound/outbound)
+- `sms_sessions` - Active routing sessions (phone → org mapping)
+- `sms_waiting_room` - Unknown contacts awaiting org code
+- `sms_broadcasts` - Broadcast campaigns (message, targeting, status)
+- `sms_broadcast_recipients` - Individual broadcast recipients with delivery status
+
 **Legacy tables (deprecated, will be removed):**
 - `students` - Replaced by profiles + student_profiles
 - `organization_members` - Replaced by organization_memberships
@@ -132,13 +139,61 @@ RPC Functions:
 
 People & Guardian Functions:
 - `get_organization_people(org_id, role_filter, campus_id, include_archived)` - Unified people list for Students/Team/Parents tabs
+- `get_organization_parents(org_id)` - Returns valid guardians with their linked children (excludes phantom guardians)
 - `get_parent_children(parent_profile_id, org_id)` - Get children linked to a guardian
 - `get_student_parents(student_profile_id, org_id)` - Get parents linked to a student
+- `get_student_siblings(student_id)` - Returns siblings via shared valid parents (prevents phantom matches)
 - `link_parent_to_student(...)` - Create parent-student link
 - `unlink_parent_from_student(...)` - Remove parent-student link
 - `create_guardian_profiles_from_student(...)` - Auto-create guardian profiles from student_profiles data
 - `invite_guardian_to_claim(...)` - Create invitation for guardian to claim profile
 - `accept_invitation_and_claim_profile(...)` - Claim existing profile via invitation
+
+Validation Helper Functions:
+- `is_valid_phone(phone)` - Returns true if phone is not empty, not all zeros, and has 7+ digits
+- `is_valid_email(email)` - Returns true if email has valid format and is not a placeholder (unknown@unknown.com, etc.)
+
+SMS Broadcast Functions:
+- `get_broadcast_recipients(org_id, target_type, group_ids[], include_leaders, include_members)` - Get recipients based on targeting criteria
+- `create_broadcast(org_id, message, target_type, group_ids[], include_leaders, include_members)` - Create broadcast and populate recipients
+- `get_organization_broadcasts(org_id)` - List all broadcasts for an org
+- `get_broadcast_details(broadcast_id)` - Get broadcast with recipient details
+- `update_broadcast_status(broadcast_id, status, sent_count, failed_count)` - Update broadcast status (service_role only)
+
+### RPC Function Modification Rules (CRITICAL - PREVENTS REGRESSIONS)
+
+**Changing an RPC function's return columns can silently break the frontend.**
+
+On Feb 4, 2026, the `get_user_organizations` function was modified to return `role` instead of `user_role`. The frontend expected `user_role` to determine admin permissions. Result: **ALL admin features disappeared** (Organization settings, Org Tools, group leader management) because `userRole` was `null`.
+
+**BEFORE modifying ANY RPC function:**
+
+1. **Search for ALL usages in the codebase:**
+   ```bash
+   grep -r "function_name" src/
+   ```
+
+2. **Check the expected return columns in TypeScript:**
+   - Look for the type definition or inline type in hooks/contexts
+   - Example: `OrganizationContext.tsx` line 102 expects `user_role`, not `role`
+
+3. **Match column names EXACTLY:**
+   - If frontend expects `user_role`, return `user_role` (not `role`)
+   - If frontend expects `display_name`, return `display_name` (not `displayName`)
+
+4. **Test the affected features after migration:**
+   - Don't just test that the RPC returns data
+   - Test that the UI features that depend on the data still work
+
+**Critical RPC functions and their consumers:**
+
+| Function | Consumer | Critical Columns |
+|----------|----------|------------------|
+| `get_user_organizations` | `OrganizationContext.tsx` | `user_role`, `display_name`, `theme_id`, `checkin_style`, `short_code`, `org_number` |
+| `get_organization_people` | `use-people.ts` | `profile_id`, `first_name`, `last_name`, `role`, `status` |
+| `search_student_for_checkin` | `use-student-search.ts` | `profile_id`, `first_name`, `last_name`, `phone_number` |
+
+**If you're unsure about column names, READ THE FRONTEND CODE FIRST.**
 
 ### RLS Architecture (IMPORTANT)
 
@@ -157,6 +212,36 @@ Helper functions (bypass RLS):
 1. NEVER call a table directly in a policy if that table has its own RLS
 2. Use the helper functions above instead
 3. If you need a new permission check, create a SECURITY DEFINER function for it
+
+### SMS Routing Flow (receive-sms edge function)
+
+**New contacts MUST text an org code to connect. No auto-routing by phone number.**
+
+```
+STEP 0: Check pending switch confirmation (YES/NO response)
+STEP 1: Check for commands (HELP, EXIT, SWITCH)
+STEP 2: Check if message is an org code → Connect to org
+STEP 3: Check for recent conversation (24-hour window) → Auto-route reply
+STEP 4: Check for active session → Route to that org
+STEP 5: [REMOVED] - No auto-routing based on phone number matching
+STEP 6: Unknown contact → Waiting room → Requires org code
+```
+
+**Security rationale (Feb 2026):** Previously STEP 5 auto-matched phone numbers to existing profiles and connected them to orgs. This was removed because:
+1. Someone could accidentally text the wrong organization
+2. A stranger's phone could be routed to a ministry without verification
+3. New contacts must intentionally provide an org code first
+
+The 24-hour reply window (STEP 3) is kept for convenience - once connected via code, replies auto-route without re-entering the code.
+
+### SMS Broadcasts
+
+Broadcasts are **separate from the Messages inbox**. They have their own UI at `/[org]/broadcasts`.
+
+- `target_type`: "all" (all groups) or "groups" (specific groups)
+- `include_leaders` / `include_members`: Filter by role in group_memberships
+- Recipients are populated when broadcast is created
+- Edge function `send-broadcast` sends with 1 msg/sec rate limiting (Twilio long code limit)
 
 ## Project Structure
 
