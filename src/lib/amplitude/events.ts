@@ -172,12 +172,28 @@ export const EVENTS = {
   DEVOTIONAL_EDITED: "Devotional Edited",
 
   // ============================================
+  // AI INSIGHTS
+  // Conversational data assistant for querying student data
+  // ============================================
+  INSIGHTS_PAGE_VIEWED: "Insights Page Viewed",
+  INSIGHTS_QUERY_SUBMITTED: "Insights Query Submitted",
+  INSIGHTS_QUERY_PARSED: "Insights Query Parsed",
+  INSIGHTS_RESULTS_DISPLAYED: "Insights Results Displayed",
+  INSIGHTS_MODE_TOGGLED: "Insights Mode Toggled",
+  INSIGHTS_CHART_TYPE_CHANGED: "Insights Chart Type Changed",
+  INSIGHTS_GRANULARITY_CHANGED: "Insights Granularity Changed",
+  INSIGHTS_EXPORT_CLICKED: "Insights Export Clicked",
+  INSIGHTS_CHART_SAVED: "Insights Chart Saved",
+  INSIGHTS_MESSAGE_CLICKED: "Insights Message Clicked",
+  INSIGHTS_DRILL_DOWN_CLICKED: "Insights Drill Down Clicked",
+  INSIGHTS_PERSON_CLICKED: "Insights Person Clicked",
+  INSIGHTS_QUERY_CLEARED: "Insights Query Cleared",
+  INSIGHTS_REFINEMENT_APPLIED: "Insights Refinement Applied",
+
+  // ============================================
   // FUTURE: AI & NATURAL LANGUAGE
   // Uncomment when features ship
   // ============================================
-  // AI_QUERY_SUBMITTED: "AI Query Submitted",
-  // AI_RESULTS_VIEWED: "AI Results Viewed",
-  // AI_RECOMMENDATION_FOLLOWED: "AI Recommendation Followed",
   // DRAFT_MESSAGE_APPROVED: "Draft Message Approved",
   // AUTO_MESSAGE_SENT: "Auto Message Sent",
 } as const;

@@ -16,6 +16,8 @@ import {
   Shield,
   UserCircle,
   MessageSquare,
+  Radio,
+  Sparkles,
 } from "lucide-react";
 import { env } from "@/lib/env";
 import { PLATFORM_NAME } from "@/lib/copy";
@@ -71,6 +73,16 @@ const navItems = [
     title: "Messages",
     path: "/messages",
     icon: MessageSquare,
+  },
+  {
+    title: "Broadcasts",
+    path: "/broadcasts",
+    icon: Radio,
+  },
+  {
+    title: "Insights",
+    path: "/insights",
+    icon: Sparkles,
   },
   {
     title: "Groups",

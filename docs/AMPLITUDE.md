@@ -489,15 +489,48 @@ The unified profiles system replaces several legacy properties.
 | `membership_role` | string | Role in org/group | Membership events |
 | `is_new_profile` | boolean | First-time registration | Check-in events |
 
-### 4.13 Future: AI & Natural Language
+### 4.13 AI Insights
 
-Events for "Ask Seedling" feature when it ships.
+Events for the AI Insights conversational data assistant - a natural language interface for querying student data with list and chart output modes.
 
-| Event | When to Add | Properties |
-|-------|-------------|------------|
-| `AI Query Submitted` | Ask Seedling feature | `query_length`, `query_category` |
-| `AI Results Viewed` | Ask Seedling feature | `result_count`, `had_recommendation` |
-| `AI Recommendation Followed` | User acted on AI suggestion | `action_type` |
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Insights Page Viewed` | Admin opened Insights page | `org_slug` | |
+| `Insights Query Submitted` | User submitted a query | `query_text`, `source`, `output_mode` | `quick_reply_label` |
+| `Insights Query Parsed` | Claude returned parsed filters | `query_text`, `parse_time_ms`, `success` | `filter_count`, `error_type` |
+| `Insights Results Displayed` | Results shown to user | `query_text`, `result_count`, `output_mode` | `segment_count`, `time_granularity` |
+| `Insights Mode Toggled` | User switched List ↔ Chart | `from_mode`, `to_mode`, `query_text` | |
+| `Insights Chart Type Changed` | User toggled Line ↔ Bar | `chart_type`, `query_text` | |
+| `Insights Granularity Changed` | User changed time granularity | `granularity`, `query_text` | `previous_granularity` |
+| `Insights Export Clicked` | User exported data | `export_type`, `query_text`, `result_count` | |
+| `Insights Chart Saved` | User saved chart as PNG | `query_text`, `segment_count` | |
+| `Insights Message Clicked` | User clicked Message All | `query_text`, `result_count`, `context` | |
+| `Insights Drill Down Clicked` | User clicked chart data point | `query_text`, `segment_label`, `period` | `count` |
+| `Insights Person Clicked` | User clicked individual person | `profile_id`, `context` | |
+| `Insights Query Cleared` | User cleared query | | `previous_query_text` |
+| `Insights Refinement Applied` | User clicked refinement chip | `refinement_type`, `query_text` | `previous_result_count` |
+
+**Property Values:**
+
+| Property | Type | Allowed Values |
+|----------|------|----------------|
+| `source` | String | `"typed"`, `"quick_reply"` |
+| `output_mode` | String | `"list"`, `"chart"` |
+| `chart_type` | String | `"line"`, `"bar"` |
+| `granularity` | String | `"daily"`, `"weekly"`, `"monthly"` |
+| `export_type` | String | `"csv"`, `"png"` |
+| `context` | String | `"list_view"`, `"drill_down"`, `"chart_action"` |
+| `refinement_type` | String | `"grade_filter"`, `"engagement_filter"`, `"group_filter"` |
+| `from_mode` | String | `"list"`, `"chart"` |
+| `to_mode` | String | `"list"`, `"chart"` |
+
+**`quick_reply_label` values**: The label of the quick reply chip clicked (e.g., "HS boys active this month")
+
+**Implementation Notes:**
+- Use existing `useTrack()` hook for automatic standard properties
+- `query_text` is acceptable as it's user-generated intent, not PII
+- Never log actual student names, phones, or emails
+- Track timing for `parse_time_ms` to monitor LLM performance
 
 ---
 
