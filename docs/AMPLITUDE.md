@@ -76,13 +76,15 @@ Before adding ANY event, it must answer a real business question:
 |----------|------|---------------|
 | `org_id` | UUID | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `org_slug` | String | `"ess-ministry"` |
-| `student_id` | UUID | `"550e8400-e29b-41d4-a716-446655440001"` |
+| `profile_id` | UUID | `"550e8400-e29b-41d4-a716-446655440001"` |
 | `device_id` | UUID | `"550e8400-e29b-41d4-a716-446655440002"` |
 | `device_name` | String | `"Front Door iPad"` |
 | `group_id` | UUID | `"550e8400-e29b-41d4-a716-446655440003"` |
 | `result_count` | Number | `5` |
 | `is_duplicate` | Boolean | `true` |
 | `checkin_style` | String | `"gamified"` |
+
+**Note:** `profile_id` replaces the deprecated `student_id` property. See Section 4.12 for migration details.
 
 ### 2.3 Property Value Conventions
 
@@ -147,19 +149,23 @@ Event properties describe THIS SPECIFIC ACTION.
 
 | Property | Used On | Description |
 |----------|---------|-------------|
-| `student_id` | Check-in, profile events | Which student |
+| `profile_id` | Check-in, profile, SMS events | Which person (replaces student_id) |
 | `student_grade` | Registration | Grade at registration time |
 | `group_id` | Group events | Which group |
 | `search_term_length` | Search events | Chars entered (NOT the term itself) |
 | `result_count` | Search events | How many results |
 | `selection_method` | Selection events | How selected (`"single"`, `"from_list"`) |
 | `is_duplicate` | Check-in | Already checked in today |
+| `is_new_profile` | Check-in | First-time registration |
+| `has_student_profile` | Check-in | Has student_profiles extension |
 | `points_earned` | Check-in, achievements | Points from this action |
 | `checkin_style` | Check-in page | `"gamified"` or `"standard"` |
 | `match_confidence` | Merge events | `"high"`, `"medium"`, `"low"` |
 | `source` | Profile views | Where clicked from (`"search"`, `"leaderboard"`, `"group"`, `"recommendation"`) |
 | `template_used` | SMS events | Which template, if any |
 | `automated` | Future: auto-send | `true` if system-initiated |
+| `membership_role` | Membership events | Role in org (owner/admin/leader/viewer/student) |
+| `sender_profile_id` | SMS events | Sender's profile (replaces sender_user_id) |
 
 ### 3.3 When to Use Which?
 
@@ -185,11 +191,11 @@ The core student check-in journey. Most events here.
 |-------|-------------|---------------------|---------------------|
 | `Check In Page Viewed` | User landed on check-in page | `org_slug`, `checkin_style` | `device_id`, `device_name` |
 | `Student Searched` | User submitted a search | `search_term_length` | `result_count` |
-| `Student Selected` | User selected from results | `student_id`, `selection_method` | |
-| `Check In Confirmed` | User confirmed identity | `student_id` | |
-| `Check In Completed` | Check-in successful | `student_id`, `is_duplicate` | `points_earned`, `student_grade` |
+| `Student Selected` | User selected from results | `profile_id`, `selection_method` | |
+| `Check In Confirmed` | User confirmed identity | `profile_id` | |
+| `Check In Completed` | Check-in successful | `profile_id`, `is_duplicate` | `points_earned`, `student_grade`, `is_new_profile`, `has_student_profile` |
 | `Registration Started` | Clicked "New Student" | `org_slug` | |
-| `Registration Completed` | New student created + checked in | `student_id`, `student_grade` | `has_email`, `has_parent_info` |
+| `Registration Completed` | New profile created + checked in | `profile_id`, `student_grade` | `has_email`, `has_parent_info`, `is_new_profile` |
 | `Registration Abandoned` | Went back without completing | | `last_section_completed` |
 
 **Future check-in events:**
@@ -216,16 +222,16 @@ Admin interactions with the main dashboard.
 
 ### 4.3 People & Profiles
 
-Viewing and managing student records.
+Viewing and managing profile records.
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
 | `People Page Viewed` | Admin opened People tab | `org_slug` | |
 | `People Searched` | Admin searched people | `search_term_length` | `result_count`, `filters_applied` |
 | `People Filtered` | Admin applied filters | `filter_type` | `filter_value` |
-| `Student Profile Viewed` | Admin opened student modal | `student_id`, `source` | |
-| `Profile Tab Changed` | Admin switched tab in profile | `student_id`, `tab_name` | |
-| `Student Edited` | Admin edited student info | `student_id` | `fields_changed` |
+| `Student Profile Viewed` | Admin opened profile modal | `profile_id`, `source` | |
+| `Profile Tab Changed` | Admin switched tab in profile | `profile_id`, `tab_name` | |
+| `Student Edited` | Admin edited profile info | `profile_id` | `fields_changed` |
 
 **`source` values**: `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"`
 **`tab_name` values**: `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"`
@@ -241,11 +247,12 @@ Group management and viewing.
 | `Group Created` | Admin created new group | `group_id` | `group_type` |
 | `Group Edited` | Admin edited group settings | `group_id` | `fields_changed` |
 | `Group Deleted` | Admin deleted a group | `group_id` | `member_count` |
-| `Member Added` | Admin added student to group | `group_id`, `student_id` | `method` |
-| `Member Removed` | Admin removed from group | `group_id`, `student_id` | |
+| `Member Added` | Admin added profile to group | `group_id`, `profile_id` | `method`, `membership_role` |
+| `Member Removed` | Admin removed from group | `group_id`, `profile_id` | |
 | `Meeting Time Changed` | Admin changed meeting schedule | `group_id` | |
 
 **`method` values**: `"manual"`, `"bulk"`, `"import"`
+**`membership_role` values**: `"leader"`, `"member"`
 
 ### 4.5 Families
 
@@ -258,7 +265,7 @@ Parent/guardian management and sibling detection.
 | `Parent Card Clicked` | Admin clicked parent card | `parent_type` | `children_count` |
 | `Parent Called` | Admin clicked call button | `parent_type` | |
 | `Parent Texted` | Admin clicked text button | `parent_type` | |
-| `Sibling Clicked` | Admin clicked sibling in profile | `sibling_id` | |
+| `Sibling Clicked` | Admin clicked sibling in profile | `sibling_profile_id` | |
 | `Family Section Expanded` | Admin viewed family tab | | `has_siblings`, `parent_count` |
 
 **`parent_type` values**: `"mother"`, `"father"`, `"guardian"`
@@ -271,7 +278,7 @@ SMS, notes, recommendations - the core pastoral workflow.
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
-| `SMS Sent` | Team member sent text message | `student_id`, `sender_user_id`, `sender_display_name`, `has_signature` | `template_used`, `automated` |
+| `SMS Sent` | Team member sent text message | `profile_id`, `sender_profile_id`, `sender_display_name`, `has_signature` | `template_used`, `automated` |
 
 **Note:** This event is logged by the `send-sms` Edge Function as a structured console log with the format:
 ```
@@ -287,7 +294,7 @@ These events are logged by the Supabase Edge Function, not the frontend. They ap
 | `SMS Received` | Every inbound SMS received | `phone_last4`, `body_length` |
 | `SMS Session Started` | New SMS session created | `org_id`, `group_id`, `status`, `phone_last4` |
 | `SMS Org Connected` | User texted valid org code | `org_id`, `org_name`, `org_code`, `phone_last4`, `is_first_connection` |
-| `SMS Message Routed` | Message stored with routing context | `org_id`, `group_id`, `is_lobby`, `has_student`, `direction` |
+| `SMS Message Routed` | Message stored with routing context | `org_id`, `group_id`, `is_lobby`, `has_profile`, `direction` |
 | `SMS Exit Command` | User typed EXIT to disconnect | `org_id`, `phone_last4` |
 | `SMS Switch Command` | User typed SWITCH [code] | `org_id`, `org_name`, `phone_last4` |
 | `SMS Switch Prompted` | Auto-detected org code while connected | `current_org_id`, `target_org_id`, `target_org_name`, `phone_last4` |
@@ -302,11 +309,11 @@ console.log("SMS_EVENT", JSON.stringify({ event: "...", ... }));
 
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
-| `Note Created` | Admin added student note | `student_id` | `note_type` |
-| `Recommendation Viewed` | Admin viewed AI suggestion | `student_id`, `recommendation_type` | |
-| `Recommendation Actioned` | Admin took action on recommendation | `student_id`, `action_type` | |
-| `Recommendation Dismissed` | Admin dismissed recommendation | `student_id` | `reason` |
-| `Prayer Prompt Viewed` | Admin saw prayer prompt | `student_id` | |
+| `Note Created` | Admin added profile note | `profile_id` | `note_type` |
+| `Recommendation Viewed` | Admin viewed AI suggestion | `profile_id`, `recommendation_type` | |
+| `Recommendation Actioned` | Admin took action on recommendation | `profile_id`, `action_type` | |
+| `Recommendation Dismissed` | Admin dismissed recommendation | `profile_id` | `reason` |
+| `Prayer Prompt Viewed` | Admin saw prayer prompt | `profile_id` | |
 
 **`note_type` values**: `"general"`, `"prayer_request"`, `"follow_up"`, `"milestone"`
 **`recommendation_type` values**: `"missing"`, `"fringe"`, `"new_student"`, `"celebration"`
@@ -326,13 +333,13 @@ Import, merge, attendance cleanup, devices.
 | Event | Description | Required Properties | Optional Properties |
 |-------|-------------|---------------------|---------------------|
 | `Import Started` | Admin started CSV import | `row_count` | |
-| `Import Completed` | Import finished | `students_imported` | `students_updated`, `errors` |
+| `Import Completed` | Import finished | `profiles_imported` | `profiles_updated`, `errors` |
 | `Import Failed` | Import errored | | `error_type` |
 | `Duplicate Detection Run` | Scanned for duplicates | | `duplicates_found` |
-| `Duplicate Previewed` | Admin previewed merge | `student_a_id`, `student_b_id` | `confidence` |
-| `Duplicate Merged` | Admin merged students | `kept_student_id` | `records_merged`, `confidence` |
+| `Duplicate Previewed` | Admin previewed merge | `profile_a_id`, `profile_b_id` | `confidence` |
+| `Duplicate Merged` | Admin merged profiles | `kept_profile_id` | `records_merged`, `confidence` |
 | `Attendance Cleanup Started` | Opened cleanup tool | | `selected_date` |
-| `Attendance Cleanup Completed` | Bulk check-ins added | `students_added` | `duplicates_skipped` |
+| `Attendance Cleanup Completed` | Bulk check-ins added | `profiles_added` | `duplicates_skipped` |
 | `Device Created` | Named a new device | `device_name` | |
 | `Device Renamed` | Changed device name | `device_id`, `device_name` | |
 
@@ -399,7 +406,71 @@ Sermon upload and AI-generated devotional content.
 **`time_slots` values**: Array of `"morning"`, `"afternoon"`, `"evening"`
 **`field_edited` values**: `"title"`, `"scripture_reference"`, `"scripture_text"`, `"reflection"`, `"prayer_prompt"`, `"discussion_question"`
 
-### 4.11 Future: AI & Natural Language
+### 4.11 Identity & Membership Events
+
+Events for the unified profiles system.
+
+#### Profile Events
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Profile Created` | New profile registered | `org_id`, `profile_id`, `source` | `has_user_id`, `has_student_profile` |
+| `Profile Updated` | Profile info changed | `org_id`, `profile_id` | `fields_changed[]` |
+| `Profile Linked` | Profile linked to auth account | `profile_id`, `user_id` | |
+
+**`source` values**: `"kiosk"`, `"invite"`, `"import"`, `"admin"`
+
+#### Organization Membership Events
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Membership Created` | Profile joined org | `org_id`, `profile_id`, `membership_role`, `source` | |
+| `Membership Updated` | Role or status changed | `org_id`, `profile_id` | `old_role`, `new_role` |
+| `Membership Removed` | Profile left org | `org_id`, `profile_id`, `membership_role` | |
+
+**`membership_role` values**: `"owner"`, `"admin"`, `"leader"`, `"viewer"`, `"student"`
+
+#### Group Membership Events
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Group Membership Added` | Profile joined group | `org_id`, `group_id`, `profile_id`, `membership_role` | |
+| `Group Membership Removed` | Profile left group | `org_id`, `group_id`, `profile_id` | |
+| `Group Leader Promoted` | Member became leader | `org_id`, `group_id`, `profile_id` | |
+
+**`membership_role` values**: `"leader"`, `"member"`
+
+### 4.12 Deprecations & Migration
+
+The unified profiles system replaces several legacy properties.
+
+#### Deprecated Properties
+
+| Old Property | Replacement | Migration |
+|--------------|-------------|-----------|
+| `student_id` | `profile_id` | All events now use profile_id |
+| `sender_user_id` | `sender_profile_id` | SMS events use profile-based sender ID |
+| `is_student_leader` | `membership_role` | Use membership_role for role checks |
+| `student_a_id` | `profile_a_id` | Merge events use profile IDs |
+| `student_b_id` | `profile_b_id` | Merge events use profile IDs |
+| `kept_student_id` | `kept_profile_id` | Merge events use profile IDs |
+| `students_imported` | `profiles_imported` | Import events use profile counts |
+| `students_updated` | `profiles_updated` | Import events use profile counts |
+| `students_added` | `profiles_added` | Cleanup events use profile counts |
+| `has_student` | `has_profile` | SMS routing uses profile checks |
+| `sibling_id` | `sibling_profile_id` | Family events use profile IDs |
+
+#### New Properties
+
+| Property | Type | Description | Used On |
+|----------|------|-------------|---------|
+| `profile_id` | UUID | The person's profile ID | All person-related events |
+| `sender_profile_id` | UUID | Sender's profile for SMS | SMS events |
+| `has_student_profile` | boolean | Has student_profiles extension | Check-in, profile events |
+| `membership_role` | string | Role in org/group | Membership events |
+| `is_new_profile` | boolean | First-time registration | Check-in events |
+
+### 4.13 Future: AI & Natural Language
 
 Events for "Ask Seedling" feature when it ships.
 
@@ -479,9 +550,12 @@ Don't manually track these - Amplitude handles them:
 | `confidence` | String | `"high"`, `"medium"`, `"low"` | Merge events |
 | `device_id` | UUID | - | Check-in, device events |
 | `device_name` | String | - | Device events |
+| `display_name_length` | Number | Character count of display name | Profile/invite events |
+| `display_name_set` | Boolean | User has set display name | Profile/invite events |
 | `duplicates_found` | Number | - | Detection events |
 | `duplicates_skipped` | Number | - | Cleanup events |
 | `errors` | Number | - | Import events |
+| `field_edited` | String | Field name that was edited | Edit events |
 | `fields_changed` | Array | `["name", "email", ...]` | Edit events |
 | `filter_type` | String | `"grade"`, `"group"`, `"belonging"` | Filter events |
 | `format` | String | `"csv"`, `"pdf"` | Export events |
@@ -489,17 +563,31 @@ Don't manually track these - Amplitude handles them:
 | `group_type` | String | `"small_group"`, `"ministry"`, `"class"` | Group events |
 | `has_email` | Boolean | - | Registration |
 | `has_parent_info` | Boolean | - | Registration |
+| `has_profile` | Boolean | Message has associated profile | SMS routing events |
+| `has_signature` | Boolean | Whether signature was appended | SMS events |
+| `has_student_profile` | Boolean | Profile has student_profiles extension | Check-in, profile events |
+| `has_user_id` | Boolean | Profile linked to auth account | Profile events |
 | `invited_role` | String | `"admin"`, `"leader"`, `"viewer"` | Team events |
 | `is_duplicate` | Boolean | - | Check-in events |
-| `kept_student_id` | UUID | - | Merge events |
+| `is_new_profile` | Boolean | First-time registration | Check-in events |
+| `kept_profile_id` | UUID | Profile kept in merge | Merge events |
 | `last_section_completed` | String | `"name"`, `"contact"`, `"optional"` | Registration abandon |
 | `level` | String | `"ultra_core"`, `"core"`, `"connected"`, `"fringe"`, `"missing"` | Belonging events |
 | `member_count` | Number | - | Group events |
+| `membership_role` | String | `"owner"`, `"admin"`, `"leader"`, `"viewer"`, `"student"`, `"member"` | Membership events |
 | `method` | String | `"manual"`, `"bulk"`, `"import"` | Member add events |
+| `new_role` | String | Role after change | Membership update events |
 | `note_type` | String | `"general"`, `"prayer_request"`, `"follow_up"`, `"milestone"` | Note events |
+| `old_role` | String | Role before change | Membership update events |
 | `period` | String | `"weekly"`, `"monthly"`, `"all_time"` | Leaderboard events |
 | `points_earned` | Number | - | Check-in, achievement events |
 | `previous_theme_id` | String | - | Theme change events |
+| `profile_a_id` | UUID | First profile in merge preview | Merge preview events |
+| `profile_b_id` | UUID | Second profile in merge preview | Merge preview events |
+| `profile_id` | UUID | The person's profile ID | All person-related events |
+| `profiles_added` | Number | - | Cleanup events |
+| `profiles_imported` | Number | - | Import events |
+| `profiles_updated` | Number | - | Import events |
 | `recommendation_type` | String | `"missing"`, `"fringe"`, `"new_student"`, `"celebration"` | Recommendation events |
 | `records_merged` | Number | - | Merge events |
 | `result_count` | Number | - | Search events |
@@ -508,23 +596,14 @@ Don't manually track these - Amplitude handles them:
 | `section` | String | `"account"`, `"team"`, `"organization"`, `"org_tools"` | Settings events |
 | `selected_date` | ISO Date | - | Cleanup events |
 | `selection_method` | String | `"single"`, `"from_list"` | Selection events |
-| `source` | String | `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"` | Profile view events |
+| `sender_display_name` | String | Sender's display name | SMS events |
+| `sender_profile_id` | UUID | Sender's profile ID | SMS events |
+| `sibling_profile_id` | UUID | Sibling's profile ID | Family events |
+| `source` | String | `"search"`, `"leaderboard"`, `"group"`, `"recommendation"`, `"belonging_drilldown"`, `"kiosk"`, `"invite"`, `"import"`, `"admin"` | Profile/membership events |
 | `stat_type` | String | `"total_checkins"`, `"unique_students"`, `"new_students"` | Stat events |
-| `student_a_id` | UUID | - | Merge preview events |
-| `student_b_id` | UUID | - | Merge preview events |
 | `student_grade` | String | `"6"` - `"12"` | Registration events |
-| `student_id` | UUID | - | Student-related events |
-| `students_added` | Number | - | Cleanup events |
-| `students_imported` | Number | - | Import events |
-| `students_updated` | Number | - | Import events |
 | `tab_name` | String | `"overview"`, `"engagement"`, `"pastoral"`, `"messages"`, `"groups"` | Profile tab events |
 | `template_used` | String | Template name or null | SMS events |
-| `sender_user_id` | UUID | Auth user who sent message | SMS events |
-| `sender_display_name` | String | Sender's display name | SMS events |
-| `has_signature` | Boolean | Whether signature was appended | SMS events |
-| `display_name_set` | Boolean | User has set display name | Profile/invite events |
-| `display_name_length` | Number | Character count of display name | Profile/invite events |
-| `fields_changed` | Array | Fields modified in update | Edit events |
 | `theme_id` | String | Theme slug | Theme events |
 | `content_length` | Number | - | Sermon upload events |
 | `series_id` | UUID | - | Devotional events |
@@ -535,7 +614,8 @@ Don't manually track these - Amplitude handles them:
 | `time_slots` | Array | Array of time_slot values | Configuration events |
 | `duration_ms` | Number | - | Generation events |
 | `success` | Boolean | - | Generation events |
-| `field_edited` | String | Field name that was edited | Edit events |
+
+**Deprecated properties** (see Section 4.12 for migration): `student_id`, `sender_user_id`, `student_a_id`, `student_b_id`, `kept_student_id`, `students_imported`, `students_updated`, `students_added`, `has_student`, `sibling_id`
 
 ---
 
@@ -911,6 +991,17 @@ export const EVENTS = {
   FIRST_DEVICE_CREATED: 'First Device Created',
   FIRST_IMPORT_COMPLETED: 'First Import Completed',
   FIRST_CHECK_IN_COMPLETED: 'First Check In Completed',
+
+  // Identity & Membership (New)
+  PROFILE_CREATED: 'Profile Created',
+  PROFILE_UPDATED: 'Profile Updated',
+  PROFILE_LINKED: 'Profile Linked',
+  MEMBERSHIP_CREATED: 'Membership Created',
+  MEMBERSHIP_UPDATED: 'Membership Updated',
+  MEMBERSHIP_REMOVED: 'Membership Removed',
+  GROUP_MEMBERSHIP_ADDED: 'Group Membership Added',
+  GROUP_MEMBERSHIP_REMOVED: 'Group Membership Removed',
+  GROUP_LEADER_PROMOTED: 'Group Leader Promoted',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];

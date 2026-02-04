@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Clock, AlertCircle, ChevronRight } from "lucide-react";
+import { Users, Clock, AlertCircle, ChevronRight, Sparkles } from "lucide-react";
 import { Group, getNextMeetingText } from "@/hooks/queries/use-groups";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,15 @@ export function GroupCard({ group, onClick }: GroupCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-lg font-semibold">{group.name}</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg font-semibold">{group.name}</CardTitle>
+            {group.is_default && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                <Sparkles className="h-3 w-3 mr-1" />
+                DEFAULT
+              </Badge>
+            )}
+          </div>
           {group.needs_attention_count > 0 && (
             <Badge variant="destructive" className="gap-1">
               <AlertCircle className="h-3 w-3" />
@@ -37,6 +45,12 @@ export function GroupCard({ group, onClick }: GroupCardProps) {
         {group.description && (
           <p className="text-sm text-muted-foreground line-clamp-1">
             {group.description}
+          </p>
+        )}
+        {group.is_default && (group.default_grades?.length || group.default_gender) && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Auto-assigns: {group.default_grades?.length ? `Grades ${group.default_grades.join(", ")}` : "All grades"}
+            {group.default_gender && ` • ${group.default_gender === "male" ? "Male" : "Female"} only`}
           </p>
         )}
       </CardHeader>

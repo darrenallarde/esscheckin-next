@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,6 +33,7 @@ const newStudentSchema = z.object({
   phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits"),
   email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
+  gender: z.enum(["male", "female"], { message: "Please select your gender" }),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
   grade: z.string().trim().min(1, "Grade is required"),
   highSchool: z.string().trim().min(1, "School is required"),
@@ -127,6 +129,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       phoneNumber: "",
       email: "",
       dateOfBirth: "",
+      gender: undefined,
       instagramHandle: "",
       grade: "",
       highSchool: "",
@@ -163,30 +166,28 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
     setIsSubmitting(true);
     const supabase = createClient();
     try {
-      // Use public RPC function with optional device tracking
+      // Use profile-based RPC function with optional device tracking and gender
       const { data: result, error } = await supabase
-        .rpc('register_student_and_checkin_public', {
+        .rpc('register_profile_and_checkin', {
           p_org_slug: orgSlug,
           p_first_name: data.firstName,
           p_last_name: data.lastName,
           p_phone_number: data.phoneNumber || null,
           p_email: data.email || null,
           p_date_of_birth: data.dateOfBirth,
-          p_instagram_handle: data.instagramHandle || null,
-          p_user_type: 'student',
           p_grade: data.grade,
           p_high_school: data.highSchool,
-          p_father_first_name: data.fatherFirstName || null,
-          p_father_last_name: data.fatherLastName || null,
-          p_father_phone: data.fatherPhone || null,
+          p_instagram_handle: data.instagramHandle || null,
+          p_parent_name: null,
+          p_parent_phone: null,
           p_mother_first_name: data.motherFirstName || null,
           p_mother_last_name: data.motherLastName || null,
           p_mother_phone: data.motherPhone || null,
-          p_address: data.address || null,
-          p_city: data.city || null,
-          p_state: data.state || 'California',
-          p_zip: data.zip || null,
+          p_father_first_name: data.fatherFirstName || null,
+          p_father_last_name: data.fatherLastName || null,
+          p_father_phone: data.fatherPhone || null,
           p_device_id: deviceId || null,
+          p_gender: data.gender,
         });
 
       if (error) {
@@ -335,20 +336,53 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             />
           </div>
 
-          {/* DOB */}
-          <FormField
-            control={form.control}
-            name="dateOfBirth"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={labelClass}>{isGamified ? "BIRTHDAY *" : "Date of Birth *"}</FormLabel>
-                <FormControl>
-                  <Input type="date" className={`${inputClass} w-full md:w-1/2`} {...field} />
-                </FormControl>
-                <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
-              </FormItem>
-            )}
-          />
+          {/* DOB & Gender */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>{isGamified ? "BIRTHDAY *" : "Date of Birth *"}</FormLabel>
+                  <FormControl>
+                    <Input type="date" className={inputClass} {...field} />
+                  </FormControl>
+                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>{isGamified ? "GENDER *" : "Gender *"}</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex gap-4 pt-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="male" id="male" />
+                        <label htmlFor="male" className={isGamified ? "jrpg-font text-xs cursor-pointer" : "text-sm cursor-pointer"}>
+                          {isGamified ? "MALE" : "Male"}
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="female" id="female" />
+                        <label htmlFor="female" className={isGamified ? "jrpg-font text-xs cursor-pointer" : "text-sm cursor-pointer"}>
+                          {isGamified ? "FEMALE" : "Female"}
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                </FormItem>
+              )}
+            />
+          </div>
 
           {/* Grade & School */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

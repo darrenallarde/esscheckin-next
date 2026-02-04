@@ -24,7 +24,26 @@ import {
   Star,
   PhoneOff,
   Users,
+  Archive,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  useArchiveStudent,
+  useDeleteStudentPermanently,
+} from "@/hooks/queries/use-profile-management";
+import { useToast } from "@/hooks/use-toast";
 import { Student } from "@/hooks/queries/use-students";
 import { useSmsConversation } from "@/hooks/queries/use-sms-conversation";
 import { ConversationThread } from "@/components/sms/ConversationThread";
@@ -37,6 +56,7 @@ interface PersonProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSendText?: (person: Student) => void;
+  organizationId?: string;
 }
 
 // Green gradient theme matching BelongingSpectrum
@@ -61,11 +81,63 @@ export function PersonProfileModal({
   open,
   onOpenChange,
   onSendText,
+  organizationId,
 }: PersonProfileModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { toast } = useToast();
+
   const { data: messages, isLoading: messagesLoading } = useSmsConversation(
     open && person ? person.id : null
   );
+
+  const archiveStudent = useArchiveStudent();
+  const deleteStudent = useDeleteStudentPermanently();
+
+  const handleArchive = async () => {
+    if (!person || !organizationId) return;
+    try {
+      await archiveStudent.mutateAsync({
+        profileId: person.id,
+        organizationId,
+      });
+      toast({
+        title: "Student archived",
+        description: `${person.first_name} has been archived. They can check in again to be restored.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to archive:", error);
+      toast({
+        title: "Error",
+        description: "Failed to archive student. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!person || !organizationId) return;
+    try {
+      const result = await deleteStudent.mutateAsync({
+        profileId: person.id,
+        organizationId,
+      });
+      toast({
+        title: "Student deleted",
+        description: result.message || "Student has been permanently deleted.",
+      });
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete student. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!person) return null;
 
@@ -215,6 +287,57 @@ export function PersonProfileModal({
                 </CardContent>
               </Card>
             )}
+
+            {/* Danger Zone - Archive/Delete */}
+            {organizationId && (
+              <Card className="border-destructive/30">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <span className="font-medium text-destructive">Danger Zone</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Archive Student</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hide from lists. They can check in again to restore.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleArchive}
+                        disabled={archiveStudent.isPending}
+                      >
+                        {archiveStudent.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Archive className="h-4 w-4 mr-1" />
+                        )}
+                        Archive
+                      </Button>
+                    </div>
+                    <div className="border-t pt-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-destructive">Permanently Delete</p>
+                        <p className="text-xs text-muted-foreground">
+                          Remove all data. This cannot be undone.
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Family Tab */}
@@ -318,6 +441,55 @@ export function PersonProfileModal({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Permanently Delete Student?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This will permanently delete <strong>{fullName}</strong> and all their data:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                <li>All check-in history</li>
+                <li>Points and achievements</li>
+                <li>SMS message history</li>
+                <li>Group memberships</li>
+                <li>Pastoral notes and recommendations</li>
+              </ul>
+              <p className="font-medium text-destructive mt-3">
+                This action cannot be undone.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteStudent.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePermanentDelete}
+              disabled={deleteStudent.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteStudent.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

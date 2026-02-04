@@ -10,30 +10,30 @@ Multi-tenant PostgreSQL database with Row Level Security (RLS). All tables use U
 
 ```mermaid
 erDiagram
-    organizations ||--o{ organization_members : "has"
-    organizations ||--o{ students : "has"
+    %% Identity System (New)
+    profiles ||--o{ organization_memberships : "has"
+    profiles ||--o{ group_memberships : "has"
+    profiles ||--o| student_profiles : "extends"
+    profiles ||--o{ check_ins : "makes"
+    profiles ||--o{ student_game_stats : "has"
+    profiles ||--o{ student_achievements : "earns"
+    profiles ||--o{ game_transactions : "has"
+    profiles ||--o{ ai_recommendations : "receives"
+    profiles ||--o{ interactions : "has"
+    profiles ||--o{ student_notes : "has"
+    profiles ||--o{ sms_messages : "sends/receives"
+
+    organizations ||--o{ organization_memberships : "has"
     organizations ||--o{ check_ins : "has"
     organizations ||--o{ groups : "has"
     organizations ||--o{ sms_messages : "has"
 
-    students ||--o{ check_ins : "makes"
-    students ||--o{ student_game_stats : "has"
-    students ||--o{ student_achievements : "earns"
-    students ||--o{ game_transactions : "has"
-    students ||--o{ ai_recommendations : "receives"
-    students ||--o{ interactions : "has"
-    students ||--o{ student_notes : "has"
-    students ||--o{ student_profiles_extended : "has"
-    students ||--o{ sms_messages : "sends/receives"
-    students }o--o{ groups : "belongs to"
-
-    groups ||--o{ group_members : "has"
-    groups ||--o{ group_leaders : "has"
+    groups ||--o{ group_memberships : "has"
     groups ||--o{ group_meeting_times : "has"
 
     curriculum_weeks ||--o{ ai_recommendations : "informs"
 
-    auth_users ||--o{ organization_members : "belongs to"
+    auth_users ||--o| profiles : "links to"
     auth_users ||--o{ interactions : "logs"
     auth_users ||--o{ student_notes : "writes"
 ```
@@ -58,7 +58,9 @@ Multi-tenant organization (ministry) records.
 | `status` | text | 'active', 'suspended', etc. |
 | `created_at` | timestamptz | Creation timestamp |
 
-### `organization_members`
+### `organization_members` ⚠️ DEPRECATED
+
+**Note:** This table is being replaced by `organization_memberships` in the Identity Tables section. Dual-write is enabled during migration. Will be removed in Phase 5.
 
 Organization membership and roles.
 
@@ -73,7 +75,9 @@ Organization membership and roles.
 | `invited_at` | timestamptz | Invitation timestamp |
 | `accepted_at` | timestamptz | Acceptance timestamp |
 
-### `students`
+### `students` ⚠️ DEPRECATED
+
+**Note:** This table is being replaced by `profiles` + `student_profiles` in the Identity Tables section. Dual-write is enabled during migration. Will be removed in Phase 5.
 
 Student records with contact and profile data.
 
@@ -105,13 +109,94 @@ Daily check-in records (idempotent per day).
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `organization_id` | uuid | FK to organizations |
 | `checked_in_at` | timestamptz | Check-in timestamp |
 | `created_at` | timestamptz | Record creation |
 
 **Constraints:**
-- UNIQUE on `(student_id, DATE(checked_in_at))` — one check-in per day
+- UNIQUE on `(profile_id, DATE(checked_in_at))` — one check-in per day
+
+---
+
+## Identity Tables
+
+The unified profiles system provides a single identity for every person in the platform.
+
+### `profiles`
+
+Core identity table — one record per human. Can be a student, team member, or both.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `first_name` | text | Required |
+| `last_name` | text | Required |
+| `email` | text | Unique across platform |
+| `phone_number` | text | Unique, E.164 format |
+| `date_of_birth` | date | Optional |
+| `user_id` | uuid | FK to auth.users (nullable) |
+| `created_at` | timestamptz | Record creation |
+| `updated_at` | timestamptz | Last modification |
+
+**Key principle:** ONE profile per person. An admin who is also a group member uses the SAME profile.
+
+### `organization_memberships`
+
+Defines what role a profile has in each organization.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `profile_id` | uuid | FK to profiles |
+| `organization_id` | uuid | FK to organizations |
+| `role` | text | owner, admin, leader, viewer, student |
+| `status` | text | active, pending, suspended |
+| `created_at` | timestamptz | When joined |
+| `updated_at` | timestamptz | Last modification |
+
+**Constraint:** UNIQUE on `(profile_id, organization_id)`
+
+### `group_memberships`
+
+Defines participation in groups (replaces both group_members and group_leaders).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `profile_id` | uuid | FK to profiles |
+| `group_id` | uuid | FK to groups |
+| `role` | text | leader, member |
+| `is_primary` | boolean | Primary leader designation |
+| `joined_at` | timestamptz | When joined |
+
+**Constraint:** UNIQUE on `(profile_id, group_id)`
+
+### `student_profiles`
+
+Optional extension for student-specific data. Only created for profiles with role='student'.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `profile_id` | uuid | PK, FK to profiles |
+| `grade` | text | Grade level (6-12, Adult) |
+| `high_school` | text | School name |
+| `profile_pin` | text | 4-digit PIN for kiosk access |
+| `instagram_handle` | text | Social handle |
+| `address` | text | Street address |
+| `city` | text | City |
+| `state` | text | State |
+| `zip` | text | ZIP code |
+| `father_first_name` | text | Father's first name |
+| `father_last_name` | text | Father's last name |
+| `father_phone` | text | Father's phone |
+| `father_email` | text | Father's email |
+| `mother_first_name` | text | Mother's first name |
+| `mother_last_name` | text | Mother's last name |
+| `mother_phone` | text | Mother's phone |
+| `mother_email` | text | Mother's email |
+| `parent_name` | text | Legacy: guardian name |
+| `parent_phone` | text | Legacy: guardian phone |
 
 ---
 
@@ -119,12 +204,12 @@ Daily check-in records (idempotent per day).
 
 ### `student_game_stats`
 
-Cumulative gamification stats per student.
+Cumulative gamification stats per profile.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students (unique) |
+| `profile_id` | uuid | FK to profiles (unique) |
 | `total_points` | integer | Lifetime points (default: 0) |
 | `current_rank` | text | Current rank title |
 | `last_points_update` | timestamptz | Last update |
@@ -146,7 +231,7 @@ Earned achievements.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `achievement_id` | text | Achievement identifier |
 | `achievement_title` | text | Display name |
 | `achievement_description` | text | Description |
@@ -155,7 +240,7 @@ Earned achievements.
 | `rarity` | text | 'common', 'rare', 'epic', 'legendary' |
 | `unlocked_at` | timestamptz | When earned |
 
-**Constraint:** UNIQUE on `(student_id, achievement_id)`
+**Constraint:** UNIQUE on `(profile_id, achievement_id)`
 
 ### `game_transactions`
 
@@ -164,7 +249,7 @@ Audit trail of point transactions.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `check_in_id` | uuid | FK to check_ins (nullable) |
 | `points_earned` | integer | Points awarded |
 | `transaction_type` | text | Type (see below) |
@@ -215,7 +300,7 @@ AI-generated pastoral recommendations.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `curriculum_week_id` | uuid | FK to curriculum_weeks |
 | `key_insight` | text | One-sentence insight (max 120 chars) |
 | `action_bullets` | text[] | 3 action items |
@@ -227,7 +312,7 @@ AI-generated pastoral recommendations.
 | `is_dismissed` | boolean | Whether dismissed |
 | `generated_at` | timestamptz | Generation timestamp |
 
-**Constraint:** UNIQUE on `(student_id, curriculum_week_id)`
+**Constraint:** UNIQUE on `(profile_id, curriculum_week_id)`
 
 ### `student_profiles_extended`
 
@@ -235,7 +320,7 @@ Extended profile for richer AI context.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `student_id` | uuid | PK, FK to students |
+| `profile_id` | uuid | PK, FK to profiles |
 | `current_phase` | text | Phase name |
 | `spiritual_maturity` | text | 'Exploring', 'Growing', 'Strong Believer', 'Leadership Ready' |
 | `faith_background` | text | 'New to faith', 'Churched', 'Unchurched', 'Unknown' |
@@ -252,7 +337,7 @@ Pastoral outreach records.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `leader_id` | uuid | FK to auth.users |
 | `leader_name` | text | Denormalized name |
 | `interaction_type` | text | 'text', 'call', 'in_person', etc. |
@@ -265,12 +350,12 @@ Pastoral outreach records.
 
 ### `student_notes`
 
-Persistent context notes about students.
+Persistent context notes about profiles.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `student_id` | uuid | FK to students |
+| `profile_id` | uuid | FK to profiles |
 | `leader_id` | uuid | FK to auth.users |
 | `leader_name` | text | Denormalized name |
 | `content` | text | Note content |
@@ -295,28 +380,6 @@ Student groups (MS Boys, HS Girls, etc.).
 | `is_active` | boolean | Active flag |
 | `created_at` | timestamptz | Timestamp |
 
-### `group_members`
-
-Students assigned to groups.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | uuid | Primary key |
-| `group_id` | uuid | FK to groups |
-| `student_id` | uuid | FK to students |
-| `joined_at` | timestamptz | When joined |
-
-### `group_leaders`
-
-Leaders assigned to groups.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | uuid | Primary key |
-| `group_id` | uuid | FK to groups |
-| `user_id` | uuid | FK to auth.users |
-| `is_primary` | boolean | Primary leader flag |
-
 ### `group_meeting_times`
 
 Meeting schedule per group.
@@ -328,6 +391,8 @@ Meeting schedule per group.
 | `day_of_week` | integer | 0-6 (Sunday-Saturday) |
 | `start_time` | time | Meeting start |
 | `end_time` | time | Meeting end |
+
+**Note:** Group membership (both members and leaders) is now managed via the `group_memberships` table in the Identity Tables section.
 
 ---
 
@@ -341,7 +406,7 @@ SMS message records.
 |--------|------|-------------|
 | `id` | uuid | Primary key |
 | `organization_id` | uuid | FK to organizations |
-| `student_id` | uuid | FK to students (nullable) |
+| `profile_id` | uuid | FK to profiles (nullable) |
 | `direction` | text | 'inbound' or 'outbound' |
 | `body` | text | Message content |
 | `from_number` | text | Sender phone |
@@ -376,8 +441,11 @@ All tables use Row Level Security with helper functions to prevent recursion.
 -- Check super admin status
 auth_is_super_admin(user_id UUID) → BOOLEAN
 
--- Get user's organization IDs
+-- Get user's organization IDs (legacy, via organization_members)
 auth_user_org_ids(user_id UUID) → SETOF UUID
+
+-- Get user's organization IDs via profiles system
+auth_profile_org_ids(user_id UUID) → UUID[]
 
 -- Check org role membership
 auth_has_org_role(org_id UUID, roles TEXT[]) → BOOLEAN
@@ -405,15 +473,15 @@ USING (organization_id IN (SELECT auth_user_org_ids(auth.uid())));
 
 | Function | Purpose |
 |----------|---------|
-| `search_student_for_checkin(term)` | Fuzzy search by phone/name |
-| `checkin_student(student_id)` | Idempotent daily check-in |
-| `register_student_and_checkin(...)` | New student registration |
+| `search_student_for_checkin(term)` | Fuzzy search profiles + student_profiles by phone/name |
+| `checkin_student(profile_id)` | Idempotent daily check-in |
+| `register_student_and_checkin(...)` | Creates profile → student_profile → org_membership → check_in |
 
 ### Gamification Functions
 
 | Function | Purpose |
 |----------|---------|
-| `get_student_game_profile(student_id)` | Complete game profile |
+| `get_student_game_profile(profile_id)` | Complete game profile |
 | `award_points(...)` | Award points with transaction |
 | `unlock_achievement(...)` | Unlock achievement |
 | `process_checkin_rewards(...)` | Calculate check-in rewards |
@@ -422,8 +490,8 @@ USING (organization_id IN (SELECT auth_user_org_ids(auth.uid())));
 
 | Function | Purpose |
 |----------|---------|
-| `get_pastoral_analytics()` | Engagement analytics for all students |
-| `get_student_context(student_id)` | Notes + interactions |
+| `get_pastoral_analytics()` | Engagement analytics for all profiles |
+| `get_student_context(profile_id)` | Notes + interactions |
 | `log_interaction(...)` | Record pastoral outreach |
 | `accept_recommendation(id)` | Accept AI recommendation |
 | `get_my_queue()` | Current leader's pending tasks |
@@ -432,10 +500,20 @@ USING (organization_id IN (SELECT auth_user_org_ids(auth.uid())));
 
 | Function | Purpose |
 |----------|---------|
-| `get_user_organizations(user_id)` | User's org memberships |
+| `get_user_organizations(user_id)` | User's orgs via profile → organization_memberships |
+| `get_organization_members(org_id)` | Returns organization_memberships + profiles |
+| `accept_pending_invitations(user_id, email, display_name)` | Creates profile + organization_membership |
 | `get_all_organizations()` | Super admin: all orgs |
 | `create_organization(...)` | Super admin: create org |
 | `is_super_admin(user_id)` | Check admin status |
+
+### Group Functions
+
+| Function | Purpose |
+|----------|---------|
+| `get_group_members(group_id)` | Returns group_memberships + profiles |
+| `add_group_member(profile_id, group_id, role)` | Creates group_membership |
+| `get_student_group_streak(profile_id, group_id)` | Per-group streak calculation |
 
 ---
 

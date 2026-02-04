@@ -28,7 +28,7 @@ export default function OrgToolsPage() {
     },
     {
       title: "Attendance Cleanup",
-      description: "Retroactively check in students who attended",
+      description: "Add missing check-ins or remove incorrect ones",
       href: orgPath(orgSlug, "/settings/org-tools/attendance-cleanup"),
       icon: ClipboardCheck,
     },

@@ -81,33 +81,43 @@ Dashboards:
 
 ### Database Tables (as of Feb 2026)
 
+**Identity System (Phase 4):**
+- `profiles` - ONE record per human (name, email, phone, optional user_id link to auth)
+- `organization_memberships` - Role in org (owner/admin/leader/viewer/student)
+- `group_memberships` - Participation in groups (leader/member role)
+- `student_profiles` - Student-specific extension (grade, school, parents)
+
+Key principle: ONE profile per person, multiple memberships define roles. An admin who is also a group member uses the SAME profile.
+
 Core:
-- `organizations`, `organization_members`, `organization_invitations`
-- `students`, `check_ins`
-- `student_game_stats`, `student_achievements`, `game_transactions`
-- `curriculum_weeks`, `ai_recommendations`, `interactions`
+- `organizations`, `organization_invitations`
+- `check_ins` - Now references profile_id
+- `student_game_stats`, `student_achievements`, `game_transactions` - Now reference profile_id
+- `curriculum_weeks`, `ai_recommendations`, `interactions` - Now reference profile_id
 
-**Key columns in `organization_members`:**
-- `display_name` - Team member's display name for messaging (e.g., "Pastor Mike"). Shown in SMS signatures and conversation threads.
-
-Groups System (Phase 3):
+Groups System:
 - `campuses` - Future multi-campus support
 - `groups` - Student groups (MS Boys, HS Girls, etc.)
 - `group_meeting_times` - Meeting schedule per group
-- `group_leaders` - Leaders assigned to groups
-- `group_members` - Students in groups
+
+**Legacy tables (deprecated, will be removed):**
+- `students` - Replaced by profiles + student_profiles
+- `organization_members` - Replaced by organization_memberships
+- `group_members`, `group_leaders` - Replaced by group_memberships
 
 RPC Functions:
-- `get_student_group_streak(student_id, group_id)` - Per-group streak calculation
-- `get_user_organizations(user_id)` - User's org memberships (returns display_name, theme_id, checkin_style)
-- `get_student_game_profile(student_id)` - Gamification profile
+- `search_student_for_checkin(term)` - Searches profiles + student_profiles by phone/name
+- `register_student_and_checkin(...)` - Creates profile → student_profile → org_membership → check_in
+- `checkin_student(profile_id)` - Idempotent daily check-in
+- `get_student_group_streak(profile_id, group_id)` - Per-group streak calculation
+- `get_user_organizations(user_id)` - User's orgs via profile → organization_memberships
+- `get_student_game_profile(profile_id)` - Gamification profile
 - `get_all_organizations()` - Super admin: list all orgs
 - `create_organization(name, owner_email, slug, timezone)` - Super admin: create new org
 - `is_super_admin(user_id)` - Check if user is super admin
-- `get_organization_members(org_id)` - Team members with display_name, email, role
+- `get_organization_members(org_id)` - Returns organization_memberships + profiles
 - `get_my_org_profile(org_id)` - Current user's profile in an org
-- `update_member_display_name(org_id, user_id, display_name)` - Update member's display name
-- `accept_pending_invitations(user_id, email, display_name)` - Accept invites with optional display name
+- `accept_pending_invitations(user_id, email, display_name)` - Creates profile + organization_membership
 
 ### RLS Architecture (IMPORTANT)
 
@@ -115,7 +125,8 @@ RPC Functions:
 
 Helper functions (bypass RLS):
 - `auth_is_super_admin(user_id)` - Check if user has super_admin role
-- `auth_user_org_ids(user_id)` - Get org IDs user belongs to
+- `auth_user_org_ids(user_id)` - Get org IDs user belongs to (legacy)
+- `auth_profile_org_ids(user_id)` - Get org IDs via profiles system (preferred)
 - `auth_has_org_role(org_id, roles[])` - Check if user has specific role in org
 
 **Reference file:** `supabase/rls-policies.sql` - canonical policy definitions

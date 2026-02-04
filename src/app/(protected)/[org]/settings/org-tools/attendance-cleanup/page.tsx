@@ -3,10 +3,11 @@
 import { useOrganization } from "@/hooks/useOrganization";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardCheck, ArrowLeft, Loader2 } from "lucide-react";
+import { ClipboardCheck, ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { orgPath } from "@/lib/navigation";
 import AttendanceCleanupForm from "@/components/settings/AttendanceCleanup/AttendanceCleanupForm";
+import RemoveCheckinForm from "@/components/settings/AttendanceCleanup/RemoveCheckinForm";
 
 export default function AttendanceCleanupPage() {
   const { currentOrganization, userRole, isLoading } = useOrganization();
@@ -59,12 +60,12 @@ export default function AttendanceCleanupPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Attendance Cleanup</h1>
           <p className="text-muted-foreground mt-1">
-            Retroactively check in students who attended but weren&apos;t recorded
+            Add missing check-ins or remove incorrect ones
           </p>
         </div>
       </div>
 
-      {/* Main Form */}
+      {/* Add Check-ins Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -77,6 +78,22 @@ export default function AttendanceCleanupPage() {
         </CardHeader>
         <CardContent>
           {orgId && <AttendanceCleanupForm organizationId={orgId} />}
+        </CardContent>
+      </Card>
+
+      {/* Remove Check-ins Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5" />
+            Remove Incorrect Check-ins
+          </CardTitle>
+          <CardDescription>
+            Remove check-ins that were recorded in error. Points will be deducted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {orgId && <RemoveCheckinForm organizationId={orgId} />}
         </CardContent>
       </Card>
     </div>

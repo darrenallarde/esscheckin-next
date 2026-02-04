@@ -39,6 +39,10 @@ export interface Group {
   leaders: GroupLeader[];
   member_count: number;
   needs_attention_count: number;
+  // Default group settings
+  is_default: boolean;
+  default_grades: string[] | null;
+  default_gender: string | null;
 }
 
 export interface GroupMember {
@@ -117,6 +121,9 @@ async function fetchGroups(organizationId: string): Promise<Group[]> {
       leaders: group.group_leaders || [],
       member_count: memberIds.length,
       needs_attention_count: needsAttention,
+      is_default: group.is_default || false,
+      default_grades: group.default_grades || null,
+      default_gender: group.default_gender || null,
     };
   });
 }
@@ -315,10 +322,13 @@ export function useCreateGroup() {
       color?: string;
       organization_id: string;
       meeting_times: Array<{ day_of_week: number; start_time: string; end_time: string; frequency?: MeetingFrequency }>;
+      is_default?: boolean;
+      default_grades?: string[];
+      default_gender?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Create group
+      // Create group with default settings
       const { data: group, error: groupError } = await supabase
         .from("groups")
         .insert({
@@ -327,6 +337,9 @@ export function useCreateGroup() {
           color: data.color,
           organization_id: data.organization_id,
           created_by: user?.id,
+          is_default: data.is_default || false,
+          default_grades: data.default_grades || null,
+          default_gender: data.default_gender || null,
         })
         .select()
         .single();

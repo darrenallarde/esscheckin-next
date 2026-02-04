@@ -16,8 +16,10 @@ import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations"
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useTodaysCheckIns } from "@/hooks/queries/use-todays-checkins";
 import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
+import { useNewStudents } from "@/hooks/queries/use-new-students";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
+import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
 import { BelongingStatus } from "@/types/pastoral";
 
 export default function DashboardPage() {
@@ -34,6 +36,7 @@ export default function DashboardPage() {
   const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
   const { data: todaysCheckIns, isLoading: todaysLoading } = useTodaysCheckIns(organizationId);
   const { data: smsInbox, isLoading: smsLoading } = useSmsInbox(organizationId);
+  const { data: newStudents, isLoading: newStudentsLoading } = useNewStudents(organizationId);
 
   const isLoading = orgLoading || statsLoading;
 
@@ -98,6 +101,17 @@ export default function DashboardPage() {
           loading={isLoading}
         />
       </div>
+
+      {/* New Students Card - Show when there are students needing triage */}
+      {!newStudentsLoading && newStudents && newStudents.length > 0 && organizationId && orgSlug && (
+        <NewStudentsCard
+          data={newStudents}
+          loading={newStudentsLoading}
+          organizationId={organizationId}
+          orgSlug={orgSlug}
+          viewAllHref={orgPath(orgSlug, "/people?filter=new")}
+        />
+      )}
 
       {/* Belonging Spectrum - Prominent placement */}
       {!belongingLoading && belongingData && (

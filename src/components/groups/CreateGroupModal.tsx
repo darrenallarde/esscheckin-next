@@ -13,8 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Sparkles } from "lucide-react";
 import { useCreateGroup, DAY_NAMES, FREQUENCY_OPTIONS, MeetingFrequency } from "@/hooks/queries/use-groups";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -52,6 +61,40 @@ export function CreateGroupModal({
     { day_of_week: 3, start_time: "19:00", end_time: "20:30", frequency: "weekly" }, // Wednesday default
   ]);
 
+  // Default group settings
+  const [isDefault, setIsDefault] = useState(false);
+  const [defaultGrades, setDefaultGrades] = useState<string[]>([]);
+  const [defaultGender, setDefaultGender] = useState<string | null>(null);
+
+  const ALL_GRADES = ["6", "7", "8", "9", "10", "11", "12"];
+  const MS_GRADES = ["6", "7", "8"];
+  const HS_GRADES = ["9", "10", "11", "12"];
+
+  const handleGradeToggle = (grade: string, checked: boolean) => {
+    if (checked) {
+      setDefaultGrades([...defaultGrades, grade]);
+    } else {
+      setDefaultGrades(defaultGrades.filter((g) => g !== grade));
+    }
+  };
+
+  const handleSelectGradeGroup = (group: "ms" | "hs" | "all" | "none") => {
+    switch (group) {
+      case "ms":
+        setDefaultGrades(MS_GRADES);
+        break;
+      case "hs":
+        setDefaultGrades(HS_GRADES);
+        break;
+      case "all":
+        setDefaultGrades(ALL_GRADES);
+        break;
+      case "none":
+        setDefaultGrades([]);
+        break;
+    }
+  };
+
   const createGroup = useCreateGroup();
 
   const handleAddMeetingTime = () => {
@@ -87,6 +130,9 @@ export function CreateGroupModal({
         color,
         organization_id: organizationId,
         meeting_times: meetingTimes,
+        is_default: isDefault,
+        default_grades: isDefault && defaultGrades.length > 0 ? defaultGrades : undefined,
+        default_gender: isDefault && defaultGender ? defaultGender : undefined,
       });
 
       // Reset form and close
@@ -94,6 +140,9 @@ export function CreateGroupModal({
       setDescription("");
       setColor(COLORS[0]);
       setMeetingTimes([{ day_of_week: 3, start_time: "19:00", end_time: "20:30", frequency: "weekly" }]);
+      setIsDefault(false);
+      setDefaultGrades([]);
+      setDefaultGender(null);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to create group:", error);
@@ -151,6 +200,116 @@ export function CreateGroupModal({
                   />
                 ))}
               </div>
+            </div>
+
+            {/* Default Group Settings */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-500" />
+                    <Label htmlFor="is-default">Default Group</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    New students matching the criteria will be auto-assigned
+                  </p>
+                </div>
+                <Switch
+                  id="is-default"
+                  checked={isDefault}
+                  onCheckedChange={setIsDefault}
+                />
+              </div>
+
+              {isDefault && (
+                <div className="space-y-4 pl-6 border-l-2 border-amber-200">
+                  {/* Grade Selection */}
+                  <div className="space-y-2">
+                    <Label>Grade Filter</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty to match all grades
+                    </p>
+                    <div className="flex gap-2 flex-wrap mb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSelectGradeGroup("ms")}
+                        className={defaultGrades.length === 3 && MS_GRADES.every(g => defaultGrades.includes(g)) ? "bg-primary/10" : ""}
+                      >
+                        MS (6-8)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSelectGradeGroup("hs")}
+                        className={defaultGrades.length === 4 && HS_GRADES.every(g => defaultGrades.includes(g)) ? "bg-primary/10" : ""}
+                      >
+                        HS (9-12)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSelectGradeGroup("all")}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSelectGradeGroup("none")}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex gap-3 flex-wrap">
+                      {ALL_GRADES.map((grade) => (
+                        <div key={grade} className="flex items-center space-x-1">
+                          <Checkbox
+                            id={`grade-${grade}`}
+                            checked={defaultGrades.includes(grade)}
+                            onCheckedChange={(checked) =>
+                              handleGradeToggle(grade, checked === true)
+                            }
+                          />
+                          <label
+                            htmlFor={`grade-${grade}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {grade}th
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Gender Selection */}
+                  <div className="space-y-2">
+                    <Label>Gender Filter</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Leave as &quot;Any&quot; to match all genders
+                    </p>
+                    <Select
+                      value={defaultGender || "any"}
+                      onValueChange={(value) =>
+                        setDefaultGender(value === "any" ? null : value)
+                      }
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any Gender</SelectItem>
+                        <SelectItem value="male">Male Only</SelectItem>
+                        <SelectItem value="female">Female Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Meeting Times */}
@@ -242,12 +401,24 @@ export function CreateGroupModal({
                   style={{ backgroundColor: color }}
                 />
                 <span className="font-medium">{name || "Group Name"}</span>
+                {isDefault && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    DEFAULT
+                  </Badge>
+                )}
                 {meetingTimes.map((mt, i) => (
                   <Badge key={i} variant="secondary">
                     {DAY_NAMES[mt.day_of_week]} ({mt.frequency === "bi-weekly" ? "Bi-wk" : mt.frequency === "monthly" ? "Monthly" : "Wk"})
                   </Badge>
                 ))}
               </div>
+              {isDefault && (defaultGrades.length > 0 || defaultGender) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Auto-assigns: {defaultGrades.length > 0 ? `Grades ${defaultGrades.join(", ")}` : "All grades"}
+                  {defaultGender && ` • ${defaultGender === "male" ? "Male" : "Female"} only`}
+                </p>
+              )}
             </div>
           </div>
 

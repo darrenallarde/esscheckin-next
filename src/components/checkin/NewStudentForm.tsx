@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,6 +24,7 @@ const newStudentSchema = z.object({
   phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits"),
   email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
+  gender: z.enum(["male", "female"], { message: "Please select gender" }),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
   grade: z.string().trim().min(1, "Grade is required"),
   highSchool: z.string().trim().min(1, "School is required"),
@@ -76,6 +78,7 @@ const NewStudentForm = ({ onSuccess, onBack, organizationId }: NewStudentFormPro
       phoneNumber: "",
       email: "",
       dateOfBirth: "",
+      gender: undefined,
       instagramHandle: "",
       grade: "",
       highSchool: "",
@@ -266,18 +269,45 @@ const NewStudentForm = ({ onSuccess, onBack, organizationId }: NewStudentFormPro
 
               <FormField
                 control={form.control}
-                name="instagramHandle"
+                name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Instagram Handle (Optional)</FormLabel>
+                    <FormLabel>Gender</FormLabel>
                     <FormControl>
-                      <Input placeholder="@username" {...field} />
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex gap-4 pt-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="male" id="male-ns" />
+                          <label htmlFor="male-ns" className="text-sm cursor-pointer">Male</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="female" id="female-ns" />
+                          <label htmlFor="female-ns" className="text-sm cursor-pointer">Female</label>
+                        </div>
+                      </RadioGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="instagramHandle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instagram Handle (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" className="w-full md:w-1/2" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-foreground">Address Information (Optional)</h4>

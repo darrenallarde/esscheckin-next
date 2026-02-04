@@ -39,24 +39,65 @@ flowchart TD
 
 ## Database Tables
 
-- `students` — Student records
-- `check_ins` — Check-in events (one per day per student)
-- `student_game_stats` — Points and rank
-- `student_achievements` — Earned achievements
-- `game_transactions` — Point transaction log
+- `profiles` — Core identity (one per person)
+- `student_profiles` — Student-specific data (grade, school, parents)
+- `organization_memberships` — Role in org (role='student' for check-in users)
+- `check_ins` — Check-in events (one per day per profile)
+- `student_game_stats` — Points and rank (linked to profile_id)
+- `student_achievements` — Earned achievements (linked to profile_id)
+- `game_transactions` — Point transaction log (linked to profile_id)
 
 ## RPC Functions
 
 | Function | Purpose |
 |----------|---------|
-| `search_student_for_checkin(term)` | Fuzzy search by phone/name/email |
-| `checkin_student(student_id)` | Create idempotent check-in |
-| `register_student_and_checkin(...)` | Register + check-in new student |
-| `process_checkin_rewards(student_id, checkin_id)` | Calculate rewards |
+| `search_student_for_checkin(term)` | Fuzzy search profiles + student_profiles by phone/name/email |
+| `checkin_student(profile_id)` | Create idempotent check-in for existing profile |
+| `register_student_and_checkin(...)` | Create profile → student_profile → org_membership → check_in |
+| `process_checkin_rewards(profile_id, checkin_id)` | Calculate rewards |
+
+## Profile Creation
+
+When a new student registers at the kiosk, the system creates multiple records to establish their unified identity:
+
+### Records Created
+
+1. **`profiles`** — Core identity record
+   - `first_name`, `last_name` (required)
+   - `phone_number` (required, unique, E.164 format)
+   - `email` (optional)
+   - `date_of_birth` (optional)
+
+2. **`student_profiles`** — Student-specific extension
+   - `profile_id` (links to profiles)
+   - `grade` (required)
+   - `high_school` (optional)
+   - Parent contact info (mother/father name, phone, email)
+   - `profile_pin` (generated on first check-in)
+
+3. **`organization_memberships`** — Role in the organization
+   - `profile_id` (links to profiles)
+   - `organization_id` (current org)
+   - `role` = 'student'
+   - `status` = 'active'
+
+4. **`check_ins`** — The actual check-in event
+   - `profile_id` (links to profiles)
+   - `organization_id`
+   - `checked_in_at` (timestamp)
+
+### Why This Architecture?
+
+The unified profiles system ensures:
+- **No duplicates**: Same person across roles uses ONE profile
+- **Consistent data**: Phone and email are unique platform-wide
+- **Easy relationships**: Families, groups, and teams all reference profiles
+- **Role flexibility**: A student can later become a leader without duplicate records
 
 ## Features
 
 ### Fuzzy Search
+- Searches `profiles` + `student_profiles` tables
 - Searches phone numbers (with any formatting)
 - Searches first and last names
 - Searches email addresses
