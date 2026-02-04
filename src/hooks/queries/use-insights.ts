@@ -22,9 +22,18 @@ interface UseInsightsReturn {
   error: string | null;
   submitQuery: (query: string) => Promise<void>;
   clearResults: () => void;
+  effectiveMode: "list" | "chart" | null;
 }
 
-export function useInsights(organizationId: string | null): UseInsightsReturn {
+interface UseInsightsOptions {
+  modeOverride?: "list" | "chart" | null;
+}
+
+export function useInsights(
+  organizationId: string | null,
+  options: UseInsightsOptions = {}
+): UseInsightsReturn {
+  const { modeOverride } = options;
   const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,31 +48,34 @@ export function useInsights(organizationId: string | null): UseInsightsReturn {
     gradeRange: { min: 6, max: 12 },
   };
 
-  // List data hook (only active when output mode is "list")
+  // Determine effective mode: modeOverride takes precedence over parsed intent
+  const effectiveMode = modeOverride ?? parsedQuery?.intent.outputMode ?? null;
+
+  // List data hook (only active when effective mode is "list")
   const {
     results: listResults,
     isLoading: isListLoading,
     error: listError,
   } = useInsightsList(
     organizationId,
-    parsedQuery?.intent.outputMode === "list" ? parsedQuery : null
+    effectiveMode === "list" && parsedQuery ? parsedQuery : null
   );
 
-  // Chart data hook (only active when output mode is "chart")
+  // Chart data hook (only active when effective mode is "chart")
   const {
     results: chartResults,
     isLoading: isChartLoading,
     error: chartError,
   } = useInsightsChart(
     organizationId,
-    parsedQuery?.intent.outputMode === "chart" ? parsedQuery : null
+    effectiveMode === "chart" && parsedQuery ? parsedQuery : null
   );
 
-  // Combine results based on mode
+  // Combine results based on effective mode
   const results: InsightsResults | null =
-    parsedQuery?.intent.outputMode === "list"
+    effectiveMode === "list"
       ? listResults
-      : parsedQuery?.intent.outputMode === "chart"
+      : effectiveMode === "chart"
         ? chartResults
         : null;
 
@@ -121,5 +133,6 @@ export function useInsights(organizationId: string | null): UseInsightsReturn {
     error: error || dataError,
     submitQuery,
     clearResults,
+    effectiveMode,
   };
 }

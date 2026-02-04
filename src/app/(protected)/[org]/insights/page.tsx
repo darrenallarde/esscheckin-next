@@ -21,6 +21,7 @@ export default function InsightsPage() {
   const [query, setQuery] = useState("");
   const [chartType, setChartType] = useState<ChartType>("line");
   const [granularity, setGranularity] = useState<TimeGranularity>("weekly");
+  const [modeOverride, setModeOverride] = useState<OutputMode | null>(null);
 
   const {
     results,
@@ -30,7 +31,8 @@ export default function InsightsPage() {
     error,
     submitQuery,
     clearResults,
-  } = useInsights(organizationId);
+    effectiveMode,
+  } = useInsights(organizationId, { modeOverride });
 
   // Track page view on mount
   useState(() => {
@@ -46,6 +48,8 @@ export default function InsightsPage() {
       output_mode: parsedQuery?.intent.outputMode || "unknown",
     });
 
+    // Reset mode override for new queries - let Claude's intent classification decide
+    setModeOverride(null);
     submitQuery(query);
   }, [query, submitQuery, track, parsedQuery]);
 
@@ -60,6 +64,8 @@ export default function InsightsPage() {
         output_mode: "unknown",
       });
 
+      // Reset mode override for new queries
+      setModeOverride(null);
       submitQuery(queryText);
     },
     [submitQuery, track]
@@ -71,6 +77,7 @@ export default function InsightsPage() {
     });
 
     setQuery("");
+    setModeOverride(null);
     clearResults();
   }, [query, clearResults, track]);
 
@@ -78,15 +85,18 @@ export default function InsightsPage() {
     (newMode: OutputMode) => {
       if (!parsedQuery) return;
 
+      const currentMode = effectiveMode || parsedQuery.intent.outputMode;
+
       track(EVENTS.INSIGHTS_MODE_TOGGLED, {
-        from_mode: parsedQuery.intent.outputMode,
+        from_mode: currentMode,
         to_mode: newMode,
         query_text: query,
       });
 
-      // Re-submit with mode hint (future enhancement)
+      // Set mode override to switch between list/chart views
+      setModeOverride(newMode);
     },
-    [parsedQuery, query, track]
+    [parsedQuery, effectiveMode, query, track]
   );
 
   const handleChartTypeChange = useCallback(
@@ -115,7 +125,7 @@ export default function InsightsPage() {
   );
 
   const hasResults = !!results;
-  const outputMode = parsedQuery?.intent.outputMode;
+  const outputMode = effectiveMode;
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">

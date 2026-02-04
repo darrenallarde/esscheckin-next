@@ -133,7 +133,10 @@ export function matchesFilters(
     switch (filters.activity.type) {
       case "active": {
         const days = filters.activity.days || 30;
-        if (daysSinceCheckIn === undefined || daysSinceCheckIn > days) {
+        // Only exclude if we HAVE check-in data and it's outside the range
+        // If no check-in data (daysSinceCheckIn === undefined), don't filter out
+        // We just can't confirm activity, so include them
+        if (daysSinceCheckIn !== undefined && daysSinceCheckIn > days) {
           return false;
         }
         break;
