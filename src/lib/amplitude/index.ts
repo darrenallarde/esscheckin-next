@@ -17,14 +17,21 @@ export async function initAmplitude(): Promise<void> {
   // Init in progress
   if (initPromise) return initPromise;
 
+  const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
+
+  // Log API key status (always, for debugging in production)
+  console.log(`[Amplitude] API key ${apiKey ? `found (${apiKey.substring(0, 8)}...)` : "MISSING"}`);
+
   // Skip if no API key (prevents errors in tests/SSR)
-  if (!process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY) {
-    console.warn("[Amplitude] No API key found, skipping initialization");
+  if (!apiKey) {
+    console.warn("[Amplitude] No API key found, skipping initialization. Add NEXT_PUBLIC_AMPLITUDE_API_KEY to Vercel env vars.");
     return;
   }
 
+  console.log("[Amplitude] Initializing SDK...");
+
   initPromise = amplitude
-    .initAll(process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY, {
+    .initAll(apiKey, {
       analytics: {
         autocapture: {
           pageViews: true,
@@ -40,6 +47,7 @@ export async function initAmplitude(): Promise<void> {
     })
     .then(() => {
       isInitialized = true;
+      console.log("[Amplitude] SDK initialized successfully");
 
       // Flush queued events
       if (eventQueue.length > 0) {
@@ -84,9 +92,11 @@ export function safeTrack(
   }
 
   if (isInitialized) {
+    console.log(`[Amplitude] Tracking: ${event}`, props);
     amplitude.track(event, props);
   } else {
     // Queue the event
+    console.log(`[Amplitude] Queued (SDK not ready): ${event}`);
     eventQueue.push({ event, props });
 
     // Try to init if not already in progress
