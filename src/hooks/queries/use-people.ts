@@ -38,6 +38,9 @@ export interface Person {
   high_school: string | null;
   last_check_in: string | null;
   total_check_ins: number;
+  check_ins_last_4_weeks: number;
+  check_ins_last_8_weeks: number;
+  belonging_status: string | null;
   total_points: number;
   current_rank: string;
   needs_triage: boolean | null;
@@ -77,6 +80,9 @@ interface RpcPersonRow {
   high_school: string | null;
   last_check_in: string | null;
   total_check_ins: number;
+  check_ins_last_4_weeks: number;
+  check_ins_last_8_weeks: number;
+  belonging_status: string | null;
   total_points: number;
   current_rank: string;
   needs_triage: boolean | null;
@@ -125,6 +131,8 @@ async function fetchPeople(
       group_ids: person.group_ids || [],
       group_names: person.group_names || [],
       group_roles: person.group_roles || [],
+      check_ins_last_4_weeks: person.check_ins_last_4_weeks || 0,
+      check_ins_last_8_weeks: person.check_ins_last_8_weeks || 0,
       days_since_last_check_in: daysSince,
     };
   });

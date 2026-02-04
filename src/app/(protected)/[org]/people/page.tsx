@@ -47,15 +47,6 @@ type ActivityFilter = "all" | "active" | "inactive" | "never" | "attention";
 
 const GRADES = ["6", "7", "8", "9", "10", "11", "12"];
 
-// Helper to calculate belonging status from days since last check-in
-function getBelongingStatus(daysSinceLastCheckIn: number | null): BelongingStatus {
-  if (daysSinceLastCheckIn === null) return "Missing";
-  if (daysSinceLastCheckIn >= 60) return "Missing";
-  if (daysSinceLastCheckIn >= 30) return "On the Fringe";
-  if (daysSinceLastCheckIn <= 7) return "Core";
-  return "Connected";
-}
-
 // Convert Person to Student for backwards-compatible modals
 function personToStudent(person: Person): Student {
   return {
@@ -203,11 +194,10 @@ export default function PeoplePage() {
       });
     }
 
-    // Belonging status filter (students only)
+    // Belonging status filter (students only) - use server-calculated belonging_status
     if (activeTab === "students" && belongingFilter !== "all") {
       result = result.filter((person) => {
-        const status = getBelongingStatus(person.days_since_last_check_in);
-        return status === belongingFilter;
+        return person.belonging_status === belongingFilter;
       });
     }
 

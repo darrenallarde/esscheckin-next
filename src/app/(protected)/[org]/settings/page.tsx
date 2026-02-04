@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Palette, Wrench, ChevronRight } from "lucide-react";
+import { Users, Palette, Wrench, ChevronRight } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 
@@ -13,13 +13,6 @@ export default function SettingsPage() {
   const canManageOrg = userRole === "owner" || userRole === "admin";
 
   const settingsLinks = [
-    {
-      title: "Account",
-      description: "Manage your personal account settings and preferences",
-      href: orgPath(orgSlug, "/settings/account"),
-      icon: User,
-      available: true,
-    },
     {
       title: "Team",
       description: "Invite team members and manage permissions",
@@ -49,7 +42,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your account and organization settings
+          Manage your organization settings
         </p>
       </div>
 

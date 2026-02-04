@@ -16,27 +16,19 @@ interface BelongingData {
 
 async function fetchBelongingDistribution(organizationId: string): Promise<BelongingData> {
   const supabase = createClient();
+  const today = new Date();
 
-  // Get pastoral analytics for all students
-  const { data, error } = await supabase.rpc("get_pastoral_analytics");
+  // Use get_organization_people to get students with belonging_status
+  const { data, error } = await supabase.rpc("get_organization_people", {
+    p_org_id: organizationId,
+    p_role_filter: ["student"],
+    p_campus_id: null,
+    p_include_archived: false,
+  });
 
   if (error) throw error;
 
-  // Filter by organization (the RPC doesn't filter by org, we need to join)
-  // For now, get students for this org and match them
-  const { data: orgStudents } = await supabase
-    .from("students")
-    .select("id")
-    .eq("organization_id", organizationId);
-
-  const orgStudentIds = new Set(orgStudents?.map(s => s.id) || []);
-
-  // Filter analytics to only include org students
-  const filteredData = (data || []).filter((s: { student_id: string }) =>
-    orgStudentIds.has(s.student_id)
-  );
-
-  // Calculate distribution
+  // Calculate distribution from the returned data
   const distribution: BelongingDistribution = {
     "Ultra-Core": 0,
     "Core": 0,
@@ -59,22 +51,33 @@ async function fetchBelongingDistribution(organizationId: string): Promise<Belon
     "Missing": [],
   };
 
-  filteredData.forEach((student: {
-    student_id: string;
+  (data || []).forEach((student: {
+    profile_id: string;
     first_name: string;
     last_name: string;
-    belonging_status: string;
-    days_since_last_seen: number;
+    belonging_status: string | null;
+    last_check_in: string | null;
     grade: string | null;
   }) => {
-    const status = student.belonging_status as BelongingStatus;
+    // Use the server-calculated belonging_status, default to "Missing" if null
+    const status = (student.belonging_status || "Missing") as BelongingStatus;
+
+    // Calculate days since last check-in
+    const lastCheckIn = student.last_check_in;
+    const daysSince = lastCheckIn
+      ? Math.floor(
+          (today.getTime() - new Date(lastCheckIn).getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+      : 9999; // Large number for never checked in
+
     if (distribution[status] !== undefined) {
       distribution[status]++;
       studentsByStatus[status].push({
-        id: student.student_id,
+        id: student.profile_id,
         first_name: student.first_name,
         last_name: student.last_name,
-        days_since_last_seen: student.days_since_last_seen,
+        days_since_last_seen: daysSince,
         grade: student.grade,
       });
     }
@@ -82,7 +85,7 @@ async function fetchBelongingDistribution(organizationId: string): Promise<Belon
 
   return {
     distribution,
-    totalStudents: filteredData.length,
+    totalStudents: (data || []).length,
     studentsByStatus,
   };
 }

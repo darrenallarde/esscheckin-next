@@ -30,6 +30,7 @@ import {
   Loader2,
   Send,
   Heart,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -54,7 +55,9 @@ import { PersonPastoralContent } from "./PersonPastoralContent";
 import { FamilySection } from "@/components/families/FamilySection";
 import { ParentChildrenTab } from "./ParentChildrenTab";
 import { InviteGuardianModal } from "./InviteGuardianModal";
+import { EditPersonModal } from "./EditPersonModal";
 import { RoleBadge, ClaimedBadge } from "./RoleBadge";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { OrgRole } from "@/hooks/queries/use-people";
 
 // Extended Student type that includes role information
@@ -108,7 +111,12 @@ export function PersonProfileModal({
   const [activeTab, setActiveTab] = useState("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { toast } = useToast();
+  const { userRole, isSuperAdmin } = useOrganization();
+
+  // Check if current user is an admin
+  const isAdmin = isSuperAdmin || userRole === "owner" || userRole === "admin";
 
   const { data: messages, isLoading: messagesLoading } = useSmsConversation(
     open && person ? person.id : null
@@ -183,48 +191,62 @@ export function PersonProfileModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span>{fullName}</span>
-                {/* Role badge for non-students */}
-                {!isStudent && person.role && (
-                  <RoleBadge role={person.role} size="sm" />
+          <div className="flex items-start justify-between">
+            <DialogTitle className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>{fullName}</span>
+                  {/* Role badge for non-students */}
+                  {!isStudent && person.role && (
+                    <RoleBadge role={person.role} size="sm" />
+                  )}
+                  {/* Grade for students */}
+                  {isStudent && person.grade && (
+                    <Badge variant="secondary">Grade {person.grade}</Badge>
+                  )}
+                  {/* Claimed status for guardians */}
+                  {isGuardian && (
+                    <ClaimedBadge isClaimed={!isUnclaimed} size="sm" />
+                  )}
+                </div>
+                {/* Status line for students */}
+                {isStudent && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={belongingStatusColors[belongingStatus] || "bg-gray-500"}>
+                      {belongingStatus}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {rankEmojis[person.current_rank] || "🌱"} {person.current_rank}
+                    </span>
+                  </div>
                 )}
-                {/* Grade for students */}
-                {isStudent && person.grade && (
-                  <Badge variant="secondary">Grade {person.grade}</Badge>
-                )}
-                {/* Claimed status for guardians */}
-                {isGuardian && (
-                  <ClaimedBadge isClaimed={!isUnclaimed} size="sm" />
+                {/* Children count for guardians */}
+                {isGuardian && person.linked_children_count !== undefined && person.linked_children_count > 0 && (
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <Heart className="h-3.5 w-3.5" />
+                    <span>
+                      {person.linked_children_count} {person.linked_children_count === 1 ? "child" : "children"}
+                    </span>
+                  </div>
                 )}
               </div>
-              {/* Status line for students */}
-              {isStudent && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className={belongingStatusColors[belongingStatus] || "bg-gray-500"}>
-                    {belongingStatus}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {rankEmojis[person.current_rank] || "🌱"} {person.current_rank}
-                  </span>
-                </div>
-              )}
-              {/* Children count for guardians */}
-              {isGuardian && person.linked_children_count !== undefined && person.linked_children_count > 0 && (
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                  <Heart className="h-3.5 w-3.5" />
-                  <span>
-                    {person.linked_children_count} {person.linked_children_count === 1 ? "child" : "children"}
-                  </span>
-                </div>
-              )}
-            </div>
-          </DialogTitle>
+            </DialogTitle>
+            {/* Edit button - visible only to admins */}
+            {isAdmin && organizationId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="shrink-0"
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {/* Invite to Claim button for unclaimed guardians */}
@@ -610,6 +632,28 @@ export function PersonProfileModal({
           guardianName={fullName}
           guardianEmail={person.email}
           guardianPhone={person.phone_number}
+        />
+      )}
+
+      {/* Edit Person Modal */}
+      {organizationId && (
+        <EditPersonModal
+          person={person ? {
+            profile_id: person.id,
+            first_name: person.first_name,
+            last_name: person.last_name,
+            email: person.email,
+            phone_number: person.phone_number,
+            grade: person.grade,
+            high_school: person.high_school,
+            role: person.role || person.user_type || undefined,
+          } : null}
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          organizationId={organizationId}
+          onSuccess={() => {
+            // Could refresh the person data here
+          }}
         />
       )}
     </Dialog>
