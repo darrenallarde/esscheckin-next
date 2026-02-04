@@ -85,6 +85,10 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
               orgId: org.id,
               orgSlug,
               role: "admin",
+              userId: user.id,
+              email: user.email!,
+              displayName: user.user_metadata?.name,
+              isSuperAdmin: true,
             });
           } else {
             // Not a super admin and no access
@@ -106,6 +110,11 @@ export default function OrgLayout({ children }: OrgLayoutProps) {
             orgId: matchingOrg.organization_id,
             orgSlug,
             role: matchingOrg.role as "admin" | "leader" | "viewer",
+            userId: user.id,
+            email: user.email!,
+            displayName: user.user_metadata?.name,
+            isSuperAdmin: false,
+            orgCount: orgs.length,
           });
         }
       } catch (err) {
