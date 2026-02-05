@@ -41,6 +41,7 @@ export interface Person {
   city: string | null;
   state: string | null;
   zip: string | null;
+  instagram_handle: string | null;
   last_check_in: string | null;
   total_check_ins: number;
   check_ins_last_4_weeks: number;
@@ -88,6 +89,7 @@ interface RpcPersonRow {
   city: string | null;
   state: string | null;
   zip: string | null;
+  instagram_handle: string | null;
   last_check_in: string | null;
   total_check_ins: number;
   check_ins_last_4_weeks: number;

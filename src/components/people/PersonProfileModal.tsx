@@ -74,6 +74,7 @@ interface ExtendedStudent extends Student {
   city?: string | null;
   state?: string | null;
   zip?: string | null;
+  instagram_handle?: string | null;
 }
 
 interface PersonProfileModalProps {
@@ -785,8 +786,15 @@ export function PersonProfileModal({
             last_name: person.last_name,
             email: person.email,
             phone_number: person.phone_number,
+            date_of_birth: person.date_of_birth,
             grade: person.grade,
             high_school: person.high_school,
+            gender: person.gender,
+            instagram_handle: person.instagram_handle,
+            address: person.address,
+            city: person.city,
+            state: person.state,
+            zip: person.zip,
             role: person.role || person.user_type || undefined,
           } : null}
           open={showEditModal}

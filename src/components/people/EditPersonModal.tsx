@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, User, Phone, Mail, GraduationCap, MapPin } from "lucide-react";
+import { Loader2, User, Phone, Mail, GraduationCap, MapPin, Cake, AtSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminEditPerson } from "@/hooks/mutations/use-admin-edit-person";
 
@@ -39,9 +39,11 @@ const editPersonSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phoneNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   grade: z.string().optional(),
   highSchool: z.string().optional(),
   gender: z.enum(["male", "female", "none"]).optional(),
+  instagramHandle: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -56,9 +58,11 @@ interface PersonData {
   last_name: string;
   email?: string | null;
   phone_number?: string | null;
+  date_of_birth?: string | null;
   grade?: string | null;
   high_school?: string | null;
   gender?: string | null;
+  instagram_handle?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
@@ -93,9 +97,11 @@ export function EditPersonModal({
       lastName: "",
       email: "",
       phoneNumber: "",
+      dateOfBirth: "",
       grade: "none",
       highSchool: "",
       gender: "none",
+      instagramHandle: "",
       address: "",
       city: "",
       state: "",
@@ -111,9 +117,11 @@ export function EditPersonModal({
         lastName: person.last_name || "",
         email: person.email || "",
         phoneNumber: person.phone_number || "",
+        dateOfBirth: person.date_of_birth || "",
         grade: person.grade || "none",
         highSchool: person.high_school || "",
         gender: (person.gender as "male" | "female") || "none",
+        instagramHandle: person.instagram_handle || "",
         address: person.address || "",
         city: person.city || "",
         state: person.state || "",
@@ -133,9 +141,11 @@ export function EditPersonModal({
         lastName: data.lastName,
         email: data.email || undefined,
         phoneNumber: data.phoneNumber || undefined,
+        dateOfBirth: data.dateOfBirth || undefined,
         grade: isStudent && data.grade && data.grade !== "none" ? data.grade : undefined,
         highSchool: isStudent ? data.highSchool || undefined : undefined,
         gender: isStudent && data.gender && data.gender !== "none" ? data.gender : undefined,
+        instagramHandle: isStudent ? data.instagramHandle || undefined : undefined,
         address: isStudent ? data.address || undefined : undefined,
         city: isStudent ? data.city || undefined : undefined,
         state: isStudent ? data.state || undefined : undefined,
@@ -209,6 +219,23 @@ export function EditPersonModal({
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5">
+                      <Cake className="h-3.5 w-3.5" />
+                      Date of Birth
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Contact Info Section */}
@@ -320,6 +347,23 @@ export function EditPersonModal({
                       <FormLabel>School</FormLabel>
                       <FormControl>
                         <Input placeholder="School name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="instagramHandle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <AtSign className="h-3.5 w-3.5" />
+                        Instagram
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="username" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

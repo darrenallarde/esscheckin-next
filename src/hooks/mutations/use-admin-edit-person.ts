@@ -9,6 +9,7 @@ export interface UpdatePersonInput {
   lastName?: string;
   email?: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
   // Student profile fields
   grade?: string;
   highSchool?: string;
@@ -17,6 +18,7 @@ export interface UpdatePersonInput {
   city?: string;
   state?: string;
   zip?: string;
+  instagramHandle?: string;
 }
 
 export function useAdminEditPerson() {
@@ -32,6 +34,7 @@ export function useAdminEditPerson() {
         p_last_name: input.lastName,
         p_email: input.email,
         p_phone_number: input.phoneNumber,
+        p_date_of_birth: input.dateOfBirth || null,
         p_grade: input.grade,
         p_high_school: input.highSchool,
         p_gender: input.gender,
@@ -39,6 +42,7 @@ export function useAdminEditPerson() {
         p_city: input.city,
         p_state: input.state,
         p_zip: input.zip,
+        p_instagram_handle: input.instagramHandle,
       });
 
       if (error) throw error;

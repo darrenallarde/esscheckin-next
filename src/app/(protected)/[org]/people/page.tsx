@@ -48,7 +48,18 @@ type ActivityFilter = "all" | "active" | "inactive" | "never" | "attention";
 const GRADES = ["6", "7", "8", "9", "10", "11", "12"];
 
 // Convert Person to Student for backwards-compatible modals
-function personToStudent(person: Person): Student {
+function personToStudent(person: Person): Student & {
+  role?: string;
+  is_claimed?: boolean;
+  linked_children_count?: number;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  instagram_handle?: string | null;
+} {
   return {
     id: person.profile_id,
     profile_id: person.profile_id,
@@ -69,6 +80,17 @@ function personToStudent(person: Person): Student {
       name: person.group_names[idx] || "",
       color: null,
     })),
+    // Extended fields for PersonProfileModal / EditPersonModal
+    role: person.role,
+    is_claimed: person.is_claimed,
+    linked_children_count: person.linked_children_count,
+    gender: person.gender,
+    date_of_birth: person.date_of_birth,
+    address: person.address,
+    city: person.city,
+    state: person.state,
+    zip: person.zip,
+    instagram_handle: person.instagram_handle,
   };
 }
 
