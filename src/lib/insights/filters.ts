@@ -36,6 +36,37 @@ export interface PersonData {
 }
 
 /**
+ * Derive belonging status from check-in activity data.
+ * Used by both list and chart hooks for consistent engagement classification.
+ */
+export function deriveBelongingStatus(
+  totalCheckIns: number,
+  lastCheckIn: string | null
+): string | null {
+  if (totalCheckIns === 0 || !lastCheckIn) {
+    return "new";
+  }
+
+  const daysSinceCheckIn = Math.floor(
+    (Date.now() - new Date(lastCheckIn).getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (totalCheckIns >= 10 && daysSinceCheckIn <= 7) {
+    return "ultra_core";
+  }
+  if (totalCheckIns >= 5 && daysSinceCheckIn <= 14) {
+    return "core";
+  }
+  if (daysSinceCheckIn <= 21) {
+    return "connected";
+  }
+  if (daysSinceCheckIn <= 45) {
+    return "fringe";
+  }
+  return "missing";
+}
+
+/**
  * Map belonging_status from DB to our BelongingLevel type
  */
 function mapBelongingStatus(status: string | null | undefined): BelongingLevel | undefined {
@@ -102,10 +133,7 @@ export function matchesFilters(
     const filterGroupNames = filters.groups.groupNames.map((n) => n.toLowerCase());
 
     const matchesAnyGroup = filterGroupNames.some((filterName) =>
-      personGroupNames.some(
-        (personName) =>
-          personName.includes(filterName) || filterName.includes(personName)
-      )
+      personGroupNames.some((personName) => personName.includes(filterName))
     );
 
     if (!matchesAnyGroup) {
@@ -116,9 +144,8 @@ export function matchesFilters(
     if (filters.groups.role && filters.groups.role !== "all") {
       const hasCorrectRole = person.groups.some(
         (g) =>
-          filterGroupNames.some(
-            (fn) => g.name.toLowerCase().includes(fn) || fn.includes(g.name.toLowerCase())
-          ) && g.role === filters.groups!.role
+          filterGroupNames.some((fn) => g.name.toLowerCase().includes(fn)) &&
+          g.role === filters.groups!.role
       );
       if (!hasCorrectRole) {
         return false;
@@ -191,7 +218,7 @@ export function matchesFilters(
   if (filters.firstName) {
     const personFirst = (person.first_name || "").toLowerCase();
     const filterFirst = filters.firstName.toLowerCase();
-    if (!personFirst.includes(filterFirst) && !filterFirst.includes(personFirst)) {
+    if (!personFirst.includes(filterFirst)) {
       return false;
     }
   }
@@ -200,7 +227,7 @@ export function matchesFilters(
   if (filters.lastName) {
     const personLast = (person.last_name || "").toLowerCase();
     const filterLast = filters.lastName.toLowerCase();
-    if (!personLast.includes(filterLast) && !filterLast.includes(personLast)) {
+    if (!personLast.includes(filterLast)) {
       return false;
     }
   }

@@ -7,50 +7,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { filterBySegment, type PersonData } from "@/lib/insights/filters";
+import {
+  filterBySegment,
+  deriveBelongingStatus,
+  type PersonData,
+} from "@/lib/insights/filters";
 import type { ParsedQuery, ListResults } from "@/lib/insights/types";
-
-/**
- * Derive belonging status from activity data
- * Since get_organization_people doesn't return belonging_status directly,
- * we calculate it from check-in count and last check-in date.
- */
-function deriveBelongingStatus(
-  totalCheckIns: number,
-  lastCheckIn: string | null
-): string | null {
-  // No check-ins = new or never engaged
-  if (totalCheckIns === 0 || !lastCheckIn) {
-    return "new";
-  }
-
-  const daysSinceCheckIn = Math.floor(
-    (Date.now() - new Date(lastCheckIn).getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  // Ultra core: 10+ check-ins and active within 7 days
-  if (totalCheckIns >= 10 && daysSinceCheckIn <= 7) {
-    return "ultra_core";
-  }
-
-  // Core: 5+ check-ins and active within 14 days
-  if (totalCheckIns >= 5 && daysSinceCheckIn <= 14) {
-    return "core";
-  }
-
-  // Connected: active within 21 days
-  if (daysSinceCheckIn <= 21) {
-    return "connected";
-  }
-
-  // Fringe: active within 45 days
-  if (daysSinceCheckIn <= 45) {
-    return "fringe";
-  }
-
-  // Missing: not seen in 45+ days
-  return "missing";
-}
 
 // Re-use the Person type structure from use-people
 interface RpcPersonRow {
@@ -100,34 +62,47 @@ async function fetchAndFilterPeople(
 
   const people = (data as RpcPersonRow[]) || [];
 
-  // Transform to PersonData format for filtering
-  const personDataList: PersonData[] = people.map((row) => ({
-    profile_id: row.profile_id,
-    first_name: row.first_name,
-    last_name: row.last_name,
-    phone_number: row.phone_number,
-    email: row.email,
-    grade: row.grade ? parseInt(row.grade, 10) : null,
-    gender: row.gender,
-    role: row.role,
-    status: row.status,
-    // Derive belonging_status from activity data instead of membership status
-    // row.status is "active"/"archived" which is wrong for engagement filtering
-    belonging_status: deriveBelongingStatus(row.total_check_ins, row.last_check_in),
-    last_check_in: row.last_check_in,
-    check_in_count: row.total_check_ins,
-    groups:
-      row.group_ids?.map((id, idx) => ({
-        id,
-        name: row.group_names?.[idx] || "",
-        role: row.group_roles?.[idx] || "member",
-      })) || [],
-  }));
+  // Transform to PersonData format for filtering, deduplicating by profile_id
+  const seen = new Set<string>();
+  const personDataList: PersonData[] = [];
+  for (const row of people) {
+    if (seen.has(row.profile_id)) continue;
+    seen.add(row.profile_id);
+    personDataList.push({
+      profile_id: row.profile_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      phone_number: row.phone_number,
+      email: row.email,
+      grade: row.grade ? parseInt(row.grade, 10) : null,
+      gender: row.gender,
+      role: row.role,
+      status: row.status,
+      // Derive belonging_status from activity data instead of membership status
+      // row.status is "active"/"archived" which is wrong for engagement filtering
+      belonging_status: deriveBelongingStatus(row.total_check_ins, row.last_check_in),
+      last_check_in: row.last_check_in,
+      check_in_count: row.total_check_ins,
+      groups:
+        row.group_ids?.map((id, idx) => ({
+          id,
+          name: row.group_names?.[idx] || "",
+          role: row.group_roles?.[idx] || "member",
+        })) || [],
+    });
+  }
 
-  // Apply filters from the first segment (for list mode)
-  // List mode typically has a single segment
-  const segment = parsedQuery.segments[0];
-  const filteredPeople = filterBySegment(personDataList, segment);
+  // Apply filters from all segments and union results (dedup by profileId)
+  const seenProfiles = new Set<string>();
+  const filteredPeople = [];
+  for (const segment of parsedQuery.segments) {
+    for (const person of filterBySegment(personDataList, segment)) {
+      if (!seenProfiles.has(person.profileId)) {
+        seenProfiles.add(person.profileId);
+        filteredPeople.push(person);
+      }
+    }
+  }
 
   return {
     mode: "list",

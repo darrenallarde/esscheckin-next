@@ -7,6 +7,7 @@ import { InsightsActions } from "./InsightsActions";
 import { ChartControls } from "./ChartControls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import type {
   InsightsResults as InsightsResultsType,
   ParsedQuery,
@@ -15,6 +16,7 @@ import type {
   ListResults,
   ChartResults,
   PersonResult,
+  SegmentFilters,
 } from "@/lib/insights/types";
 
 interface InsightsResultsProps {
@@ -27,6 +29,42 @@ interface InsightsResultsProps {
   onPersonClick?: (person: PersonResult) => void;
   organizationId: string | null;
   orgSlug?: string | null;
+}
+
+/**
+ * Extract readable filter descriptions from parsed segment filters
+ */
+function getFilterChips(filters: SegmentFilters): string[] {
+  const chips: string[] = [];
+
+  if (filters.firstName) {
+    chips.push(`firstName: "${filters.firstName}"`);
+  }
+  if (filters.lastName) {
+    chips.push(`lastName: "${filters.lastName}"`);
+  }
+  if (filters.gender && filters.gender !== "all") {
+    chips.push(`gender: ${filters.gender}`);
+  }
+  if (filters.grades?.grades && filters.grades.grades.length > 0) {
+    const label = filters.grades.label || `grades ${filters.grades.grades.join(", ")}`;
+    chips.push(`grade: ${label}`);
+  }
+  if (filters.groups?.groupNames && filters.groups.groupNames.length > 0) {
+    chips.push(`group: ${filters.groups.groupNames.join(", ")}`);
+  }
+  if (filters.activity) {
+    const days = filters.activity.days ? ` ${filters.activity.days}d` : "";
+    chips.push(`activity: ${filters.activity.type}${days}`);
+  }
+  if (filters.engagement?.belongingLevels && filters.engagement.belongingLevels.length > 0) {
+    chips.push(`belonging: ${filters.engagement.belongingLevels.join(", ")}`);
+  }
+  if (filters.engagement?.minCheckins !== undefined) {
+    chips.push(`min check-ins: ${filters.engagement.minCheckins}`);
+  }
+
+  return chips;
 }
 
 export function InsightsResults({
@@ -118,6 +156,22 @@ export function InsightsResults({
           />
         )}
       </CardHeader>
+
+      {/* Filter transparency: show what filters the NLP extracted */}
+      {isListMode && parsedQuery.segments[0] && (() => {
+        const chips = getFilterChips(parsedQuery.segments[0].filters);
+        if (chips.length === 0) return null;
+        return (
+          <div className="px-6 pb-2 flex flex-wrap gap-1.5 items-center">
+            <span className="text-xs text-muted-foreground mr-1">Filters:</span>
+            {chips.map((chip) => (
+              <Badge key={chip} variant="secondary" className="text-xs font-normal">
+                {chip}
+              </Badge>
+            ))}
+          </div>
+        );
+      })()}
 
       <CardContent className="space-y-4">
         {/* Results View */}

@@ -7,7 +7,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { getSegmentProfileIds, type PersonData } from "@/lib/insights/filters";
+import {
+  getSegmentProfileIds,
+  deriveBelongingStatus,
+  type PersonData,
+} from "@/lib/insights/filters";
 import {
   aggregateCheckIns,
   calculateSegmentStats,
@@ -56,27 +60,33 @@ async function fetchChartData(
 
   const people = (peopleData as RpcPersonRow[]) || [];
 
-  // Transform to PersonData format for filtering
-  const personDataList: PersonData[] = people.map((row) => ({
-    profile_id: row.profile_id,
-    first_name: row.first_name,
-    last_name: row.last_name,
-    phone_number: row.phone_number,
-    email: row.email,
-    grade: row.grade ? parseInt(row.grade, 10) : null,
-    gender: row.gender,
-    role: row.role,
-    status: row.status,
-    belonging_status: row.status,
-    last_check_in: row.last_check_in,
-    check_in_count: row.total_check_ins,
-    groups:
-      row.group_ids?.map((id, idx) => ({
-        id,
-        name: row.group_names?.[idx] || "",
-        role: row.group_roles?.[idx] || "member",
-      })) || [],
-  }));
+  // Transform to PersonData format for filtering, deduplicating by profile_id
+  const seen = new Set<string>();
+  const personDataList: PersonData[] = [];
+  for (const row of people) {
+    if (seen.has(row.profile_id)) continue;
+    seen.add(row.profile_id);
+    personDataList.push({
+      profile_id: row.profile_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      phone_number: row.phone_number,
+      email: row.email,
+      grade: row.grade ? parseInt(row.grade, 10) : null,
+      gender: row.gender,
+      role: row.role,
+      status: row.status,
+      belonging_status: deriveBelongingStatus(row.total_check_ins, row.last_check_in),
+      last_check_in: row.last_check_in,
+      check_in_count: row.total_check_ins,
+      groups:
+        row.group_ids?.map((id, idx) => ({
+          id,
+          name: row.group_names?.[idx] || "",
+          role: row.group_roles?.[idx] || "member",
+        })) || [],
+    });
+  }
 
   // 2. Get profile IDs for each segment
   const segmentProfileIds = getSegmentProfileIds(
@@ -91,26 +101,54 @@ async function fetchChartData(
   };
   const { start, end } = getDateRange(timeRange);
 
+  const metric = parsedQuery.metric?.metric || "unique_checkins";
+
   // 4. Fetch check-ins within the date range
-  const { data: checkInsData, error: checkInsError } = await supabase
+  // For new_students metric, we also need historical data to determine first-timers
+  const checkInQuery = supabase
     .from("check_ins")
     .select("id, profile_id, checked_in_at, organization_id")
-    .eq("organization_id", organizationId)
-    .gte("checked_in_at", start.toISOString())
-    .lte("checked_in_at", end.toISOString())
+    .eq("organization_id", organizationId);
+
+  if (metric === "new_students") {
+    // Fetch all check-ins (no date filter) so we can determine first-timers
+    // We still need to know who checked in before the range
+  } else {
+    checkInQuery
+      .gte("checked_in_at", start.toISOString())
+      .lte("checked_in_at", end.toISOString());
+  }
+
+  const { data: checkInsData, error: checkInsError } = await checkInQuery
     .order("checked_in_at", { ascending: true });
 
   if (checkInsError) throw checkInsError;
 
-  const checkIns: CheckInRecord[] = (checkInsData || []).map((row) => ({
+  const allCheckIns: CheckInRecord[] = (checkInsData || []).map((row) => ({
     id: row.id,
     profile_id: row.profile_id,
     checked_in_at: row.checked_in_at,
     organization_id: row.organization_id,
   }));
 
+  // For non-new_students metrics, allCheckIns is already date-filtered
+  // For new_students, filter to range for the main set but pass full history
+  const checkIns =
+    metric === "new_students"
+      ? allCheckIns.filter((ci) => {
+          const d = new Date(ci.checked_in_at);
+          return d >= start && d <= end;
+        })
+      : allCheckIns;
+
   // 5. Aggregate check-ins by segment and time period
-  const dataPoints = aggregateCheckIns(checkIns, segmentProfileIds, timeRange);
+  const dataPoints = aggregateCheckIns(
+    checkIns,
+    segmentProfileIds,
+    timeRange,
+    metric,
+    metric === "new_students" ? allCheckIns : undefined
+  );
 
   // 6. Calculate segment statistics
   const segmentLabels = parsedQuery.segments.map((s) => s.label);

@@ -8,6 +8,7 @@ import type {
   TimeRangeExtraction,
   TimeGranularity,
   ChartDataPoint,
+  MetricType,
 } from "./types";
 
 /**
@@ -166,36 +167,87 @@ export function generatePeriods(
 }
 
 /**
- * Aggregate check-ins by segment and time period
+ * Aggregate check-ins by segment and time period.
+ * Supports multiple metric types:
+ *  - unique_checkins: count distinct people who checked in (default)
+ *  - total_checkins: total check-in count including duplicates
+ *  - attendance_rate: percentage of segment that checked in
+ *  - new_students: first-time check-ins within the period
  */
 export function aggregateCheckIns(
   checkIns: CheckInRecord[],
   segmentProfileIds: Map<string, string[]>,
-  timeRange: TimeRangeExtraction
+  timeRange: TimeRangeExtraction,
+  metric: MetricType = "unique_checkins",
+  allCheckIns?: CheckInRecord[] // Full history needed for new_students
 ): ChartDataPoint[] {
   const { start, end } = getDateRange(timeRange);
   const periods = generatePeriods(start, end, timeRange.granularity);
+
+  // For new_students, pre-compute who checked in before the chart range
+  let profilesSeenBefore: Set<string> | undefined;
+  if (metric === "new_students") {
+    profilesSeenBefore = new Set<string>();
+    const allData = allCheckIns || checkIns;
+    for (const ci of allData) {
+      if (new Date(ci.checked_in_at) < start) {
+        profilesSeenBefore.add(ci.profile_id);
+      }
+    }
+  }
+
+  // Track cumulative first-timers across periods for new_students
+  const seenDuringChart = new Set<string>();
 
   return periods.map((period) => {
     const values: Record<string, number> = {};
 
     segmentProfileIds.forEach((profileIds, segmentLabel) => {
-      // Count unique profiles that checked in during this period
-      const uniqueProfiles = new Set<string>();
+      const profileIdSet = new Set(profileIds);
+      const periodCheckIns: CheckInRecord[] = [];
 
       for (const checkIn of checkIns) {
         const checkInDate = new Date(checkIn.checked_in_at);
-
         if (
           checkInDate >= period.start &&
           checkInDate < period.end &&
-          profileIds.includes(checkIn.profile_id)
+          profileIdSet.has(checkIn.profile_id)
         ) {
-          uniqueProfiles.add(checkIn.profile_id);
+          periodCheckIns.push(checkIn);
         }
       }
 
-      values[segmentLabel] = uniqueProfiles.size;
+      switch (metric) {
+        case "total_checkins": {
+          values[segmentLabel] = periodCheckIns.length;
+          break;
+        }
+        case "attendance_rate": {
+          const uniqueInPeriod = new Set(periodCheckIns.map((ci) => ci.profile_id));
+          const total = profileIds.length;
+          values[segmentLabel] =
+            total > 0 ? Math.round((uniqueInPeriod.size / total) * 100) : 0;
+          break;
+        }
+        case "new_students": {
+          let count = 0;
+          const uniqueInPeriod = new Set(periodCheckIns.map((ci) => ci.profile_id));
+          Array.from(uniqueInPeriod).forEach((pid) => {
+            if (!profilesSeenBefore!.has(pid) && !seenDuringChart.has(pid)) {
+              count++;
+              seenDuringChart.add(pid);
+            }
+          });
+          values[segmentLabel] = count;
+          break;
+        }
+        case "unique_checkins":
+        default: {
+          const uniqueProfiles = new Set(periodCheckIns.map((ci) => ci.profile_id));
+          values[segmentLabel] = uniqueProfiles.size;
+          break;
+        }
+      }
     });
 
     return {
