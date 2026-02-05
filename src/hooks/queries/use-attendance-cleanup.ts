@@ -152,10 +152,10 @@ async function fetchCheckinsWithDetails(
       checked_in_at,
       profiles!inner (
         first_name,
-        last_name
-      ),
-      student_profiles (
-        grade
+        last_name,
+        student_profiles (
+          grade
+        )
       )
     `)
     .eq("organization_id", organizationId)
@@ -169,7 +169,11 @@ async function fetchCheckinsWithDetails(
     // Handle both single object and array result from Supabase join
     const profiles = row.profiles as unknown;
     const profileData = Array.isArray(profiles) ? profiles[0] : profiles;
-    const typedProfile = profileData as { first_name: string; last_name: string };
+    const typedProfile = profileData as {
+      first_name: string;
+      last_name: string;
+      student_profiles: Array<{ grade: string | null }> | null;
+    };
 
     return {
       id: row.id,
@@ -177,7 +181,7 @@ async function fetchCheckinsWithDetails(
       checked_in_at: row.checked_in_at,
       first_name: typedProfile?.first_name ?? "",
       last_name: typedProfile?.last_name ?? "",
-      grade: row.student_profiles?.[0]?.grade || null,
+      grade: typedProfile?.student_profiles?.[0]?.grade || null,
     };
   });
 }

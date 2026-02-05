@@ -88,7 +88,6 @@ async function fetchQuestBoard(orgId: string): Promise<QuestBoard> {
     },
   };
 
-  console.log("[fetchQuestBoard] Parsed board:", board);
   return board;
 }
 
@@ -177,7 +176,6 @@ export function generateQuests(
 ): { dailyQuests: Quest[]; priorityQuests: Quest[] } {
   // Fallback quests when board data is unavailable (RPC failed or loading)
   if (!board) {
-    console.log("[generateQuests] No board data, returning fallback quests");
     return {
       dailyQuests: [
         {

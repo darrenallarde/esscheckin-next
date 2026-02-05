@@ -32,9 +32,6 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
   const { data: miaStudents } = useMiaStudents(organizationId, 5);
   const completeQuest = useCompleteQuest();
 
-  // Debug logging (temporary)
-  console.log("[QuestBoard] Query state:", { board, boardLoading, isPending, isError, error });
-
   const { dailyQuests, priorityQuests } = generateQuests(board, miaStudents, orgSlug);
 
   // Calculate progress
