@@ -38,6 +38,7 @@ async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
     .select(`
       id,
       student_id,
+      profile_id,
       key_insight,
       action_bullets,
       context_paragraph,
@@ -50,7 +51,7 @@ async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
       completed_at,
       completion_notes,
       generated_at,
-      students(first_name, last_name)
+      profiles(first_name, last_name)
     `)
     .in("status", ["pending", "accepted", "completed", "dismissed"])
     .eq("is_dismissed", false)
@@ -96,13 +97,13 @@ async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
 
   (recommendations || []).forEach(rec => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const student = rec.students as any;
+    const profile = rec.profiles as any;
     const interactionInfo = interactionMap.get(rec.id) || { count: 0, lastAt: null };
 
     const transformed: AIRecommendation = {
       id: rec.id,
-      student_id: rec.student_id!,
-      student_name: student ? `${student.first_name} ${student.last_name}` : "Unknown",
+      student_id: rec.profile_id || rec.student_id!,
+      student_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown",
       key_insight: rec.key_insight,
       action_bullets: rec.action_bullets || [],
       context_paragraph: rec.context_paragraph,

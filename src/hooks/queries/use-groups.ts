@@ -148,10 +148,10 @@ async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
       profiles(
         id,
         first_name,
-        last_name
-      ),
-      student_profiles(grade),
-      student_game_stats(total_points, current_rank)
+        last_name,
+        student_profiles(grade),
+        student_game_stats(total_points, current_rank)
+      )
     `)
     .eq("group_id", groupId)
     .eq("role", "member");
@@ -200,10 +200,8 @@ async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
     memberData = memberships.map((m) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profile = m.profiles as any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const studentProfile = m.student_profiles as any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gameStats = m.student_game_stats as any;
+      const studentProfile = profile?.student_profiles?.[0];
+      const gameStats = profile?.student_game_stats?.[0];
       const streak = streakMap.get(m.profile_id) || { current_streak: 0, best_streak: 0 };
 
       return {
@@ -221,41 +219,47 @@ async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
       };
     }).filter((m) => m.profile_id);
   } else {
-    // Fallback to old group_members table
+    // Fallback: get student_ids from old group_members, then look up profiles
     const { data: members, error } = await supabase
       .from("group_members")
-      .select(`
-        id,
-        student_id,
-        students(
-          id,
-          first_name,
-          last_name,
-          grade,
-          student_game_stats(total_points, current_rank)
-        )
-      `)
+      .select("id, student_id")
       .eq("group_id", groupId);
 
     if (error) throw error;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const studentIds = members?.map((m) => (m.students as any)?.id).filter(Boolean) || [];
+    const studentIds = members?.map((m) => m.student_id).filter(Boolean) || [];
 
     if (studentIds.length === 0) {
       return [];
     }
 
+    // Look up profiles for these student IDs (may be profile IDs or legacy student IDs)
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        student_profiles(grade),
+        student_game_stats(total_points, current_rank)
+      `)
+      .in("id", studentIds);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profileMap = new Map<string, any>();
+    (profiles || []).forEach((p) => profileMap.set(p.id, p));
+
     const { data: checkIns } = await supabase
       .from("check_ins")
-      .select("student_id, checked_in_at")
-      .in("student_id", studentIds)
+      .select("profile_id, student_id, checked_in_at")
+      .or(`profile_id.in.(${studentIds.join(",")}),student_id.in.(${studentIds.join(",")})`)
       .order("checked_in_at", { ascending: false });
 
     const lastCheckInMap = new Map<string, string>();
     (checkIns || []).forEach((ci) => {
-      if (!lastCheckInMap.has(ci.student_id)) {
-        lastCheckInMap.set(ci.student_id, ci.checked_in_at);
+      const id = ci.profile_id || ci.student_id;
+      if (id && !lastCheckInMap.has(id)) {
+        lastCheckInMap.set(id, ci.checked_in_at);
       }
     });
 
@@ -280,19 +284,20 @@ async function fetchGroupMembers(groupId: string): Promise<GroupMember[]> {
 
     memberData = (members || []).map((member) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const student = member.students as any;
-      const gameStats = student?.student_game_stats?.[0];
-      const streak = streakMap.get(student?.id) || { current_streak: 0, best_streak: 0 };
+      const profile = profileMap.get(member.student_id) as any;
+      const studentProfile = profile?.student_profiles?.[0];
+      const gameStats = profile?.student_game_stats?.[0];
+      const streak = streakMap.get(member.student_id) || { current_streak: 0, best_streak: 0 };
 
       return {
         id: member.id,
-        student_id: student?.id || member.student_id,
-        first_name: student?.first_name || "",
-        last_name: student?.last_name || "",
-        grade: student?.grade || null,
+        student_id: member.student_id,
+        first_name: profile?.first_name || "",
+        last_name: profile?.last_name || "",
+        grade: studentProfile?.grade || null,
         current_rank: gameStats?.current_rank || "Newcomer",
         total_points: gameStats?.total_points || 0,
-        last_check_in: lastCheckInMap.get(student?.id) || null,
+        last_check_in: lastCheckInMap.get(member.student_id) || null,
         current_streak: streak.current_streak,
         best_streak: streak.best_streak,
       };
