@@ -57,12 +57,7 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Quest Board - Daily Habits & Priority Actions */}
-      {organizationId && (
-        <QuestBoard organizationId={organizationId} orgSlug={orgSlug} />
-      )}
-
-      {/* Belonging Spectrum - Prominent placement */}
+      {/* Belonging Spectrum - Top placement */}
       {!belongingLoading && belongingData && (
         <BelongingSpectrum
           distribution={belongingData.distribution}
@@ -71,7 +66,26 @@ export default function HomePage() {
         />
       )}
 
-      {/* Main Content - Two Column Layout */}
+      {/* Quest Board + New Students - Two Column Layout */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Quest Board - Daily Habits & Priority Actions */}
+        {organizationId && (
+          <QuestBoard organizationId={organizationId} orgSlug={orgSlug} />
+        )}
+
+        {/* New Students Card */}
+        {organizationId && orgSlug && (
+          <NewStudentsCard
+            data={newStudents ?? []}
+            loading={newStudentsLoading}
+            organizationId={organizationId}
+            orgSlug={orgSlug}
+            viewAllHref={orgPath(orgSlug, "/people?filter=new")}
+          />
+        )}
+      </div>
+
+      {/* Pastoral Queue + Recent Messages - Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pastoral Queue */}
         <PastoralQueue
@@ -88,17 +102,6 @@ export default function HomePage() {
           onConversationClick={handleConversationClick}
         />
       </div>
-
-      {/* New Students Card - Show when there are students needing triage */}
-      {!newStudentsLoading && newStudents && newStudents.length > 0 && organizationId && orgSlug && (
-        <NewStudentsCard
-          data={newStudents}
-          loading={newStudentsLoading}
-          organizationId={organizationId}
-          orgSlug={orgSlug}
-          viewAllHref={orgPath(orgSlug, "/people?filter=new")}
-        />
-      )}
     </div>
   );
 }
