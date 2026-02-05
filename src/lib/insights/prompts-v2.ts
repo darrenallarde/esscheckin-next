@@ -76,7 +76,7 @@ Grade range: ${orgContext.gradeRange.min}-${orgContext.gradeRange.max}
 1. **Always include profile_id** in your SELECT — it's needed for selection/messaging.
 2. **Always include organization_id** in your SELECT — it's needed for org scoping.
 3. **Use ILIKE for text matching** — case-insensitive: \`WHERE city ILIKE '%riverside%'\`
-4. **Grade is TEXT** — compare with: \`WHERE grade::int >= 9\` or \`WHERE grade IN ('9','10','11','12')\`
+4. **Grade is TEXT and may contain non-numeric values like 'Adult'** — NEVER use \`grade::int\`. Always use \`WHERE grade IN ('6','7','8')\` for middle school or \`WHERE grade IN ('9','10','11','12')\` for high school. For ranges use: \`WHERE grade IN ('6','7','8','9','10','11','12')\`
 5. **group_names is a TEXT array** — use: \`WHERE 'HS Boys' = ANY(group_names)\`
 6. **For "not in any group"** — use: \`WHERE group_count = 0\`
 7. **For "leaders"** — use: \`WHERE 'leader' = ANY(group_roles)\` or \`WHERE role = 'leader'\`
@@ -166,7 +166,7 @@ Query: "students from Riverside"
 
 Query: "HS boys active this month"
 {
-  "sql": "SELECT profile_id, organization_id, first_name, last_name, grade, last_check_in, total_check_ins FROM insights_people WHERE status = 'active' AND role IN ('student', 'leader') AND gender = 'male' AND grade::int >= 9 AND last_check_in >= NOW() - INTERVAL '30 days' ORDER BY last_name, first_name",
+  "sql": "SELECT profile_id, organization_id, first_name, last_name, grade, last_check_in, total_check_ins FROM insights_people WHERE status = 'active' AND role IN ('student', 'leader') AND gender = 'male' AND grade IN ('9','10','11','12') AND last_check_in >= NOW() - INTERVAL '30 days' ORDER BY last_name, first_name",
   "summary": "High school boys who checked in this month",
   "display_columns": ["first_name", "last_name", "grade", "last_check_in", "total_check_ins"],
   "display_labels": ["First Name", "Last Name", "Grade", "Last Check-in", "Check-ins"],
@@ -193,7 +193,7 @@ Query: "group leaders"
 
 Query: "MS boys and girls who showed up on Feb 4th 2026"
 {
-  "sql": "SELECT profile_id, organization_id, first_name, last_name, grade, gender, group_names FROM insights_people WHERE status = 'active' AND role IN ('student', 'leader') AND grade::int BETWEEN 6 AND 8 AND '2026-02-04'::date = ANY(recent_check_in_dates) ORDER BY last_name, first_name",
+  "sql": "SELECT profile_id, organization_id, first_name, last_name, grade, gender, group_names FROM insights_people WHERE status = 'active' AND role IN ('student', 'leader') AND grade IN ('6','7','8') AND '2026-02-04'::date = ANY(recent_check_in_dates) ORDER BY last_name, first_name",
   "summary": "Middle school students who checked in on February 4th, 2026",
   "display_columns": ["first_name", "last_name", "grade", "gender", "group_names"],
   "display_labels": ["First Name", "Last Name", "Grade", "Gender", "Groups"],
