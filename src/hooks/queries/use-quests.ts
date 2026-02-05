@@ -140,23 +140,79 @@ export function useCompleteQuest() {
 
 /**
  * Generate the list of quests based on board data and context
+ *
+ * IMPORTANT: Quests should NOT auto-complete when counts are 0.
+ * Instead, show them with "(all clear ✓)" to indicate no action needed,
+ * but let the user manually mark them complete to track engagement.
  */
 export function generateQuests(
   board: QuestBoard | undefined,
   miaStudents: MiaStudent[] | undefined,
   orgSlug: string | undefined
 ): { dailyQuests: Quest[]; priorityQuests: Quest[] } {
+  // Fallback quests when board data is unavailable (RPC failed or loading)
   if (!board) {
-    return { dailyQuests: [], priorityQuests: [] };
+    console.log("[generateQuests] No board data, returning fallback quests");
+    return {
+      dailyQuests: [
+        {
+          id: "daily_messages",
+          type: "daily",
+          icon: "💬",
+          title: "Check messages",
+          completed: false,
+          actions: [
+            { label: "Inbox →", type: "navigate", path: `/${orgSlug}/messages` },
+          ],
+        },
+        {
+          id: "daily_new_students",
+          type: "daily",
+          icon: "🆕",
+          title: "Review new students",
+          completed: false,
+          actions: [
+            { label: "View", type: "navigate", path: `/${orgSlug}/people?filter=new` },
+            { label: "✓", type: "inline", handler: "markComplete" },
+          ],
+        },
+        {
+          id: "daily_pastoral",
+          type: "daily",
+          icon: "🩺",
+          title: "Check pastoral queue",
+          completed: false,
+          actions: [
+            { label: "Queue →", type: "navigate", path: `/${orgSlug}/pastoral` },
+          ],
+        },
+      ],
+      priorityQuests: [],
+    };
   }
 
+  // Generate titles with status - show "(all clear ✓)" when count is 0
+  const messagesTitle = board.context.unreadMessages === 0
+    ? "Check messages (all clear ✓)"
+    : `Check messages (${board.context.unreadMessages} conversations)`;
+
+  const newStudentsTitle = board.context.newStudents === 0
+    ? "Review new students (all clear ✓)"
+    : `Review new students (${board.context.newStudents} pending)`;
+
+  const pastoralTitle = board.context.urgentPastoral === 0
+    ? "Check pastoral queue (all clear ✓)"
+    : `Check pastoral queue (${board.context.urgentPastoral} urgent)`;
+
+  // Only mark as completed if explicitly completed by user (from completions record)
+  // Do NOT auto-complete when counts are 0
   const dailyQuests: Quest[] = [
     {
       id: "daily_messages",
       type: "daily",
       icon: "💬",
-      title: `Check messages (${board.context.unreadMessages} conversations)`,
-      completed: board.completions.daily_messages || board.context.unreadMessages === 0,
+      title: messagesTitle,
+      completed: !!board.completions.daily_messages,
       actions: [
         { label: "Inbox →", type: "navigate", path: `/${orgSlug}/messages` },
       ],
@@ -165,8 +221,8 @@ export function generateQuests(
       id: "daily_new_students",
       type: "daily",
       icon: "🆕",
-      title: `Review new students (${board.context.newStudents} pending)`,
-      completed: board.completions.daily_new_students || board.context.newStudents === 0,
+      title: newStudentsTitle,
+      completed: !!board.completions.daily_new_students,
       actions: [
         { label: "View", type: "navigate", path: `/${orgSlug}/people?filter=new` },
         { label: "✓", type: "inline", handler: "markComplete" },
@@ -176,8 +232,8 @@ export function generateQuests(
       id: "daily_pastoral",
       type: "daily",
       icon: "🩺",
-      title: `Check pastoral queue (${board.context.urgentPastoral} urgent)`,
-      completed: board.completions.daily_pastoral || board.context.urgentPastoral === 0,
+      title: pastoralTitle,
+      completed: !!board.completions.daily_pastoral,
       actions: [
         { label: "Queue →", type: "navigate", path: `/${orgSlug}/pastoral` },
       ],

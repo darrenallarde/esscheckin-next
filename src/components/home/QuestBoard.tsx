@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { Target, Flame, ChevronRight, Check, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,12 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
   const track = useTrack();
   const { toast } = useToast();
 
-  const { data: board, isLoading: boardLoading } = useQuestBoard(organizationId);
+  const { data: board, isLoading: boardLoading, isError, error, refetch } = useQuestBoard(organizationId);
   const { data: miaStudents } = useMiaStudents(organizationId, 5);
   const completeQuest = useCompleteQuest();
+
+  // Debug logging (temporary)
+  console.log("[QuestBoard] RPC response:", { board, isError, error });
 
   const { dailyQuests, priorityQuests } = generateQuests(board, miaStudents, orgSlug);
 
@@ -103,6 +106,22 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
       <Card className="border-2 border-primary/20">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-2 border-destructive/20">
+        <CardContent className="py-8 text-center space-y-3">
+          <p className="text-sm text-destructive">Failed to load quests</p>
+          <p className="text-xs text-muted-foreground">
+            {error instanceof Error ? error.message : "Unknown error"}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
         </CardContent>
       </Card>
     );
