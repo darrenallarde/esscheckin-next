@@ -47,7 +47,7 @@ export const ROUTES = {
   // Public routes (no org context)
   auth: '/auth',
   setup: '/setup',
-  home: '/',
+  landing: '/',
 } as const;
 
 /**
