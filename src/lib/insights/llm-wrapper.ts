@@ -69,6 +69,8 @@ export const SegmentFiltersSchema = z.object({
   groups: GroupFilterSchema,
   activity: ActivityFilterSchema,
   engagement: EngagementFilterSchema,
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
 });
 
 export const SegmentSchema = z.object({

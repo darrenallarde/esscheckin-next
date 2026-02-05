@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTrack } from "@/lib/amplitude/hooks";
 import { EVENTS } from "@/lib/amplitude/events";
 import type { PersonResult, BelongingLevel } from "@/lib/insights/types";
@@ -21,6 +22,8 @@ interface InsightsListViewProps {
   people: PersonResult[];
   organizationId?: string | null;
   onPersonClick?: (person: PersonResult) => void;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (profileId: string) => void;
 }
 
 const BELONGING_COLORS: Record<BelongingLevel, string> = {
@@ -59,9 +62,12 @@ function formatLastSeen(dateStr?: string): string {
 export function InsightsListView({
   people,
   onPersonClick,
+  selectedIds,
+  onToggleSelection,
 }: InsightsListViewProps) {
   const track = useTrack();
   const [showAll, setShowAll] = useState(false);
+  const hasSelection = selectedIds !== undefined && onToggleSelection !== undefined;
 
   const displayedPeople = showAll ? people : people.slice(0, 10);
   const hasMore = people.length > 10;
@@ -82,41 +88,57 @@ export function InsightsListView({
       onClick={() => handlePersonClick(person)}
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="font-medium">
-              {person.firstName} {person.lastName}
-            </div>
-            {person.grade && (
-              <div className="text-sm text-muted-foreground">
-                Grade {person.grade}
+        <div className="flex items-start gap-3">
+          {/* Selection checkbox */}
+          {hasSelection && (
+            <Checkbox
+              checked={selectedIds.has(person.profileId)}
+              onCheckedChange={(e) => {
+                e.stopPropagation?.();
+                onToggleSelection(person.profileId);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1"
+            />
+          )}
+          <div className="flex-1">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="font-medium">
+                  {person.firstName} {person.lastName}
+                </div>
+                {person.grade && (
+                  <div className="text-sm text-muted-foreground">
+                    Grade {person.grade}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {person.belongingLevel && (
-            <Badge
-              variant="secondary"
-              className={BELONGING_COLORS[person.belongingLevel]}
-            >
-              {BELONGING_LABELS[person.belongingLevel]}
-            </Badge>
-          )}
-        </div>
+              {person.belongingLevel && (
+                <Badge
+                  variant="secondary"
+                  className={BELONGING_COLORS[person.belongingLevel]}
+                >
+                  {BELONGING_LABELS[person.belongingLevel]}
+                </Badge>
+              )}
+            </div>
 
-        <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
-          {person.lastCheckIn && (
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {formatLastSeen(person.lastCheckIn)}
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
+              {person.lastCheckIn && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formatLastSeen(person.lastCheckIn)}
+                </div>
+              )}
+              {person.groups && person.groups.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {person.groups[0].name}
+                  {person.groups.length > 1 && ` +${person.groups.length - 1}`}
+                </div>
+              )}
             </div>
-          )}
-          {person.groups && person.groups.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              {person.groups[0].name}
-              {person.groups.length > 1 && ` +${person.groups.length - 1}`}
-            </div>
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -130,6 +152,7 @@ export function InsightsListView({
           <Table>
             <TableHeader>
               <TableRow>
+                {hasSelection && <TableHead className="w-10"></TableHead>}
                 <TableHead>Name</TableHead>
                 <TableHead>Grade</TableHead>
                 <TableHead>Last Seen</TableHead>
@@ -144,6 +167,15 @@ export function InsightsListView({
                   className="cursor-pointer hover:bg-accent"
                   onClick={() => handlePersonClick(person)}
                 >
+                  {hasSelection && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(person.profileId)}
+                        onCheckedChange={() => onToggleSelection(person.profileId)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium">
                     {person.firstName} {person.lastName}
                   </TableCell>

@@ -19,11 +19,11 @@ const INTERIM_RESPONSES = {
 const NPC_RESPONSES = {
   // New unknown user - prompt for code
   welcome: () =>
-    `Welcome! Text your ministry code to connect.\nType HELP for commands.`,
+    `Welcome! Text your ministry code to connect.\nText ? for commands.`,
 
   // First connection to an org - explain how it works
   firstConnection: (orgName: string, code: string) =>
-    `Welcome to ${orgName}! Type HELP anytime for options.\n\n` +
+    `Welcome to ${orgName}! Text ? anytime for options.\n\n` +
     `Your messages now go directly to our team.\n` +
     `The #${code.toUpperCase()} tag below shows you're connected.\n\n` +
     `#${code.toUpperCase()}`,
@@ -32,17 +32,17 @@ const NPC_RESPONSES = {
   messageRouted: (code: string) =>
     `#${code.toUpperCase()}`,
 
-  // HELP command response
+  // MENU/? command response (avoiding HELP which is a Twilio reserved keyword)
   help: (orgName: string | null, code: string | null) =>
     `Commands:\n` +
-    `- HELP - Show this menu\n` +
+    `- ? or MENU - Show this menu\n` +
     `- EXIT - Disconnect and start fresh\n` +
     `- SWITCH [code] - Connect to a different ministry` +
     (orgName ? `\n\nCurrently connected to: ${orgName} #${code?.toUpperCase()}` : `\n\nNot connected to any ministry.`),
 
   // EXIT command response
   disconnected: () =>
-    `Disconnected. Text a ministry code to reconnect.\nType HELP for commands.`,
+    `Disconnected. Text a ministry code to reconnect.\nText ? for commands.`,
 
   // SWITCH command success
   switched: (orgName: string, code: string) =>
@@ -54,7 +54,7 @@ const NPC_RESPONSES = {
 
   // Invalid code
   invalidCode: () =>
-    `Code not found. Type HELP for commands.`,
+    `Code not found. Text ? for commands.`,
 
   // Group selection (future feature)
   connectedWithGroups: (orgName: string, code: string, groups: { name: string; code: string | null }[]) => {
@@ -66,7 +66,7 @@ const NPC_RESPONSES = {
   groupSelected: (groupName: string, code: string) =>
     `Connected to ${groupName}!\n\n#${code.toUpperCase()}`,
   invalidSelection: (code?: string) => {
-    const base = `Didn't catch that. Reply with a number from the list, or text HELP for options.`;
+    const base = `Didn't catch that. Reply with a number from the list, or text ? for options.`;
     return code ? `${base}\n\n#${code.toUpperCase()}` : base;
   },
   multipleGroups: (groups: { org_name: string; group_name: string; group_code: string | null }[]) => {
@@ -143,7 +143,7 @@ serve(async (req) => {
     // ============================================
     if (INTERIM_MODE) {
       // Handle HELP command
-      if (upperBody === "HELP") {
+      if (upperBody === "?" || upperBody === "MENU") {
         return twimlResponse(INTERIM_RESPONSES.help);
       }
 
@@ -224,7 +224,7 @@ serve(async (req) => {
       return twimlResponse(NPC_RESPONSES.disconnected());
     }
 
-    if (upperBody === "HELP") {
+    if (upperBody === "?" || upperBody === "MENU") {
       return twimlResponse(NPC_RESPONSES.help(currentOrgName, currentOrgCode));
     }
 

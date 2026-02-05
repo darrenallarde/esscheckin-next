@@ -98,7 +98,9 @@ Respond with ONLY valid JSON:
           "belongingLevels": ["ultra_core", "core", "connected", "fringe", "missing", "new"],
           "minCheckins": 5,
           "maxCheckins": null
-        } | null
+        } | null,
+        "firstName": "John" | null,
+        "lastName": "Smith" | null
       }
     }
   ]
@@ -128,6 +130,13 @@ Engagement mapping:
 - "on the fringe" / "need attention" / "fringe students" = belongingLevels: ["fringe"]
 - "ultra core" / "most engaged" = belongingLevels: ["ultra_core"]
 - "new students" = belongingLevels: ["new"]
+
+Name mapping:
+- "last name Smith" / "with the last name Smith" / "surname Smith" = lastName: "Smith"
+- "first name John" / "named John" / "called John" = firstName: "John"
+- "John Smith" / "student John Smith" = firstName: "John", lastName: "Smith"
+- "anyone named Allarde" / "students with the last name Allarde" = lastName: "Allarde"
+- Names are CASE-INSENSITIVE when matching
 
 IMPORTANT distinction:
 - "MS vs HS" or "boys vs girls" = COMPARISON, create MULTIPLE segments for side-by-side comparison

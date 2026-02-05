@@ -187,6 +187,24 @@ export function matchesFilters(
     }
   }
 
+  // First name filter (case-insensitive partial match)
+  if (filters.firstName) {
+    const personFirst = (person.first_name || "").toLowerCase();
+    const filterFirst = filters.firstName.toLowerCase();
+    if (!personFirst.includes(filterFirst) && !filterFirst.includes(personFirst)) {
+      return false;
+    }
+  }
+
+  // Last name filter (case-insensitive partial match)
+  if (filters.lastName) {
+    const personLast = (person.last_name || "").toLowerCase();
+    const filterLast = filters.lastName.toLowerCase();
+    if (!personLast.includes(filterLast) && !filterLast.includes(personLast)) {
+      return false;
+    }
+  }
+
   return true;
 }
 

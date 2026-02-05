@@ -95,6 +95,8 @@ export interface SegmentFilters {
   groups?: GroupFilter | null;
   activity?: ActivityFilter | null;
   engagement?: EngagementFilter | null;
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
 /**
