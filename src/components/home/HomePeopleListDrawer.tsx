@@ -62,7 +62,7 @@ export function HomePeopleListDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh] mx-auto max-w-lg">
+      <DrawerContent className="min-h-[60vh] max-h-[85vh] mx-auto max-w-2xl">
         <DrawerHeader className="text-left border-b pb-3">
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${statusColors[status]}`} />
