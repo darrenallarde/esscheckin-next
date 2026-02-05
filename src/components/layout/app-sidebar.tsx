@@ -85,6 +85,14 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: "Understand",
+    icon: Lightbulb,
+    items: [
+      { title: "Insights", path: "/insights", icon: Sparkles },
+      { title: "Analytics", path: "/analytics", icon: BarChart3 },
+    ],
+  },
+  {
     title: "Reach",
     icon: MessageCircle,
     items: [
@@ -99,14 +107,6 @@ const navSections: NavSection[] = [
       { title: "Students", path: "/people", icon: Users },
       { title: "Families", path: "/families", icon: UserCircle },
       { title: "Groups", path: "/groups", icon: UsersRound },
-    ],
-  },
-  {
-    title: "Understand",
-    icon: Lightbulb,
-    items: [
-      { title: "Insights", path: "/insights", icon: Sparkles },
-      { title: "Analytics", path: "/analytics", icon: BarChart3 },
     ],
   },
   {

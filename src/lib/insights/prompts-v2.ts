@@ -60,6 +60,7 @@ Given a natural language question, write a SQL SELECT query against the \`insigh
 | current_rank | TEXT | Gamification rank | 'Newcomer', 'Regular', 'Champion' |
 | total_check_ins | BIGINT | Total lifetime check-ins (default 0) | 12, 0 |
 | last_check_in | TIMESTAMPTZ | Most recent check-in (nullable) | '2026-01-28T19:30:00Z' |
+| recent_check_in_dates | DATE[] | Array of check-in dates from last 90 days (descending) | '{2026-02-04,2026-01-29,2026-01-22}' |
 | group_names | TEXT[] | Array of group names | '{HS Boys,Youth Choir}' |
 | group_roles | TEXT[] | Array of roles in each group | '{member,leader}' |
 | group_ids | UUID[] | Array of group IDs | |
@@ -81,15 +82,17 @@ Grade range: ${orgContext.gradeRange.min}-${orgContext.gradeRange.max}
 7. **For "leaders"** — use: \`WHERE 'leader' = ANY(group_roles)\` or \`WHERE role = 'leader'\`
 8. **Date math** — use: \`WHERE last_check_in < NOW() - INTERVAL '21 days'\`
 9. **For "never checked in"** — use: \`WHERE total_check_ins = 0\`
-10. **Default to active students** — unless explicitly asked about archived or all statuses, add: \`WHERE status = 'active'\`
-11. **Default to student role** — unless explicitly asking about leaders, admins, or all roles, filter: \`WHERE role IN ('student', 'leader')\`
-12. **Birth month names** — January=1, February=2, ..., December=12
-13. **MS/HS mapping** — Middle School = grades 6-8, High School = grades 9-12
-14. **Gender mapping** — "boys"/"guys" = 'male', "girls"/"gals" = 'female'
-15. **Do NOT use semicolons** at the end of your SQL.
-16. **Do NOT use SQL comments** (-- or /* */).
-17. **Only query insights_people** — never reference other tables directly.
-18. **Keep ORDER BY sensible** — alphabetical by name for people lists, DESC for rankings.
+10. **For "who showed up on a specific date"** — use: \`WHERE '2026-02-04'::date = ANY(recent_check_in_dates)\`. This array contains dates from the last 90 days. For older dates, fall back to \`last_check_in\`.
+11. **For "who showed up this week/last week"** — use: \`WHERE recent_check_in_dates && ARRAY(SELECT generate_series('2026-02-02'::date, '2026-02-08'::date, '1 day')::date[])\` or simply \`WHERE last_check_in >= NOW() - INTERVAL '7 days'\` for approximate matches.
+12. **Default to active students** — unless explicitly asked about archived or all statuses, add: \`WHERE status = 'active'\`
+13. **Default to student role** — unless explicitly asking about leaders, admins, or all roles, filter: \`WHERE role IN ('student', 'leader')\`
+14. **Birth month names** — January=1, February=2, ..., December=12
+15. **MS/HS mapping** — Middle School = grades 6-8, High School = grades 9-12
+16. **Gender mapping** — "boys"/"guys" = 'male', "girls"/"gals" = 'female'
+17. **Do NOT use semicolons** at the end of your SQL.
+18. **Do NOT use SQL comments** (-- or /* */).
+19. **Only query insights_people** — never reference other tables directly.
+20. **Keep ORDER BY sensible** — alphabetical by name for people lists, DESC for rankings.
 
 ## OUTPUT FORMAT
 
@@ -185,6 +188,15 @@ Query: "group leaders"
   "summary": "All group leaders",
   "display_columns": ["first_name", "last_name", "group_names", "phone_number", "email"],
   "display_labels": ["First Name", "Last Name", "Groups", "Phone", "Email"],
+  "can_answer": true
+}
+
+Query: "MS boys and girls who showed up on Feb 4th 2026"
+{
+  "sql": "SELECT profile_id, organization_id, first_name, last_name, grade, gender, group_names FROM insights_people WHERE status = 'active' AND role IN ('student', 'leader') AND grade::int BETWEEN 6 AND 8 AND '2026-02-04'::date = ANY(recent_check_in_dates) ORDER BY last_name, first_name",
+  "summary": "Middle school students who checked in on February 4th, 2026",
+  "display_columns": ["first_name", "last_name", "grade", "gender", "group_names"],
+  "display_labels": ["First Name", "Last Name", "Grade", "Gender", "Groups"],
   "can_answer": true
 }
 

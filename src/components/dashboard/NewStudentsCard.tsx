@@ -24,6 +24,8 @@ interface NewStudentsCardProps {
   orgSlug: string;
   viewAllHref: string;
   maxDisplay?: number;
+  onPersonClick?: (student: NewStudent) => void;
+  onSmsClick?: (student: NewStudent) => void;
 }
 
 export function NewStudentsCard({
@@ -33,6 +35,8 @@ export function NewStudentsCard({
   orgSlug,
   viewAllHref,
   maxDisplay = 5,
+  onPersonClick,
+  onSmsClick,
 }: NewStudentsCardProps) {
   const { toast } = useToast();
   const markTriaged = useMarkStudentTriaged();
@@ -112,9 +116,18 @@ export function NewStudentsCard({
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium truncate">
-                  {student.first_name} {student.last_name}
-                </span>
+                {onPersonClick ? (
+                  <button
+                    onClick={() => onPersonClick(student)}
+                    className="font-medium truncate hover:underline text-left"
+                  >
+                    {student.first_name} {student.last_name}
+                  </button>
+                ) : (
+                  <span className="font-medium truncate">
+                    {student.first_name} {student.last_name}
+                  </span>
+                )}
                 {student.gender && (
                   <Badge variant="outline" className="text-xs">
                     {student.gender === "male" ? "M" : "F"}
@@ -139,25 +152,49 @@ export function NewStudentsCard({
 
             <div className="flex items-center gap-1">
               {/* View Profile */}
-              <Link href={`/${orgSlug}/people?profile=${student.profile_id}`}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+              {onPersonClick ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onPersonClick(student)}
+                >
                   <User className="h-4 w-4" />
                   <span className="sr-only">View profile</span>
                 </Button>
-              </Link>
+              ) : (
+                <Link href={`/${orgSlug}/people?profile=${student.profile_id}`}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <User className="h-4 w-4" />
+                    <span className="sr-only">View profile</span>
+                  </Button>
+                </Link>
+              )}
 
               {/* Send SMS */}
               {student.phone_number && (
-                <Link
-                  href={`/${orgSlug}/messages?phone=${encodeURIComponent(
-                    student.phone_number
-                  )}`}
-                >
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                onSmsClick ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onSmsClick(student)}
+                  >
                     <MessageSquare className="h-4 w-4" />
                     <span className="sr-only">Send SMS</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link
+                    href={`/${orgSlug}/messages?phone=${encodeURIComponent(
+                      student.phone_number
+                    )}`}
+                  >
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MessageSquare className="h-4 w-4" />
+                      <span className="sr-only">Send SMS</span>
+                    </Button>
+                  </Link>
+                )
               )}
 
               {/* Mark as Triaged */}

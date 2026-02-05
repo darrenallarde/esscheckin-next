@@ -26,6 +26,8 @@ interface PastoralQueueProps {
   data: PastoralRecommendation[];
   loading?: boolean;
   viewAllHref?: string;
+  useDrawer?: boolean;
+  onPersonClick?: (rec: PastoralRecommendation) => void;
 }
 
 const priorityConfig = {
@@ -50,11 +52,19 @@ export function PastoralQueue({
   data,
   loading = false,
   viewAllHref = "/pastoral",
+  useDrawer = false,
+  onPersonClick,
 }: PastoralQueueProps) {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const handleStudentClick = (rec: PastoralRecommendation) => {
+    // When useDrawer is enabled and callback is provided, delegate to parent
+    if (useDrawer && onPersonClick) {
+      onPersonClick(rec);
+      return;
+    }
+
     // Parse first and last name from student_name
     const nameParts = rec.student_name.split(" ");
     const firstName = nameParts[0] || "";
@@ -165,12 +175,14 @@ export function PastoralQueue({
         </div>
       </CardContent>
 
-      {/* Profile modal */}
-      <PersonProfileModal
-        person={selectedStudent}
-        open={profileOpen}
-        onOpenChange={setProfileOpen}
-      />
+      {/* Profile modal - only used when not in drawer mode */}
+      {!useDrawer && (
+        <PersonProfileModal
+          person={selectedStudent}
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+        />
+      )}
     </Card>
   );
 }

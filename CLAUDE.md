@@ -119,7 +119,7 @@ SMS System:
 - `sms_broadcast_recipients` - Individual broadcast recipients with delivery status
 
 Insights:
-- `insights_people` (VIEW) - Read-only view joining profiles, student_profiles, org_memberships, groups, check_ins, game_stats. Used exclusively by Insights V2 SQL generation. Not directly accessible via API — only through `run_insights_query` RPC.
+- `insights_people` (VIEW) - Read-only view joining profiles, student_profiles, org_memberships, groups, check_ins, game_stats. Includes `recent_check_in_dates` (DATE[] of last 90 days) for date-specific attendance queries. Used exclusively by Insights V2 SQL generation. Not directly accessible via API — only through `run_insights_query` RPC.
 
 **Legacy tables (deprecated, will be removed):**
 - `students` - Replaced by profiles + student_profiles
@@ -335,6 +335,10 @@ The sidebar is organized into **5 thematic sections** reflecting how ministry le
   Pastoral  → /pastoral (care queue)
   Curriculum → /curriculum
 
+📊 UNDERSTAND
+  Insights  → /insights (AI-powered SQL queries with dynamic columns + saved queries)
+  Analytics → /analytics (stats, charts, leaderboards)
+
 💬 REACH
   Messages   → /messages (SMS inbox)
   Broadcasts → /broadcasts (bulk SMS)
@@ -344,15 +348,35 @@ The sidebar is organized into **5 thematic sections** reflecting how ministry le
   Families  → /families (parent/guardian management)
   Groups    → /groups (group management)
 
-📊 UNDERSTAND
-  Insights  → /insights (AI-powered SQL queries with dynamic columns + saved queries)
-  Analytics → /analytics (stats, charts, leaderboards)
-
 ⚙️ MANAGE
   Settings  → /settings (admin only, tabbed: Account, Team, Import)
 ```
 
 **Note:** The `/dashboard` route is deprecated and redirects to `/home` via middleware.
+
+## UI Interaction Patterns
+
+### Home Screen Rule: Modal-First, No Navigation
+The home page (`/home`) is the primary working screen. **No user action on the home page should navigate away.** All person-level actions open in-context using vaul Drawers (bottom sheets):
+
+- Tapping a student name → `HomeProfileDrawer` (profile quick-view)
+- Tapping an SMS icon → `HomeMessageDrawer` (conversation + composer)
+- Tapping a conversation → `HomeMessageDrawer`
+
+Components: `src/components/home/HomeProfileDrawer.tsx`, `src/components/home/HomeMessageDrawer.tsx`
+
+### Drawer vs Dialog Pattern
+| Context | Component | Why |
+|---------|-----------|-----|
+| **Home screen** | vaul Drawer (bottom sheet) | Mobile-first, swipe-to-dismiss, stays in context |
+| **All other pages** | Dialog (centered modal) | Established pattern across 28+ modals |
+
+The Drawer component is from `vaul` (installed, `src/components/ui/drawer.tsx`). The home screen is the pilot for this pattern. If successful, Drawers may be adopted more broadly.
+
+### Existing Reusable Components for Drawers
+- `ConversationThread` — renders message history (used inside HomeMessageDrawer)
+- `MessageComposer` — handles sending internally (used inside HomeMessageDrawer)
+- `PersonProfileModal` — NOT used in drawers; stays Dialog-only for other pages
 
 ## Implementation Status
 
