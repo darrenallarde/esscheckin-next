@@ -286,6 +286,65 @@ Broadcasts are **separate from the Messages inbox**. They have their own UI at `
 - `src/hooks/queries/use-insights-sql.ts` — Client hook for SQL-based queries
 - `src/components/insights/InsightsSqlResults.tsx` — Dynamic column rendering
 
+### ChMS Integration Architecture
+
+**Purpose:** Connect SheepDoggo to external Church Management Systems. Import students/families from ChMS, push activity back so senior pastors see engagement in their system of record.
+
+**Supported Providers:**
+
+| Provider | API Style | Auth | Key Limitations |
+|----------|-----------|------|-----------------|
+| Rock RMS | REST + OData (JSON) | `Authorization-Token` header | Self-hosted (every church = different URL) |
+| Planning Center | JSON:API 1.0 | Basic Auth (PAT) | Check-Ins API is **READ-ONLY** (can't write attendance) |
+| CCB/Pushpay | XML API | Basic Auth | **10,000 requests/day** limit, only 12 custom text fields |
+
+**Database Tables:**
+- `chms_connections` — One connection per org (provider, credentials, sync config, status)
+- `chms_profile_links` — Maps SheepDoggo profile_id ↔ external person ID (per org)
+- `chms_sync_log` — Audit trail for all sync operations
+
+**RPC Functions:**
+- `get_chms_connection(org_id)` — Get connection config (no credentials, admin only)
+- `save_chms_connection(org_id, provider, ...)` — Upsert connection (admin only)
+- `delete_chms_connection(org_id)` — Remove connection + unlink profiles
+- `get_chms_sync_history(org_id, limit)` — Sync audit log
+- `get_chms_connection_with_credentials(org_id)` — **Service role only** — returns credentials for edge functions
+- `update_chms_connection_status(org_id, ...)` — Update sync status (edge function use)
+
+**Edge Functions:**
+- `chms-sync` — Import + incremental sync. Actions: `test_connection`, `import_people`, `import_families`, `full_import`, `incremental`, `save_connection`, `delete_connection`
+- `chms-write-back` — Push activity (last check-in, last text, points) back to ChMS
+
+**Provider Adapter Pattern:**
+- `src/lib/chms/types.ts` — NormalizedPerson, NormalizedFamily, ProviderCapabilities
+- `src/lib/chms/provider.ts` — ChmsProviderAdapter interface
+- `src/lib/chms/factory.ts` — `createChmsAdapter(connection)` → correct adapter
+- `src/lib/chms/adapters/rock.ts` — Rock RMS adapter
+- `src/lib/chms/adapters/planning-center.ts` — Planning Center adapter
+- `src/lib/chms/adapters/ccb.ts` — CCB adapter
+- `src/lib/chms/sync.ts` — Core sync logic (match by email/phone, create, link)
+- `src/lib/chms/field-mapping.ts` — Field mapping + grade calculation from graduation year
+
+**Activity Write-Back Strategy (per provider):**
+
+| Data Point | Rock RMS | Planning Center | CCB |
+|-----------|----------|-----------------|-----|
+| Last Check-in | Person Attribute | Note/FieldData | `udf_text_1` |
+| Last Text | Person Attribute | Note/FieldData | `udf_text_2` |
+| Belonging | Person Attribute | Note/FieldData | `udf_text_3` |
+| Points | Person Attribute | Note/FieldData | `udf_text_4` |
+| Check-ins | Person Attribute | Note/FieldData | `udf_text_5` |
+| Detailed log | Interactions API | N/A | N/A |
+
+**UI:** Settings → Integrations (`/settings/integrations`)
+- `ChmsIntegrationSettings.tsx` — Provider picker + connection form + sync controls
+- `ChmsProviderCard.tsx` — Individual provider selection card
+- `ChmsSyncStatus.tsx` — Sync history display
+
+**Hooks:**
+- `use-chms-connection.ts` — Query for connection status + sync history
+- `use-chms-sync.ts` — Mutations for save/delete/test/import/incremental
+
 ## Project Structure
 
 ```
@@ -306,7 +365,8 @@ src/
 │       ├── [org]/pastoral/ # Pastoral care queue
 │       ├── [org]/analytics/ # Stats, charts, leaderboards
 │       ├── [org]/curriculum/ # Weekly content
-│       └── [org]/settings/ # Tabbed settings page
+│       └── [org]/settings/ # Settings hub (Team, Org, Tools, Integrations)
+│           └── integrations/ # ChMS integration settings
 ├── components/
 │   ├── analytics/          # StatCard, Charts, Leaderboard
 │   ├── broadcasts/         # BroadcastComposer
@@ -316,11 +376,16 @@ src/
 │   ├── insights/           # InsightsInput, SavedQueries, Results, InsightsSqlResults
 │   ├── layout/             # AppSidebar (categorized navigation)
 │   ├── pastoral/           # PastoralQueue, BelongingSpectrum
+│   ├── settings/           # ChmsIntegrationSettings, ChmsProviderCard, ChmsSyncStatus
 │   ├── shared/             # StreakMeter, DrillDownModal
 │   └── ui/                 # shadcn/ui components
 ├── hooks/
-│   └── queries/            # React Query hooks (use-insights-sql, use-insights-chart, use-quests, etc.)
-├── lib/supabase/           # Supabase clients
+│   ├── queries/            # React Query hooks (use-insights-sql, use-chms-connection, etc.)
+│   └── mutations/          # Mutation hooks (use-chms-sync, use-admin-edit-person, etc.)
+├── lib/
+│   ├── supabase/           # Supabase clients
+│   └── chms/               # ChMS integration (types, provider, adapters, sync, field-mapping)
+│       └── adapters/       # Rock, Planning Center, CCB adapters
 ├── utils/                  # gamificationDB, bibleVerses
 └── types/
 ```
@@ -349,7 +414,7 @@ The sidebar is organized into **5 thematic sections** reflecting how ministry le
   Groups    → /groups (group management)
 
 ⚙️ MANAGE
-  Settings  → /settings (admin only, tabbed: Account, Team, Import)
+  Settings  → /settings (admin only: Team, Organization, Org Tools, Integrations)
 ```
 
 **Note:** The `/dashboard` route is deprecated and redirects to `/home` via middleware.

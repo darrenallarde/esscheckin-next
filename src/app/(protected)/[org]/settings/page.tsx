@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Palette, Wrench, ChevronRight } from "lucide-react";
+import { Users, Palette, Wrench, ChevronRight, Plug } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { orgPath } from "@/lib/navigation";
 
@@ -32,6 +32,13 @@ export default function SettingsPage() {
       description: "Import, devices, attendance cleanup, merge duplicates",
       href: orgPath(orgSlug, "/settings/org-tools"),
       icon: Wrench,
+      available: canManageOrg,
+    },
+    {
+      title: "Integrations",
+      description: "Connect your church database (Rock, PCO, CCB)",
+      href: orgPath(orgSlug, "/settings/integrations"),
+      icon: Plug,
       available: canManageOrg,
     },
   ];
