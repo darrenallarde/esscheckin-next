@@ -1,21 +1,30 @@
 /**
  * AI Insights - Main Orchestration Hook
  *
- * Coordinates:
- * 1. Query parsing via API
- * 2. Data fetching via list or chart hooks
- * 3. State management for the Insights feature
+ * V2 architecture:
+ * - List mode → SQL generation via /api/insights/query (new V2 path)
+ * - Chart mode → existing pipeline via /api/insights/parse → segments → aggregation
+ *
+ * The intent check (list vs chart) is done first via the parse endpoint.
+ * If the intent is "list", we route to the SQL path instead.
  */
 
-import { useState, useCallback } from "react";
-import { useInsightsList } from "./use-insights-list";
+import { useState, useCallback, useRef } from "react";
 import { useInsightsChart } from "./use-insights-chart";
-import type { ParsedQuery, InsightsResults } from "@/lib/insights/types";
+import { useInsightsSql } from "./use-insights-sql";
+import type {
+  ParsedQuery,
+  InsightsResults,
+} from "@/lib/insights/types";
+import type { SqlListResults } from "@/lib/insights/types-v2";
 import type { OrgContext } from "@/lib/insights/prompts";
 import { useGroups } from "./use-groups";
 
+// Combined results type that includes both V1 and V2 result shapes
+export type CombinedResults = InsightsResults | SqlListResults;
+
 interface UseInsightsReturn {
-  results: InsightsResults | null;
+  results: CombinedResults | null;
   parsedQuery: ParsedQuery | null;
   isLoading: boolean;
   isParsing: boolean;
@@ -37,6 +46,8 @@ export function useInsights(
   const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track whether the current query is using V2 SQL mode
+  const [isSqlMode, setIsSqlMode] = useState(false);
 
   // Fetch groups for org context (used in prompts)
   const { data: groups } = useGroups(organizationId);
@@ -48,20 +59,25 @@ export function useInsights(
     gradeRange: { min: 6, max: 12 },
   };
 
-  // Determine effective mode: modeOverride takes precedence over parsed intent
-  const effectiveMode = modeOverride ?? parsedQuery?.intent.outputMode ?? null;
+  // Ref to persist orgContext for stable callback
+  const orgContextRef = useRef(orgContext);
+  orgContextRef.current = orgContext;
 
-  // List data hook (only active when effective mode is "list")
+  // V2 SQL hook for list mode
   const {
-    results: listResults,
-    isLoading: isListLoading,
-    error: listError,
-  } = useInsightsList(
-    organizationId,
-    effectiveMode === "list" && parsedQuery ? parsedQuery : null
-  );
+    results: sqlResults,
+    isLoading: isSqlLoading,
+    error: sqlError,
+    submitQuery: submitSqlQuery,
+    clearResults: clearSqlResults,
+  } = useInsightsSql(organizationId, orgContext);
 
-  // Chart data hook (only active when effective mode is "chart")
+  // Determine effective mode
+  const effectiveMode = isSqlMode
+    ? modeOverride ?? "list"
+    : modeOverride ?? parsedQuery?.intent.outputMode ?? null;
+
+  // Chart data hook (only active when effective mode is "chart" and we have a parsed query)
   const {
     results: chartResults,
     isLoading: isChartLoading,
@@ -71,18 +87,21 @@ export function useInsights(
     effectiveMode === "chart" && parsedQuery ? parsedQuery : null
   );
 
-  // Combine results based on effective mode
-  const results: InsightsResults | null =
-    effectiveMode === "list"
-      ? listResults
-      : effectiveMode === "chart"
-        ? chartResults
-        : null;
+  // Combine results based on mode
+  const results: CombinedResults | null = (() => {
+    if (isSqlMode && effectiveMode === "list") {
+      return sqlResults;
+    }
+    if (effectiveMode === "chart") {
+      return chartResults;
+    }
+    return null;
+  })();
 
-  const isLoading = isListLoading || isChartLoading;
-  const dataError = listError || chartError;
+  const isLoading = isSqlLoading || isChartLoading;
+  const dataError = sqlError || chartError;
 
-  // Parse and submit query
+  // Submit query — first classify intent, then route accordingly
   const submitQuery = useCallback(
     async (query: string) => {
       if (!query.trim()) return;
@@ -90,14 +109,18 @@ export function useInsights(
       setIsParsing(true);
       setError(null);
       setParsedQuery(null);
+      setIsSqlMode(false);
+      clearSqlResults();
 
       try {
+        // Step 1: Classify intent (list vs chart) via the parse endpoint
+        // We only need intent classification — for list mode, we skip to SQL
         const response = await fetch("/api/insights/parse", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: query.trim(),
-            orgContext,
+            orgContext: orgContextRef.current,
           }),
         });
 
@@ -107,7 +130,21 @@ export function useInsights(
           throw new Error(data.error || "Failed to parse query");
         }
 
-        setParsedQuery(data.parsedQuery);
+        const parsed: ParsedQuery = data.parsedQuery;
+        const intent = parsed.intent.outputMode;
+
+        if (intent === "chart") {
+          // Chart mode: use existing V1 pipeline
+          setParsedQuery(parsed);
+          setIsSqlMode(false);
+        } else {
+          // List mode: use V2 SQL generation pipeline
+          setIsSqlMode(true);
+          // Store parsed query for mode toggle support
+          setParsedQuery(parsed);
+          // Fire the SQL query
+          await submitSqlQuery(query);
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Something went wrong";
@@ -116,14 +153,16 @@ export function useInsights(
         setIsParsing(false);
       }
     },
-    [orgContext]
+    [submitSqlQuery, clearSqlResults]
   );
 
   // Clear all results
   const clearResults = useCallback(() => {
     setParsedQuery(null);
     setError(null);
-  }, []);
+    setIsSqlMode(false);
+    clearSqlResults();
+  }, [clearSqlResults]);
 
   return {
     results,

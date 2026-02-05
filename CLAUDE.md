@@ -118,6 +118,9 @@ SMS System:
 - `sms_broadcasts` - Broadcast campaigns (message, targeting, status)
 - `sms_broadcast_recipients` - Individual broadcast recipients with delivery status
 
+Insights:
+- `insights_people` (VIEW) - Read-only view joining profiles, student_profiles, org_memberships, groups, check_ins, game_stats. Used exclusively by Insights V2 SQL generation. Not directly accessible via API — only through `run_insights_query` RPC.
+
 **Legacy tables (deprecated, will be removed):**
 - `students` - Replaced by profiles + student_profiles
 - `organization_members` - Replaced by organization_memberships
@@ -166,6 +169,9 @@ Insights Saved Queries:
 - `get_insights_saved_queries(org_id, limit)` - Get saved queries for current user
 - `delete_insights_query(query_id)` - Delete a saved query
 
+Insights V2 (SQL Generation):
+- `run_insights_query(org_id, sql)` - Executes validated SELECT queries against `insights_people` view. 4-layer safety: keyword blocking, table reference blocking, org_id injection, LIMIT 200, 5s timeout. SECURITY DEFINER. Only accepts SELECT against `insights_people`.
+
 Quest System:
 - `complete_quest(org_id, quest_type, quest_key)` - Mark a quest complete, updates streaks
 - `get_quest_board(org_id)` - Get today's completions, streak info, and context counts
@@ -203,6 +209,7 @@ On Feb 4, 2026, the `get_user_organizations` function was modified to return `ro
 | `get_user_organizations` | `OrganizationContext.tsx` | `user_role`, `display_name`, `theme_id`, `checkin_style`, `short_code`, `org_number` |
 | `get_organization_people` | `use-people.ts` | `profile_id`, `first_name`, `last_name`, `role`, `status` |
 | `search_student_for_checkin` | `use-student-search.ts` | `profile_id`, `first_name`, `last_name`, `phone_number` |
+| `run_insights_query` | `/api/insights/query` route | Returns dynamic JSONB — columns determined by LLM-generated SQL |
 
 **If you're unsure about column names, READ THE FRONTEND CODE FIRST.**
 
@@ -254,6 +261,31 @@ Broadcasts are **separate from the Messages inbox**. They have their own UI at `
 - Recipients are populated when broadcast is created
 - Edge function `send-broadcast` sends with 1 msg/sec rate limiting (Twilio long code limit)
 
+### Insights V2 Architecture (SQL Generation)
+
+**List mode** uses LLM-generated SQL against the `insights_people` view:
+1. User types natural language
+2. Server-side API route sends query + view schema to Claude
+3. Claude returns SQL SELECT + display metadata (columns, labels, summary)
+4. TypeScript validator checks safety (SELECT only, no dangerous keywords)
+5. `run_insights_query` RPC re-validates and executes with org scoping
+6. Frontend renders dynamic columns (not hardcoded)
+
+**Chart mode** uses the existing pipeline (intent → segments → time range → metric → aggregation).
+
+**Safety model (4 layers):**
+- LLM prompt constrains to SELECT against insights_people
+- TypeScript validator blocks dangerous keywords and table references
+- PostgreSQL RPC re-validates + enforces org_id + LIMIT 200 + 5s timeout
+- View has no GRANT to authenticated/anon (only accessible via SECURITY DEFINER RPC)
+
+**Key files:**
+- `src/lib/insights/prompts-v2.ts` — SQL generation prompt with full view schema
+- `src/lib/insights/sql-validator.ts` — TypeScript safety validation
+- `src/app/api/insights/query/route.ts` — Server-side API route
+- `src/hooks/queries/use-insights-sql.ts` — Client hook for SQL-based queries
+- `src/components/insights/InsightsSqlResults.tsx` — Dynamic column rendering
+
 ## Project Structure
 
 ```
@@ -281,13 +313,13 @@ src/
 │   ├── checkin/            # JRPG check-in flow
 │   ├── groups/             # GroupCard, modals
 │   ├── home/               # QuestBoard, QuickMessageWidget
-│   ├── insights/           # InsightsInput, SavedQueries, Results
+│   ├── insights/           # InsightsInput, SavedQueries, Results, InsightsSqlResults
 │   ├── layout/             # AppSidebar (categorized navigation)
 │   ├── pastoral/           # PastoralQueue, BelongingSpectrum
 │   ├── shared/             # StreakMeter, DrillDownModal
 │   └── ui/                 # shadcn/ui components
 ├── hooks/
-│   └── queries/            # React Query hooks (use-quests, use-saved-queries, etc.)
+│   └── queries/            # React Query hooks (use-insights-sql, use-insights-chart, use-quests, etc.)
 ├── lib/supabase/           # Supabase clients
 ├── utils/                  # gamificationDB, bibleVerses
 └── types/
@@ -313,7 +345,7 @@ The sidebar is organized into **5 thematic sections** reflecting how ministry le
   Groups    → /groups (group management)
 
 📊 UNDERSTAND
-  Insights  → /insights (AI-powered queries with saved/starred queries)
+  Insights  → /insights (AI-powered SQL queries with dynamic columns + saved queries)
   Analytics → /analytics (stats, charts, leaderboards)
 
 ⚙️ MANAGE

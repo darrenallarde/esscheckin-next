@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InsightsInput } from "@/components/insights/InsightsInput";
 import { QuickQueryChips } from "@/components/insights/QuickQueryChips";
 import { InsightsResults } from "@/components/insights/InsightsResults";
+import { InsightsSqlResults } from "@/components/insights/InsightsSqlResults";
 import { ModeToggle } from "@/components/insights/ModeToggle";
 import { SavedQueries } from "@/components/insights/SavedQueries";
 import { PersonProfileModal } from "@/components/people/PersonProfileModal";
@@ -14,7 +15,8 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useSaveQuery } from "@/hooks/queries/use-saved-queries";
 import { useTrack } from "@/lib/amplitude/hooks";
 import { EVENTS } from "@/lib/amplitude/events";
-import type { ChartType, TimeGranularity, OutputMode, PersonResult } from "@/lib/insights/types";
+import type { ChartType, TimeGranularity, OutputMode, PersonResult, InsightsResults as InsightsResultsType } from "@/lib/insights/types";
+import type { SqlListResults } from "@/lib/insights/types-v2";
 import type { Student } from "@/hooks/queries/use-students";
 
 export default function InsightsPage() {
@@ -168,9 +170,8 @@ export default function InsightsPage() {
   const hasResults = !!results;
   const outputMode = effectiveMode;
 
-  // Handle clicking on a person in results
+  // Handle clicking on a person in V1 results (PersonResult type)
   const handlePersonClick = useCallback((person: PersonResult) => {
-    // Convert PersonResult to Student type for the modal
     const studentData: Student = {
       id: person.profileId,
       profile_id: person.profileId,
@@ -195,6 +196,36 @@ export default function InsightsPage() {
     setSelectedPerson(studentData);
     setProfileModalOpen(true);
   }, []);
+
+  // Handle clicking on a person in V2 SQL results (profile_id string)
+  const handleSqlPersonClick = useCallback((profileId: string) => {
+    // For SQL results, we have the raw row data — find the row and build Student
+    const sqlResults = results as SqlListResults | null;
+    const row = sqlResults?.data.find((r) => String(r.profile_id) === profileId);
+    if (!row) return;
+
+    const studentData: Student = {
+      id: profileId,
+      profile_id: profileId,
+      first_name: String(row.first_name || ""),
+      last_name: String(row.last_name || ""),
+      phone_number: row.phone_number ? String(row.phone_number) : null,
+      email: row.email ? String(row.email) : null,
+      grade: row.grade ? String(row.grade) : null,
+      high_school: row.high_school ? String(row.high_school) : null,
+      user_type: "student",
+      total_points: typeof row.total_points === "number" ? row.total_points : 0,
+      current_rank: row.current_rank ? String(row.current_rank) : "Newcomer",
+      last_check_in: row.last_check_in ? String(row.last_check_in) : null,
+      days_since_last_check_in: null,
+      total_check_ins: typeof row.total_check_ins === "number" ? row.total_check_ins : 0,
+      groups: [],
+    };
+    setSelectedPerson(studentData);
+    setProfileModalOpen(true);
+  }, [results]);
+
+  const isSqlResults = results?.mode === "sql-list";
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -256,17 +287,26 @@ export default function InsightsPage() {
 
       {/* Results or Quick Replies */}
       {hasResults ? (
-        <InsightsResults
-          results={results}
-          parsedQuery={parsedQuery!}
-          chartType={chartType}
-          granularity={granularity}
-          onChartTypeChange={handleChartTypeChange}
-          onGranularityChange={handleGranularityChange}
-          onPersonClick={handlePersonClick}
-          organizationId={organizationId}
-          orgSlug={currentOrganization?.slug}
-        />
+        isSqlResults ? (
+          <InsightsSqlResults
+            results={results as SqlListResults}
+            organizationId={organizationId}
+            orgSlug={currentOrganization?.slug}
+            onPersonClick={handleSqlPersonClick}
+          />
+        ) : (
+          <InsightsResults
+            results={results as InsightsResultsType}
+            parsedQuery={parsedQuery!}
+            chartType={chartType}
+            granularity={granularity}
+            onChartTypeChange={handleChartTypeChange}
+            onGranularityChange={handleGranularityChange}
+            onPersonClick={handlePersonClick}
+            organizationId={organizationId}
+            orgSlug={currentOrganization?.slug}
+          />
+        )
       ) : (
         !isLoading &&
         !isParsing && (
