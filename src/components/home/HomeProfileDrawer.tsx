@@ -100,7 +100,7 @@ export function HomeProfileDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent className="max-h-[85vh] mx-auto max-w-lg">
         <DrawerHeader className="text-left border-b pb-3">
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">

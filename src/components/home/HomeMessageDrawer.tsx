@@ -52,7 +52,7 @@ export function HomeMessageDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[80vh]">
+      <DrawerContent className="h-[80vh] mx-auto max-w-lg">
         <DrawerHeader className="text-left border-b pb-3">
           <DrawerTitle>{personName || "Conversation"}</DrawerTitle>
           {phoneNumber && (

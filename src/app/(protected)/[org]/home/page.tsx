@@ -8,6 +8,7 @@ import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
 import { QuestBoard } from "@/components/home/QuestBoard";
 import { HomeProfileDrawer, HomeProfilePerson } from "@/components/home/HomeProfileDrawer";
 import { HomeMessageDrawer } from "@/components/home/HomeMessageDrawer";
+import { HomePeopleListDrawer, BelongingPerson } from "@/components/home/HomePeopleListDrawer";
 import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
@@ -40,11 +41,35 @@ export default function HomePage() {
     personName: string | null;
   }>({ profileId: null, phoneNumber: null, personName: null });
 
-  // Handle belonging spectrum filter click (keeps navigation — filter action)
+  // People list drawer state (for BelongingSpectrum)
+  const [peopleListDrawerOpen, setPeopleListDrawerOpen] = useState(false);
+  const [selectedBelongingStatus, setSelectedBelongingStatus] = useState<BelongingStatus | null>(null);
+  const [selectedBelongingPeople, setSelectedBelongingPeople] = useState<BelongingPerson[]>([]);
+
+  // Handle belonging spectrum status click → open people list drawer
   const handleBelongingFilterChange = (status: BelongingStatus | "all") => {
-    if (status !== "all") {
-      window.location.href = orgPath(orgSlug, `/people?status=${encodeURIComponent(status)}`);
+    if (status !== "all" && belongingData?.studentsByStatus) {
+      setSelectedBelongingStatus(status);
+      setSelectedBelongingPeople(belongingData.studentsByStatus[status] || []);
+      setPeopleListDrawerOpen(true);
     }
+  };
+
+  // Handle clicking a person in the people list drawer → open profile drawer
+  const handleBelongingPersonClick = (person: BelongingPerson) => {
+    setPeopleListDrawerOpen(false);
+    setSelectedPerson({
+      profile_id: person.id,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      phone_number: null,
+      email: null,
+      grade: person.grade,
+      gender: null,
+      high_school: null,
+      days_since_last_check_in: person.days_since_last_seen,
+    });
+    setProfileDrawerOpen(true);
   };
 
   // Handle clicking a person name in NewStudentsCard → open profile drawer
@@ -200,6 +225,14 @@ export default function HomePage() {
         personName={selectedConversation.personName}
         open={messageDrawerOpen}
         onOpenChange={setMessageDrawerOpen}
+      />
+
+      <HomePeopleListDrawer
+        status={selectedBelongingStatus}
+        people={selectedBelongingPeople}
+        open={peopleListDrawerOpen}
+        onOpenChange={setPeopleListDrawerOpen}
+        onPersonClick={handleBelongingPersonClick}
       />
     </div>
   );
