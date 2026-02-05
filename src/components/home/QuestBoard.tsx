@@ -28,12 +28,12 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
   const track = useTrack();
   const { toast } = useToast();
 
-  const { data: board, isLoading: boardLoading, isError, error, refetch } = useQuestBoard(organizationId);
+  const { data: board, isLoading: boardLoading, isPending, isError, error, refetch } = useQuestBoard(organizationId);
   const { data: miaStudents } = useMiaStudents(organizationId, 5);
   const completeQuest = useCompleteQuest();
 
   // Debug logging (temporary)
-  console.log("[QuestBoard] RPC response:", { board, isError, error });
+  console.log("[QuestBoard] Query state:", { board, boardLoading, isPending, isError, error });
 
   const { dailyQuests, priorityQuests } = generateQuests(board, miaStudents, orgSlug);
 
@@ -74,8 +74,13 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
           total_completed: totalCount,
         });
       }
-    } catch (error) {
-      console.error("Failed to complete quest:", error);
+    } catch (err) {
+      console.error("Failed to complete quest:", err);
+      toast({
+        title: "Failed to complete quest",
+        description: err instanceof Error ? err.message : "Please try again",
+        variant: "destructive",
+      });
     }
   }, [completeQuest, organizationId, track, completedCount, totalCount, board?.streak.current]);
 
@@ -101,7 +106,8 @@ export function QuestBoard({ organizationId, orgSlug }: QuestBoardProps) {
     }
   }, [router, track, handleCompleteQuest]);
 
-  if (boardLoading) {
+  // Show loading state for initial load or pending state
+  if (boardLoading || (isPending && !board)) {
     return (
       <Card className="border-2 border-primary/20">
         <CardContent className="flex items-center justify-center py-8">

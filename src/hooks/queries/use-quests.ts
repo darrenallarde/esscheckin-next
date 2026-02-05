@@ -62,9 +62,34 @@ async function fetchQuestBoard(orgId: string): Promise<QuestBoard> {
     p_org_id: orgId,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error("[fetchQuestBoard] RPC error:", error);
+    throw error;
+  }
 
-  return data as QuestBoard;
+  // Validate the response structure
+  if (!data || typeof data !== 'object') {
+    console.error("[fetchQuestBoard] Invalid response - expected object, got:", typeof data, data);
+    throw new Error("Invalid quest board response from server");
+  }
+
+  // Ensure all required fields exist with proper defaults
+  const board: QuestBoard = {
+    completions: data.completions || {},
+    streak: {
+      current: data.streak?.current ?? 0,
+      longest: data.streak?.longest ?? 0,
+      lastCompleted: data.streak?.lastCompleted ?? null,
+    },
+    context: {
+      unreadMessages: data.context?.unreadMessages ?? 0,
+      newStudents: data.context?.newStudents ?? 0,
+      urgentPastoral: data.context?.urgentPastoral ?? 0,
+    },
+  };
+
+  console.log("[fetchQuestBoard] Parsed board:", board);
+  return board;
 }
 
 export function useQuestBoard(orgId: string | null) {

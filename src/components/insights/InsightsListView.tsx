@@ -93,10 +93,7 @@ export function InsightsListView({
           {hasSelection && (
             <Checkbox
               checked={selectedIds.has(person.profileId)}
-              onCheckedChange={(e) => {
-                e.stopPropagation?.();
-                onToggleSelection(person.profileId);
-              }}
+              onCheckedChange={() => onToggleSelection(person.profileId)}
               onClick={(e) => e.stopPropagation()}
               className="mt-1"
             />
