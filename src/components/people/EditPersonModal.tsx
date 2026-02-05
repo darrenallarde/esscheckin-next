@@ -41,7 +41,7 @@ const editPersonSchema = z.object({
   phoneNumber: z.string().optional(),
   grade: z.string().optional(),
   highSchool: z.string().optional(),
-  gender: z.enum(["male", "female", ""]).optional(),
+  gender: z.enum(["male", "female", "none"]).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -93,9 +93,9 @@ export function EditPersonModal({
       lastName: "",
       email: "",
       phoneNumber: "",
-      grade: "",
+      grade: "none",
       highSchool: "",
-      gender: "",
+      gender: "none",
       address: "",
       city: "",
       state: "",
@@ -111,9 +111,9 @@ export function EditPersonModal({
         lastName: person.last_name || "",
         email: person.email || "",
         phoneNumber: person.phone_number || "",
-        grade: person.grade || "",
+        grade: person.grade || "none",
         highSchool: person.high_school || "",
-        gender: (person.gender as "male" | "female" | "") || "",
+        gender: (person.gender as "male" | "female") || "none",
         address: person.address || "",
         city: person.city || "",
         state: person.state || "",
@@ -133,9 +133,9 @@ export function EditPersonModal({
         lastName: data.lastName,
         email: data.email || undefined,
         phoneNumber: data.phoneNumber || undefined,
-        grade: isStudent ? data.grade || undefined : undefined,
+        grade: isStudent && data.grade && data.grade !== "none" ? data.grade : undefined,
         highSchool: isStudent ? data.highSchool || undefined : undefined,
-        gender: isStudent ? data.gender || undefined : undefined,
+        gender: isStudent && data.gender && data.gender !== "none" ? data.gender : undefined,
         address: isStudent ? data.address || undefined : undefined,
         city: isStudent ? data.city || undefined : undefined,
         state: isStudent ? data.state || undefined : undefined,
@@ -272,7 +272,7 @@ export function EditPersonModal({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Not set</SelectItem>
+                            <SelectItem value="none">Not set</SelectItem>
                             {GRADES.map((grade) => (
                               <SelectItem key={grade} value={grade}>
                                 Grade {grade}
@@ -301,7 +301,7 @@ export function EditPersonModal({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Not set</SelectItem>
+                            <SelectItem value="none">Not set</SelectItem>
                             <SelectItem value="male">Male</SelectItem>
                             <SelectItem value="female">Female</SelectItem>
                           </SelectContent>
