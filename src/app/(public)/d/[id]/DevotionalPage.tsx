@@ -30,8 +30,12 @@ export function DevotionalPage({
       organization={organization}
       seriesDevotionals={seriesDevotionals}
     >
-      {/* Auth gate - sign in CTA */}
-      <DevotionalAuthGate />
+      {/* Auth gate with engagement */}
+      <DevotionalAuthGate
+        devotionalId={devotional.id}
+        orgId={organization.id}
+        orgSlug={organization.slug}
+      />
 
       {/* Series navigation */}
       {seriesDevotionals && seriesDevotionals.length > 1 && (

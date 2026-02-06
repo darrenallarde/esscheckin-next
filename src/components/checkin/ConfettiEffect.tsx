@@ -22,8 +22,8 @@ interface ConfettiEffectProps {
 }
 
 const CONFETTI_COLORS = [
-  "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4",
-  "#FECA57", "#FF9FF3", "#54A0FF", "#5F27CD", "#00D2D3"
+  "#F59E0B", "#10B981", "#6366F1", "#EC4899", "#3B82F6",
+  "#F97316",
 ];
 
 const ConfettiEffect = ({ active, duration = 3000 }: ConfettiEffectProps) => {
@@ -37,7 +37,7 @@ const ConfettiEffect = ({ active, duration = 3000 }: ConfettiEffectProps) => {
     const generatePieces = () => {
       const pieces: ConfettiPiece[] = [];
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 15; i++) {
         pieces.push({
           id: i,
           x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),

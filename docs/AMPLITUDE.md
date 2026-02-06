@@ -583,6 +583,37 @@ Events for the gamified Home page with daily quests, priority actions, and strea
 - Daily quests reset at midnight (server time)
 - Priority quests are generated based on MIA students
 
+### 4.16 Student Devotional (Consumer-Facing)
+
+Events for the public devotional page and student authentication flow. These are **student-initiated** events (not admin). Standard properties may be null for unauthenticated events.
+
+| Event | Description | Required Properties | Optional Properties |
+|-------|-------------|---------------------|---------------------|
+| `Devotional Page Viewed` | Student opened devotional link | `devotional_id`, `series_id`, `day_number`, `time_slot` | `org_slug` |
+| `Devotional Auth Started` | Student clicked sign-in method | `auth_method`, `org_slug` | `devotional_id` |
+| `Devotional Auth Completed` | Student successfully authenticated | `auth_method`, `profile_id`, `org_slug` | `is_new_account` |
+| `Devotional Auth Failed` | Auth attempt failed | `auth_method`, `error_type` | `org_slug` |
+| `Devotional Reflected` | Student tapped "I reflected" | `devotional_id`, `profile_id`, `series_id` | |
+| `Devotional Prayed` | Student tapped "I prayed" | `devotional_id`, `profile_id`, `series_id` | |
+| `Devotional Journaled` | Student submitted journal entry | `devotional_id`, `profile_id`, `series_id` | `journal_length` |
+| `Devotional Series Navigated` | Student navigated to another devotional | `from_devotional_id`, `to_devotional_id`, `navigation_type` | |
+
+**Property Values:**
+
+| Property | Type | Allowed Values |
+|----------|------|----------------|
+| `auth_method` | String | `"phone_otp"`, `"email_otp"`, `"username_password"` |
+| `error_type` | String | `"invalid_otp"`, `"phone_not_found"`, `"email_not_found"`, `"username_taken"`, `"password_weak"`, `"rate_limited"` |
+| `navigation_type` | String | `"prev"`, `"next"`, `"series_list"` |
+| `is_new_account` | Boolean | Whether a new auth account was created |
+| `journal_length` | Number | Character count of journal entry |
+
+**Implementation Notes:**
+- `Devotional Page Viewed` fires for ALL visitors (no auth needed). Use `org_slug` from server data, not from session.
+- Auth events use the student's profile_id (NOT admin_user_id). `admin_user_id` will be null.
+- Never log journal content — only `journal_length`.
+- `Devotional Auth Completed` should also fire the existing `Profile Linked` event when a profile is linked to an auth account.
+
 ---
 
 ## 5. Event Property Reference
@@ -744,6 +775,13 @@ Don't manually track these - Amplitude handles them:
 | `time_slots` | Array | Array of time_slot values | Configuration events |
 | `duration_ms` | Number | - | Generation events |
 | `success` | Boolean | - | Generation events |
+| `auth_method` | String | `"phone_otp"`, `"email_otp"`, `"username_password"` | Devotional auth events |
+| `error_type` | String | Various error codes | Devotional auth failure events |
+| `is_new_account` | Boolean | Whether new auth account created | Devotional auth events |
+| `journal_length` | Number | Character count | Devotional journal events |
+| `navigation_type` | String | `"prev"`, `"next"`, `"series_list"` | Devotional navigation events |
+| `from_devotional_id` | UUID | Source devotional | Devotional navigation events |
+| `to_devotional_id` | UUID | Target devotional | Devotional navigation events |
 
 **Deprecated properties** (see Section 4.12 for migration): `student_id`, `sender_user_id`, `student_a_id`, `student_b_id`, `kept_student_id`, `students_imported`, `students_updated`, `students_added`, `has_student`, `sibling_id`
 
@@ -1150,6 +1188,16 @@ export const EVENTS = {
   QUICK_MESSAGE_SENT: 'Quick Message Sent',
   HOME_PASTORAL_ACTION: 'Home Pastoral Action',
   HOME_NEW_STUDENT_ACTION: 'Home New Student Action',
+
+  // Student Devotional (Phase 2)
+  DEVOTIONAL_PAGE_VIEWED: 'Devotional Page Viewed',
+  DEVOTIONAL_AUTH_STARTED: 'Devotional Auth Started',
+  DEVOTIONAL_AUTH_COMPLETED: 'Devotional Auth Completed',
+  DEVOTIONAL_AUTH_FAILED: 'Devotional Auth Failed',
+  DEVOTIONAL_REFLECTED: 'Devotional Reflected',
+  DEVOTIONAL_PRAYED: 'Devotional Prayed',
+  DEVOTIONAL_JOURNALED: 'Devotional Journaled',
+  DEVOTIONAL_SERIES_NAVIGATED: 'Devotional Series Navigated',
 } as const;
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS];
@@ -1382,5 +1430,5 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 
 ---
 
-*Last Updated: February 5, 2026*
+*Last Updated: February 5, 2026 (Phase 2: Student Devotional events added)*
 *Maintainer: Engineering Team*
