@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +27,7 @@ function cleanPhoneNumber(phone: string): string {
   return cleanTo;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -135,20 +135,27 @@ serve(async (req) => {
 
           sentCount++;
 
-          // Also store in sms_messages for conversation history (optional, broadcasts are separate)
-          // Uncomment if you want broadcast messages to appear in conversations:
-          // await supabase.from("sms_messages").insert({
-          //   profile_id: recipient.profile_id,
-          //   organization_id: broadcast.organization_id,
-          //   direction: "outbound",
-          //   body: broadcast.message_body,
-          //   from_number: TWILIO_PHONE_NUMBER,
-          //   to_number: cleanTo,
-          //   twilio_sid: twilioData.sid,
-          //   status: twilioData.status,
-          //   is_broadcast: true,
-          //   broadcast_id: broadcastId,
-          // });
+          // Store in sms_messages for conversation history
+          // This makes broadcasts visible in Messages inbox and enables find_recent_conversation
+          try {
+            await supabase.from("sms_messages").insert({
+              profile_id: recipient.profile_id,
+              student_id: recipient.profile_id,
+              organization_id: broadcast.organization_id,
+              direction: "outbound",
+              body: broadcast.message_body,
+              from_number: TWILIO_PHONE_NUMBER,
+              to_number: cleanTo,
+              twilio_sid: twilioData.sid,
+              status: twilioData.status || "sent",
+            });
+          } catch (insertErr) {
+            // Don't let a failed sms_messages insert break broadcast delivery
+            console.error("Failed to store broadcast message in sms_messages:", {
+              recipient_id: recipient.id,
+              error: insertErr.message,
+            });
+          }
         } else {
           // Update recipient status to failed
           await supabase
