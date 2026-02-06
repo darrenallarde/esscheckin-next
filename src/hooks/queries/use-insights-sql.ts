@@ -77,6 +77,7 @@ export function useInsightsSql(
           displayLabels: result.displayLabels,
           totalCount: result.rowCount,
           rawQuery: query.trim(),
+          sql: result.sql,
         });
       } catch (err) {
         const message =

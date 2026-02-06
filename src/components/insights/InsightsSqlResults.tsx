@@ -357,6 +357,16 @@ export function InsightsSqlResults({
             <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your search criteria
             </p>
+            {results.sql && (
+              <details className="mt-4 text-left max-w-xl mx-auto">
+                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                  Show generated SQL (debug)
+                </summary>
+                <pre className="mt-2 p-3 bg-muted rounded-md text-xs overflow-x-auto whitespace-pre-wrap break-all">
+                  {results.sql}
+                </pre>
+              </details>
+            )}
           </div>
         )}
 

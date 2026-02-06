@@ -80,4 +80,5 @@ export interface SqlListResults {
   displayLabels: string[];
   totalCount: number;
   rawQuery: string;
+  sql?: string;
 }

@@ -158,15 +158,40 @@ export async function POST(
       );
     }
 
-    const results = (data as Record<string, unknown>[]) || [];
+    // Defensive: parse RPC response into a flat array of row objects.
+    // The RPC returns JSONB. PostgREST may return it as:
+    //   - A JS array (expected): [{...}, {...}]
+    //   - null/undefined (empty or error)
+    //   - A non-array value (unexpected wrapper)
+    let results: Record<string, unknown>[];
+    if (Array.isArray(data)) {
+      // Check if PostgREST wrapped the JSONB in an outer array
+      // e.g. [[ {...}, {...} ]] instead of [ {...}, {...} ]
+      if (data.length === 1 && Array.isArray(data[0])) {
+        results = data[0] as Record<string, unknown>[];
+        console.warn("INSIGHTS_UNWRAP: PostgREST returned nested array, unwrapped");
+      } else {
+        results = data as Record<string, unknown>[];
+      }
+    } else if (data === null || data === undefined) {
+      results = [];
+      console.error("INSIGHTS_NULL_DATA: RPC returned null/undefined despite no error");
+    } else {
+      console.error("INSIGHTS_UNEXPECTED_SHAPE:", typeof data, JSON.stringify(data).slice(0, 500));
+      results = [];
+    }
 
     console.log("INSIGHTS_RESULT", JSON.stringify({
       userQuery: query.trim(),
+      generatedSql: llmResponse.sql,
       orgId: organizationId,
       rowCount: results.length,
-      dataType: typeof data,
-      dataIsNull: data === null,
-      dataIsArray: Array.isArray(data),
+      rawDataType: typeof data,
+      rawDataIsNull: data === null,
+      rawDataIsArray: Array.isArray(data),
+      rawDataLength: Array.isArray(data) ? data.length : "N/A",
+      rawDataPreview: JSON.stringify(data).slice(0, 300),
+      firstRow: results.length > 0 ? JSON.stringify(results[0]).slice(0, 200) : "EMPTY",
     }));
 
     const response: InsightsSqlApiResponse = {
