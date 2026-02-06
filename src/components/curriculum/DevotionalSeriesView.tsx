@@ -20,6 +20,8 @@ import {
   Lightbulb,
   Heart,
   MessageCircle,
+  Link2,
+  Check,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -125,11 +127,21 @@ function DevotionalSection({
 function DevotionalCard({
   devotional,
   onEdit,
+  showCopyLink,
 }: {
   devotional: Devotional;
   onEdit?: () => void;
+  showCopyLink?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/d/${devotional.id}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -149,6 +161,20 @@ function DevotionalCard({
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {showCopyLink && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyLink}
+                title="Copy student link"
+              >
+                {copied ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <Link2 className="h-3 w-3" />
+                )}
+              </Button>
+            )}
             {onEdit && (
               <Button variant="ghost" size="sm" onClick={onEdit}>
                 <Edit className="h-3 w-3" />
@@ -369,6 +395,7 @@ export function DevotionalSeriesView({
                       <DevotionalCard
                         key={devotional.id}
                         devotional={devotional}
+                        showCopyLink={series.status === "active"}
                         onEdit={
                           onEditDevotional
                             ? () => onEditDevotional(devotional)

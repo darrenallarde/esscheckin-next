@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
 import { useSmsConversation, useSmsConversationPagination, useSmsRealtimeConversation } from "@/hooks/queries/use-sms-conversation";
-import { useMarkConversationRead, useSmsRealtimeInbox } from "@/hooks/queries/use-sms-inbox";
+import { useMarkConversationRead } from "@/hooks/queries/use-sms-inbox";
 import type { SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -50,15 +50,15 @@ export function ConversationPanel({
     loadEarlier(messages?.length || 0);
   }, [loadEarlier, messages?.length]);
 
-  // Realtime subscriptions
+  // Realtime subscription for this conversation only
+  // (inbox realtime is handled by the parent messages page or home page)
   useSmsRealtimeConversation(orgId || null, recipientId);
-  useSmsRealtimeInbox(orgId || null);
 
   const markRead = useMarkConversationRead();
 
   const isUnknownContact = !recipientId;
 
-  // Mark as read when conversation is opened
+  // Mark as read when conversation is opened (runs once on mount / when recipient changes)
   useEffect(() => {
     if (orgId && conversation.unreadCount > 0) {
       markRead.mutate({
@@ -67,7 +67,8 @@ export function ConversationPanel({
         studentId: recipientId,
       });
     }
-  }, [conversation.phoneNumber, recipientId, conversation.unreadCount, orgId, markRead]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run only when conversation changes, not on markRead ref changes
+  }, [conversation.phoneNumber, recipientId, orgId]);
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
