@@ -27,13 +27,15 @@ function formatPhoneNumber(phone: string): string {
 }
 
 export function RecentMessages({
-  data,
+  data: rawData,
   loading = false,
   viewAllHref = "/messages",
   onConversationClick,
 }: RecentMessagesProps) {
+  // Defensive: ensure data is always an array
+  const data = Array.isArray(rawData) ? rawData : [];
   // Calculate total unread across all conversations
-  const totalUnread = data.reduce((sum, conv) => sum + conv.unreadCount, 0);
+  const totalUnread = data.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
 
   if (loading) {
     return (

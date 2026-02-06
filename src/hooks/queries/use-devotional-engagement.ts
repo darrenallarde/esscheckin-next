@@ -7,6 +7,7 @@ interface EngagementState {
   reflected: boolean;
   prayed: boolean;
   journal_entry: string | null;
+  prayer_request: string | null;
   opened_at: string | null;
   reflected_at: string | null;
   prayed_at: string | null;
@@ -38,6 +39,7 @@ export function useDevotionalEngagement(devotionalId: string, isAuthenticated: b
               reflected: false,
               prayed: false,
               journal_entry: null,
+              prayer_request: null,
               opened_at: null,
               reflected_at: null,
               prayed_at: null,
@@ -90,27 +92,6 @@ export function useDevotionalEngagement(devotionalId: string, isAuthenticated: b
     }
   }, [devotionalId]);
 
-  const togglePrayed = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.rpc("record_devotional_engagement", {
-        p_devotional_id: devotionalId,
-        p_action: "prayed",
-      });
-      if (!error && data) {
-        const result = data as unknown as { success: boolean; engagement?: EngagementState };
-        if (result.success && result.engagement) {
-          setEngagement(result.engagement);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to toggle prayed:", err);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [devotionalId]);
-
   const saveJournal = useCallback(async (text: string) => {
     setIsSaving(true);
     try {
@@ -133,12 +114,34 @@ export function useDevotionalEngagement(devotionalId: string, isAuthenticated: b
     }
   }, [devotionalId]);
 
+  const savePrayerRequest = useCallback(async (text: string) => {
+    setIsSaving(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("record_devotional_engagement", {
+        p_devotional_id: devotionalId,
+        p_action: "prayed",
+        p_journal_text: text || null,
+      });
+      if (!error && data) {
+        const result = data as unknown as { success: boolean; engagement?: EngagementState };
+        if (result.success && result.engagement) {
+          setEngagement(result.engagement);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save prayer request:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [devotionalId]);
+
   return {
     engagement,
     isLoading,
     isSaving,
     toggleReflected,
-    togglePrayed,
     saveJournal,
+    savePrayerRequest,
   };
 }
