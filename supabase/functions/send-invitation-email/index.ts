@@ -46,55 +46,51 @@ Deno.serve(async (req: Request) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 30px;">
-    <div style="display: inline-block; background-color: #16a34a; border-radius: 8px; padding: 12px;">
-      <span style="font-size: 24px;">🐕</span>
-    </div>
-    <h1 style="color: #16a34a; margin-top: 16px; margin-bottom: 0;">Sheepdoggo</h1>
-  </div>
+  <h2>You're Invited! 🐕</h2>
 
-  <div style="background-color: #f9fafb; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-    <h2 style="margin-top: 0; color: #111;">You're Invited!</h2>
-    <p style="margin-bottom: 16px;">
-      ${inviterName ? `<strong>${inviterName}</strong> has invited you` : "You've been invited"} to join
-      <strong>${organizationName}</strong> on Sheepdoggo${role ? ` as ${role === 'admin' ? 'an admin' : `a ${role}`}` : ''}.
-    </p>
-    <p style="margin-bottom: 24px;">
-      Sheepdoggo helps ministries track attendance and nurture every person's growth.
-    </p>
-    <a href="${loginUrl || 'https://sheepdoggo.ai/auth'}"
-       style="display: inline-block; background-color: #16a34a; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
+  <p>Hi there!</p>
+
+  <p>
+    ${inviterName ? `<strong>${inviterName}</strong> has invited you` : "You've been invited"} to join
+    <strong>${organizationName}</strong> on SheepDoggo${role ? ` as ${role === 'admin' ? 'an admin' : `a ${role}`}` : ''}.
+  </p>
+
+  <p style="font-size: 14px; color: #64748b;">
+    SheepDoggo helps ministries track attendance and nurture every person's growth.
+  </p>
+
+  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+    <a href="${loginUrl || 'https://sheepdoggo.app/auth'}"
+       style="display: inline-block; background: #7c3aed; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; font-size: 16px;">
       Accept Invitation
     </a>
   </div>
 
-  <p style="color: #666; font-size: 14px; text-align: center;">
-    Simply log in with this email address and you'll automatically be added to the team.
+  <p style="font-size: 14px; color: #64748b;">
+    Just log in with this email address and you'll automatically be added to the team.
   </p>
 
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
-  <p style="color: #999; font-size: 12px; text-align: center;">
-    Sheepdoggo · Helping ministries nurture growth
+  <p style="font-size: 12px; color: #94a3b8;">
+    If you weren't expecting this invitation, you can safely ignore this email.
   </p>
 </body>
 </html>
 `;
 
     const emailText = `
-You're Invited to ${organizationName}!
+You're Invited!
 
-${inviterName ? `${inviterName} has invited you` : "You've been invited"} to join ${organizationName} on Sheepdoggo${role ? ` as ${role === 'admin' ? 'an admin' : `a ${role}`}` : ''}.
+${inviterName ? `${inviterName} has invited you` : "You've been invited"} to join ${organizationName} on SheepDoggo${role ? ` as ${role === 'admin' ? 'an admin' : `a ${role}`}` : ''}.
 
-Sheepdoggo helps ministries track attendance and nurture every person's growth.
+SheepDoggo helps ministries track attendance and nurture every person's growth.
 
-To accept this invitation, visit: ${loginUrl || 'https://sheepdoggo.ai/auth'}
+To accept this invitation, visit: ${loginUrl || 'https://sheepdoggo.app/auth'}
 
-Simply log in with this email address and you'll automatically be added to the team.
+Just log in with this email address and you'll automatically be added to the team.
 
---
-Sheepdoggo
-Helping ministries nurture growth
+If you weren't expecting this invitation, you can safely ignore this email.
 `;
 
     // Send email via Resend
@@ -105,9 +101,9 @@ Helping ministries nurture growth
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Sheepdoggo <hello@sheepdoggo.ai>',
+        from: 'SheepDoggo <hello@sheepdoggo.app>',
         to: [to],
-        subject: `You're invited to join ${organizationName} on Sheepdoggo`,
+        subject: `You're invited to join ${organizationName} on SheepDoggo`,
         html: emailHtml,
         text: emailText,
       }),
