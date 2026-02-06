@@ -36,7 +36,11 @@
       "Bash(which *)",
       "Bash(ls *)",
       "Bash(mkdir *)",
-      "Bash(chmod *)"
+      "Bash(chmod *)",
+      "Bash(npx vitest*)",
+      "Bash(npx playwright*)",
+      "Bash(npm run test*)",
+      "Bash(npm test*)"
     ],
     "deny": [
       "Bash(git push --force*)",

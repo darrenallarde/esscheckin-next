@@ -31,6 +31,7 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 | ChMS Integration | `docs/claude/chms-integration.md` | 3-provider adapter architecture, sync engine, edge functions |
 | Mistakes | `docs/mistakes.md` | Bug post-mortems with prevention rules |
 | Deployment | `docs/deployment.md` | Vercel, Supabase CLI, env vars |
+| Testing | `docs/claude/testing.md` | Vitest, Playwright, TDD workflow, mocking |
 | ChMS Status | `docs/CHMS_INTEGRATION_STATUS.md` | Deployment status, test credentials |
 
 ## Code Standards
@@ -55,10 +56,11 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 
 ## Testing
 
-No test framework. Manual testing only.
-- Always test on the dev server (`npm run dev` → localhost:3000) against staging Supabase.
-- Test session restore separately from fresh login — different code paths.
-- Test mobile/iPad and try to break it (wrong input, slow network, back button).
+- Unit tests: `npm run test:run` (Vitest). Always write tests BEFORE implementation.
+- E2E tests: `npm run test:e2e` (Playwright). Cover critical user flows.
+- Async Server Components: test via Playwright E2E, NOT Vitest.
+- Manual: test on dev server, test session restore separately, test mobile/iPad.
+- Reference: `docs/claude/testing.md`
 
 ## Git & Deploy
 

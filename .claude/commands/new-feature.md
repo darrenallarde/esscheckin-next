@@ -13,7 +13,7 @@ Use this when starting work on a new feature. Argument: `$ARGUMENTS` (feature de
 ## Phase 2: Build
 5. **Create branch:** `git checkout -b feature/<short-name>`
 6. **Database first:** If the feature needs schema changes, use `/db-migrate` workflow.
-7. **Implement:** Build the feature, following code standards in CLAUDE.md.
+7. **Implement:** Follow `/qa` workflow: write tests first, then implement. If unsure what to test, ask me.
 8. **Typecheck + build:** Run `npm run typecheck` and `npm run build` — both must pass.
 9. **Review:** Show a summary of all changes made.
 10. **Commit:** Commit with a clear message describing the feature.
