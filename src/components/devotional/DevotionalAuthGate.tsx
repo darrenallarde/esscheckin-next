@@ -29,8 +29,21 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
       const session = await auth.checkSession();
       if (session) {
         setAuthenticated(true);
-        // Try to get first name from profile (best effort)
-        setFirstName("");
+        // Look up first name from profiles table
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("profiles")
+            .select("first_name")
+            .eq("user_id", session.user.id)
+            .single();
+          if (data?.first_name) {
+            setFirstName(data.first_name);
+          }
+        } catch {
+          // Best effort — "there" fallback is fine
+        }
       }
       setCheckingSession(false);
     };
