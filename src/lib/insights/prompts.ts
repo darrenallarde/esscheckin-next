@@ -19,6 +19,7 @@ export interface OrgContext {
   groupNames: string[]; // Available groups like "HS Boys", "MS Girls"
   hasGrades: boolean; // Whether grade data is tracked
   gradeRange: { min: number; max: number }; // e.g., 6-12
+  timezone?: string; // IANA timezone e.g. "America/Los_Angeles"
 }
 
 /**

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Radio, Plus, Send, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -14,9 +15,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBroadcasts, type Broadcast, type BroadcastStatus } from "@/hooks/queries/use-broadcasts";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useBroadcasts, useSendBroadcast, type Broadcast, type BroadcastStatus } from "@/hooks/queries/use-broadcasts";
 import { useOrganization } from "@/hooks/useOrganization";
 import { BroadcastComposer } from "@/components/broadcasts/BroadcastComposer";
+import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
 function getStatusBadge(status: BroadcastStatus) {
@@ -73,7 +81,7 @@ function getAudienceSummary(broadcast: Broadcast): string {
   return parts.join(" ") || "No audience";
 }
 
-function BroadcastHistoryTable({ broadcasts, loading }: { broadcasts: Broadcast[]; loading: boolean }) {
+function BroadcastHistoryTable({ broadcasts, loading, onBroadcastClick }: { broadcasts: Broadcast[]; loading: boolean; onBroadcastClick?: (broadcast: Broadcast) => void }) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -109,7 +117,11 @@ function BroadcastHistoryTable({ broadcasts, loading }: { broadcasts: Broadcast[
       </TableHeader>
       <TableBody>
         {broadcasts.map((broadcast) => (
-          <TableRow key={broadcast.id}>
+          <TableRow
+            key={broadcast.id}
+            className={onBroadcastClick ? "cursor-pointer hover:bg-accent" : ""}
+            onClick={() => onBroadcastClick?.(broadcast)}
+          >
             <TableCell className="whitespace-nowrap">
               <div className="text-sm">
                 {broadcast.sentAt
@@ -163,6 +175,9 @@ export default function BroadcastsPage() {
 
   const { data: broadcasts, isLoading: broadcastsLoading } = useBroadcasts(orgId);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [selectedBroadcast, setSelectedBroadcast] = useState<Broadcast | null>(null);
+  const sendBroadcast = useSendBroadcast();
+  const { toast } = useToast();
 
   // Parse pre-selected profile IDs from URL (from Insights "Message All" action)
   const profileIdsParam = searchParams.get("profileIds");
@@ -201,6 +216,7 @@ export default function BroadcastsPage() {
         <BroadcastHistoryTable
           broadcasts={broadcasts || []}
           loading={isLoading}
+          onBroadcastClick={(broadcast) => setSelectedBroadcast(broadcast)}
         />
       </div>
 
@@ -211,6 +227,111 @@ export default function BroadcastsPage() {
         orgId={orgId}
         preSelectedProfileIds={preSelectedProfileIds.length > 0 ? preSelectedProfileIds : undefined}
       />
+
+      {/* Broadcast Detail Sheet */}
+      <Sheet open={!!selectedBroadcast} onOpenChange={(open) => !open && setSelectedBroadcast(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedBroadcast && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Broadcast Details</SheetTitle>
+              </SheetHeader>
+
+              <div className="space-y-6 mt-6">
+                {/* Status */}
+                <div className="flex items-center justify-between">
+                  {getStatusBadge(selectedBroadcast.status)}
+                  <span className="text-sm text-muted-foreground">
+                    {selectedBroadcast.sentAt
+                      ? formatDistanceToNow(new Date(selectedBroadcast.sentAt), { addSuffix: true })
+                      : formatDistanceToNow(new Date(selectedBroadcast.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+
+                {/* Message */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Message</Label>
+                  <div className="rounded-lg bg-muted p-4 text-sm whitespace-pre-wrap">
+                    {selectedBroadcast.messageBody}
+                  </div>
+                </div>
+
+                {/* Audience */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Audience</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {getAudienceSummary(selectedBroadcast)}
+                  </p>
+                </div>
+
+                {/* Recipients */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Recipients</Label>
+                  <p className="text-sm">
+                    {selectedBroadcast.status === "sent" ? (
+                      <>
+                        <span className="text-green-600 font-medium">{selectedBroadcast.sentCount} sent</span>
+                        {selectedBroadcast.failedCount > 0 && (
+                          <span className="text-destructive"> / {selectedBroadcast.failedCount} failed</span>
+                        )}
+                      </>
+                    ) : (
+                      <span>{selectedBroadcast.recipientCount} recipient{selectedBroadcast.recipientCount === 1 ? "" : "s"}</span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Created by */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Created by</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedBroadcast.createdByName}
+                  </p>
+                </div>
+
+                {/* Resend button for drafts/failed */}
+                {(selectedBroadcast.status === "draft" || selectedBroadcast.status === "failed") && orgId && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await sendBroadcast.mutateAsync({
+                          broadcastId: selectedBroadcast.id,
+                          orgId,
+                        });
+                        toast({
+                          title: "Broadcast sent",
+                          description: `Message sent to ${selectedBroadcast.recipientCount} recipient${selectedBroadcast.recipientCount === 1 ? "" : "s"}.`,
+                        });
+                        setSelectedBroadcast(null);
+                      } catch (error) {
+                        toast({
+                          title: "Failed to send",
+                          description: error instanceof Error ? error.message : "An error occurred",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={sendBroadcast.isPending}
+                    className="w-full gap-2"
+                  >
+                    {sendBroadcast.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        {selectedBroadcast.status === "failed" ? "Retry Send" : "Send Now"}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

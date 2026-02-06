@@ -19,6 +19,7 @@ import type {
 import type { SqlListResults } from "@/lib/insights/types-v2";
 import type { OrgContext } from "@/lib/insights/prompts";
 import { useGroups } from "./use-groups";
+import { useOrganization } from "@/hooks/useOrganization";
 
 // Combined results type that includes both V1 and V2 result shapes
 export type CombinedResults = InsightsResults | SqlListResults;
@@ -49,14 +50,16 @@ export function useInsights(
   // Track whether the current query is using V2 SQL mode
   const [isSqlMode, setIsSqlMode] = useState(false);
 
-  // Fetch groups for org context (used in prompts)
+  // Fetch groups and org details for context (used in prompts)
   const { data: groups } = useGroups(organizationId);
+  const { currentOrganization } = useOrganization();
 
   // Build org context for the parser
   const orgContext: OrgContext = {
     groupNames: groups?.map((g) => g.name) || [],
     hasGrades: true,
     gradeRange: { min: 6, max: 12 },
+    timezone: currentOrganization?.timezone || "America/Los_Angeles",
   };
 
   // Ref to persist orgContext for stable callback

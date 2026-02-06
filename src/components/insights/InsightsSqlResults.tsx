@@ -29,12 +29,12 @@ interface InsightsSqlResultsProps {
 function formatCellValue(value: unknown, column: string): string {
   if (value === null || value === undefined) return "-";
 
-  // Date columns
+  // Date columns (exact match to avoid treating count columns like total_check_ins as dates)
   if (
-    column.includes("check_in") ||
-    column.includes("created_at") ||
     column === "last_check_in" ||
-    column === "membership_created_at"
+    column === "membership_created_at" ||
+    column.endsWith("_at") ||
+    column === "last_text_date"
   ) {
     const date = new Date(String(value));
     if (isNaN(date.getTime())) return String(value);

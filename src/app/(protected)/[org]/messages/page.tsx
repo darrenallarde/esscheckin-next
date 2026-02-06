@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, PenSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ConversationList } from "@/components/messages/ConversationList";
 import { ConversationPanel } from "@/components/messages/ConversationPanel";
+import { NewConversationDialog } from "@/components/messages/NewConversationDialog";
 import { useSmsInbox, type SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { useOrganization } from "@/hooks/useOrganization";
 
@@ -17,6 +19,7 @@ export default function MessagesPage() {
 
   const { data: conversations, isLoading: inboxLoading } = useSmsInbox(orgId);
   const [selectedConversation, setSelectedConversation] = useState<SmsConversation | null>(null);
+  const [showNewConversation, setShowNewConversation] = useState(false);
 
   // Auto-select conversation from URL param
   useEffect(() => {
@@ -51,6 +54,10 @@ export default function MessagesPage() {
             View and respond to SMS conversations
           </p>
         </div>
+        <Button onClick={() => setShowNewConversation(true)} className="gap-2">
+          <PenSquare className="h-4 w-4" />
+          New Message
+        </Button>
       </div>
 
       {/* Main Content - Split View */}
@@ -97,6 +104,26 @@ export default function MessagesPage() {
           />
         </div>
       )}
+
+      {/* New Conversation Dialog */}
+      <NewConversationDialog
+        open={showNewConversation}
+        onOpenChange={setShowNewConversation}
+        onConversationStarted={(profileId, phoneNumber, name) => {
+          // Auto-select the new conversation once inbox refreshes
+          setSelectedConversation({
+            phoneNumber,
+            profileId,
+            studentId: profileId,
+            studentName: name,
+            lastMessage: "",
+            lastMessageAt: new Date().toISOString(),
+            lastMessageDirection: "outbound",
+            unreadCount: 0,
+            totalMessageCount: 1,
+          });
+        }}
+      />
     </div>
   );
 }

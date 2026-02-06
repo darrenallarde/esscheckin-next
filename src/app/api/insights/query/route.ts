@@ -81,8 +81,12 @@ export async function POST(
       gradeRange: { min: 6, max: 12 },
     };
 
+    // Compute today's date in the org's timezone (for relative date queries like "yesterday")
+    const tz = ctx.timezone || "America/Los_Angeles";
+    const todayLocal = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // "2026-02-04" format
+
     // Build prompt and call Claude for SQL generation
-    const prompt = buildSqlGenerationPrompt(query.trim(), ctx);
+    const prompt = buildSqlGenerationPrompt(query.trim(), ctx, todayLocal);
     const llmResponse = await llmWithValidation(
       prompt,
       InsightsSqlResponseSchema,
