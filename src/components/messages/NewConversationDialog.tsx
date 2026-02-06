@@ -60,6 +60,7 @@ export function NewConversationDialog({
   const [selected, setSelected] = useState<OrgContact[]>([]);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState(0);
 
   // Filter contacts by search, exclude already-selected
   const filteredContacts = useMemo(() => {
@@ -92,11 +93,15 @@ export function NewConversationDialog({
   const handleSend = async () => {
     if (!message.trim() || selected.length === 0 || sending) return;
     setSending(true);
+    setSendProgress(0);
 
     let successCount = 0;
     let firstRecipient: OrgContact | null = null;
 
-    for (const recipient of selected) {
+    for (let i = 0; i < selected.length; i++) {
+      const recipient = selected[i];
+      setSendProgress(i + 1);
+
       const result = await sendSms({
         to: recipient.phoneNumber,
         body: message.trim(),
@@ -112,6 +117,7 @@ export function NewConversationDialog({
     }
 
     setSending(false);
+    setSendProgress(0);
 
     if (successCount > 0) {
       playSendSound();
@@ -268,11 +274,18 @@ export function NewConversationDialog({
                   )}
                 >
                   {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {selected.length > 1
+                        ? `Sending ${sendProgress} of ${selected.length}...`
+                        : "Sending..."}
+                    </>
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <>
+                      <Send className="h-4 w-4" />
+                      Send{selected.length > 1 ? ` to ${selected.length}` : ""}
+                    </>
                   )}
-                  Send{selected.length > 1 ? ` to ${selected.length}` : ""}
                 </Button>
               </div>
             </div>
