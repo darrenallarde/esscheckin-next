@@ -10,6 +10,7 @@ import { useRefreshConversation } from "@/hooks/queries/use-sms-conversation";
 import { playSendSound } from "@/lib/sounds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { smsCounterText, SMS_MAX_LENGTH } from "@/lib/sms-segments";
 
 interface MessageComposerProps {
   studentId: string;
@@ -33,6 +34,8 @@ export function MessageComposer({
   const [message, setMessage] = useState("");
   const { sendSms, isSending } = useSendSms();
   const refreshConversation = useRefreshConversation();
+  const counter = smsCounterText(message);
+  const isTooLong = message.length > SMS_MAX_LENGTH;
 
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
@@ -110,13 +113,16 @@ export function MessageComposer({
             className="resize-none pr-12"
             disabled={isSending}
           />
-          <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-            {message.length}/160
+          <span className={cn(
+            "absolute bottom-2 right-2 text-xs",
+            counter.isOverLimit ? "text-destructive font-medium" : counter.isMultiSegment ? "text-amber-600" : "text-muted-foreground"
+          )}>
+            {counter.text}
           </span>
         </div>
         <Button
           onClick={handleSend}
-          disabled={!message.trim() || isSending}
+          disabled={!message.trim() || isSending || isTooLong}
           size="icon"
           className={cn(
             "h-[68px] w-12 shrink-0",

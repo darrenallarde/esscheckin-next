@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConversationList } from "@/components/messages/ConversationList";
 import { ConversationPanel } from "@/components/messages/ConversationPanel";
 import { NewConversationDialog } from "@/components/messages/NewConversationDialog";
-import { useSmsInbox, type SmsConversation } from "@/hooks/queries/use-sms-inbox";
+import { useSmsInbox, useSmsRealtimeInbox, type SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { useOrganization } from "@/hooks/useOrganization";
 
 export default function MessagesPage() {
@@ -18,6 +18,7 @@ export default function MessagesPage() {
   const orgId = currentOrganization?.id || null;
 
   const { data: conversations, isLoading: inboxLoading } = useSmsInbox(orgId);
+  useSmsRealtimeInbox(orgId);
   const [selectedConversation, setSelectedConversation] = useState<SmsConversation | null>(null);
   const [showNewConversation, setShowNewConversation] = useState(false);
 

@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, Phone, Mail, TrendingDown, Copy, Check, Instagram
 import { toast } from '@/hooks/use-toast';
 import { useSendSms } from '@/hooks/useSendSms';
 import { supabase } from '@/integrations/supabase/client';
+import { countSmsSegments } from '@/lib/sms-segments';
 import RecommendationDisplay from './RecommendationDisplay';
 import { StudentContextPanel } from './workflow';
 
@@ -538,8 +539,8 @@ const StudentPastoralCard: React.FC<StudentPastoralCardProps> = ({
               {/* Character count */}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{messageText.length} characters</span>
-                <span className={messageText.length > 160 ? 'text-orange-500' : ''}>
-                  {messageText.length > 160 ? '(May split into multiple SMS)' : 'Single SMS'}
+                <span className={countSmsSegments(messageText) > 1 ? 'text-amber-600' : ''}>
+                  {countSmsSegments(messageText)} segment{countSmsSegments(messageText) === 1 ? '' : 's'}
                 </span>
               </div>
 

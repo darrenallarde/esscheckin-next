@@ -15,6 +15,7 @@ import { MessageCircle, Loader2 } from "lucide-react";
 import { useSendSms } from "@/hooks/useSendSms";
 import { Student } from "@/hooks/queries/use-students";
 import { toast } from "sonner";
+import { smsCounterText, SMS_MAX_LENGTH } from "@/lib/sms-segments";
 
 interface SendSmsModalProps {
   person: Student | null;
@@ -72,11 +73,15 @@ export function SendSmsModal({ person, open, onOpenChange }: SendSmsModalProps) 
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
-              maxLength={160}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {message.length}/160 characters
-            </p>
+            {(() => {
+              const counter = smsCounterText(message);
+              return (
+                <p className={`text-xs text-right ${counter.isOverLimit ? "text-destructive font-medium" : counter.isMultiSegment ? "text-amber-600" : "text-muted-foreground"}`}>
+                  {counter.text}
+                </p>
+              );
+            })()}
           </div>
         </div>
 
@@ -84,7 +89,7 @@ export function SendSmsModal({ person, open, onOpenChange }: SendSmsModalProps) 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSend} disabled={isSending || !message.trim()}>
+          <Button onClick={handleSend} disabled={isSending || !message.trim() || message.length > SMS_MAX_LENGTH}>
             {isSending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

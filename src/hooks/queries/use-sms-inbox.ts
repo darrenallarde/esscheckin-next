@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export interface SmsConversation {
@@ -118,4 +119,42 @@ export function useRefreshSmsInbox() {
   return (orgId: string) => {
     queryClient.invalidateQueries({ queryKey: ["sms-inbox", orgId] });
   };
+}
+
+/**
+ * Realtime subscription for SMS inbox updates.
+ * Invalidates inbox query when any new message arrives in the org.
+ */
+export function useSmsRealtimeInbox(orgId: string | null) {
+  const queryClient = useQueryClient();
+  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`sms-inbox-${orgId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "sms_messages",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["sms-inbox", orgId] });
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [orgId, queryClient]);
 }

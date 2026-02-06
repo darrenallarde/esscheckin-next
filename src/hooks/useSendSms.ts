@@ -25,6 +25,8 @@ export function useSendSms() {
   const { data: profile } = useMyOrgProfile(currentOrganization?.id || null);
   const supabase = createClient();
 
+  const resetError = () => setError(null);
+
   const sendSms = async ({ to, body, studentId, profileId }: SendSmsParams): Promise<SendSmsResult> => {
     setIsSending(true);
     setError(null);
@@ -32,12 +34,16 @@ export function useSendSms() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const response = await supabase.functions.invoke('send-sms', {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Message send timed out. Please try again.')), 15000)
+      );
+
+      const invokePromise = supabase.functions.invoke('send-sms', {
         body: {
           to,
           body,
           studentId,
-          profileId: profileId || studentId, // Use profileId if provided, otherwise studentId
+          profileId: profileId || studentId,
           organizationId: currentOrganization?.id || null,
           senderDisplayName: profile?.display_name || null,
         },
@@ -45,6 +51,8 @@ export function useSendSms() {
           ? { Authorization: `Bearer ${session.access_token}` }
           : undefined,
       });
+
+      const response = await Promise.race([invokePromise, timeoutPromise]);
 
       if (response.error) {
         throw new Error(response.error.message || 'Failed to send SMS');
@@ -66,5 +74,5 @@ export function useSendSms() {
     }
   };
 
-  return { sendSms, isSending, error };
+  return { sendSms, isSending, error, resetError };
 }

@@ -37,6 +37,7 @@ import {
   type BroadcastTargetType,
   type BroadcastRecipient,
 } from "@/hooks/queries/use-broadcasts";
+import { smsCounterText, SMS_MAX_LENGTH } from "@/lib/sms-segments";
 
 interface BroadcastComposerProps {
   open: boolean;
@@ -45,7 +46,6 @@ interface BroadcastComposerProps {
   preSelectedProfileIds?: string[];
 }
 
-const SMS_CHAR_LIMIT = 160;
 const DRAFT_STORAGE_KEY = "broadcast-draft-message";
 
 export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfileIds }: BroadcastComposerProps) {
@@ -157,9 +157,9 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
     return { leaders, members, total: recipients.length };
   }, [recipients]);
 
-  // Character count
-  const charCount = messageBody.length;
-  const isOverLimit = charCount > SMS_CHAR_LIMIT;
+  // Character count and segment info
+  const counter = smsCounterText(messageBody);
+  const isOverLimit = messageBody.length > SMS_MAX_LENGTH;
 
   // Validation
   const isValid =
@@ -439,14 +439,9 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
                 className={isOverLimit ? "border-destructive" : ""}
               />
               <div className="flex justify-between text-xs">
-                <span className={isOverLimit ? "text-destructive" : "text-muted-foreground"}>
-                  {charCount} / {SMS_CHAR_LIMIT} characters
+                <span className={counter.isOverLimit ? "text-destructive font-medium" : counter.isMultiSegment ? "text-amber-600" : "text-muted-foreground"}>
+                  {counter.text}
                 </span>
-                {isOverLimit && (
-                  <span className="text-destructive">
-                    Message will be split into multiple texts
-                  </span>
-                )}
               </div>
             </div>
 

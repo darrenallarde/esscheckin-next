@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export interface SmsMessage {
@@ -12,10 +13,16 @@ export interface SmsMessage {
   sent_by_name: string | null;
 }
 
-async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
+const PAGE_SIZE = 50;
+
+async function fetchSmsConversation(
+  profileId: string,
+  offset: number = 0,
+  limit: number = PAGE_SIZE
+): Promise<SmsMessage[]> {
   const supabase = createClient();
 
-  // Get all messages for this profile (check both profile_id and student_id for backward compat)
+  // Fetch messages with pagination (newest first, then reverse for display)
   const { data: messages, error } = await supabase
     .from("sms_messages")
     .select(`
@@ -30,13 +37,17 @@ async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
       organization_id
     `)
     .or(`profile_id.eq.${profileId},student_id.eq.${profileId}`)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) throw error;
 
+  // Reverse to chronological order for display
+  const chronological = (messages || []).reverse();
+
   // Get sender names for outbound messages
   const senderIds = Array.from(new Set(
-    (messages || [])
+    chronological
       .filter((m) => m.direction === "outbound" && m.sent_by)
       .map((m) => m.sent_by)
   ));
@@ -44,11 +55,9 @@ async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
   const senderNames: Record<string, string> = {};
 
   if (senderIds.length > 0) {
-    // Get organization ID from first message
-    const orgId = messages?.find((m) => m.organization_id)?.organization_id;
+    const orgId = chronological.find((m) => m.organization_id)?.organization_id;
 
     if (orgId) {
-      // Fetch display names from organization_members
       const { data: members } = await supabase
         .from("organization_members")
         .select("user_id, display_name")
@@ -64,7 +73,6 @@ async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
       }
     }
 
-    // Fall back to "Staff" for any sender without a display name
     senderIds.forEach((id) => {
       if (!senderNames[id]) {
         senderNames[id] = "Staff";
@@ -72,10 +80,9 @@ async function fetchSmsConversation(profileId: string): Promise<SmsMessage[]> {
     });
   }
 
-  // Get current user to show "You" for their messages
   const { data: { user } } = await supabase.auth.getUser();
 
-  return (messages || []).map((msg) => ({
+  return chronological.map((msg) => ({
     id: msg.id,
     direction: msg.direction as "inbound" | "outbound",
     body: msg.body,
@@ -97,6 +104,46 @@ export function useSmsConversation(profileId: string | null) {
   });
 }
 
+/**
+ * Hook to load earlier messages for pagination.
+ * Returns messages loaded so far (prepended) and a function to load more.
+ */
+export function useSmsConversationPagination(profileId: string | null) {
+  const [earlierMessages, setEarlierMessages] = useState<SmsMessage[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingEarlier, setIsLoadingEarlier] = useState(false);
+
+  // Reset when profile changes
+  useEffect(() => {
+    setEarlierMessages([]);
+    setHasMore(true);
+  }, [profileId]);
+
+  const loadEarlier = useCallback(async (currentCount: number) => {
+    if (!profileId || isLoadingEarlier || !hasMore) return;
+    setIsLoadingEarlier(true);
+
+    try {
+      const offset = currentCount + earlierMessages.length;
+      const older = await fetchSmsConversation(profileId, offset, PAGE_SIZE);
+
+      if (older.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+
+      if (older.length > 0) {
+        setEarlierMessages((prev) => [...older, ...prev]);
+      }
+    } catch {
+      // Silently fail — user can retry
+    } finally {
+      setIsLoadingEarlier(false);
+    }
+  }, [profileId, isLoadingEarlier, hasMore, earlierMessages.length]);
+
+  return { earlierMessages, hasMore, isLoadingEarlier, loadEarlier };
+}
+
 // Hook to refresh conversation after sending
 export function useRefreshConversation() {
   const queryClient = useQueryClient();
@@ -104,4 +151,46 @@ export function useRefreshConversation() {
   return (profileId: string) => {
     queryClient.invalidateQueries({ queryKey: ["sms-conversation", profileId] });
   };
+}
+
+/**
+ * Realtime subscription for SMS conversation updates.
+ * Invalidates query cache when new messages arrive for the given profile.
+ */
+export function useSmsRealtimeConversation(orgId: string | null, profileId: string | null) {
+  const queryClient = useQueryClient();
+  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+
+  useEffect(() => {
+    if (!orgId || !profileId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`sms-conversation-${profileId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "sms_messages",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as { profile_id?: string; student_id?: string };
+          if (newMsg.profile_id === profileId || newMsg.student_id === profileId) {
+            queryClient.invalidateQueries({ queryKey: ["sms-conversation", profileId] });
+            queryClient.invalidateQueries({ queryKey: ["sms-inbox", orgId] });
+          }
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [orgId, profileId, queryClient]);
 }

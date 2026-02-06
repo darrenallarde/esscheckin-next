@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { User, MessageCircle, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConversationThread } from "@/components/sms/ConversationThread";
 import { MessageComposer } from "@/components/sms/MessageComposer";
-import { useSmsConversation } from "@/hooks/queries/use-sms-conversation";
-import { useMarkConversationRead } from "@/hooks/queries/use-sms-inbox";
+import { useSmsConversation, useSmsConversationPagination, useSmsRealtimeConversation } from "@/hooks/queries/use-sms-conversation";
+import { useMarkConversationRead, useSmsRealtimeInbox } from "@/hooks/queries/use-sms-inbox";
 import type { SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -42,6 +42,17 @@ export function ConversationPanel({
 
   // Fetch full message history (hook supports both profile_id and student_id)
   const { data: messages, isLoading: messagesLoading } = useSmsConversation(recipientId);
+
+  // Pagination for loading earlier messages
+  const { earlierMessages, hasMore, isLoadingEarlier, loadEarlier } = useSmsConversationPagination(recipientId);
+
+  const handleLoadEarlier = useCallback(() => {
+    loadEarlier(messages?.length || 0);
+  }, [loadEarlier, messages?.length]);
+
+  // Realtime subscriptions
+  useSmsRealtimeConversation(orgId || null, recipientId);
+  useSmsRealtimeInbox(orgId || null);
 
   const markRead = useMarkConversationRead();
 
@@ -131,7 +142,11 @@ export function ConversationPanel({
         <>
           <ConversationThread
             messages={messages || []}
+            earlierMessages={earlierMessages}
             loading={messagesLoading}
+            hasMore={hasMore}
+            isLoadingEarlier={isLoadingEarlier}
+            onLoadEarlier={handleLoadEarlier}
             className="flex-1 min-h-0"
           />
 

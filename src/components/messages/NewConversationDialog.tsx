@@ -19,6 +19,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { playSendSound } from "@/lib/sounds";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { smsCounterText, SMS_MAX_LENGTH } from "@/lib/sms-segments";
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -240,9 +241,17 @@ export function NewConversationDialog({
                   className="resize-none pr-12"
                   disabled={sending}
                 />
-                <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">
-                  {message.length}/160
-                </span>
+                {(() => {
+                  const counter = smsCounterText(message);
+                  return (
+                    <span className={cn(
+                      "absolute bottom-2 right-3 text-xs",
+                      counter.isOverLimit ? "text-destructive font-medium" : counter.isMultiSegment ? "text-amber-600" : "text-muted-foreground"
+                    )}>
+                      {counter.text}
+                    </span>
+                  );
+                })()}
               </div>
 
               <div className="flex items-center justify-between">
@@ -252,7 +261,7 @@ export function NewConversationDialog({
                 </p>
                 <Button
                   onClick={handleSend}
-                  disabled={!message.trim() || sending}
+                  disabled={!message.trim() || sending || message.length > SMS_MAX_LENGTH}
                   className={cn(
                     "gap-2",
                     sending && "opacity-70"

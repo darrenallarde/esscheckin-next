@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { SmsMessage } from "@/hooks/queries/use-sms-conversation";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MessageCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConversationThreadProps {
   messages: SmsMessage[];
+  earlierMessages?: SmsMessage[];
   loading?: boolean;
+  hasMore?: boolean;
+  isLoadingEarlier?: boolean;
+  onLoadEarlier?: () => void;
   className?: string;
 }
 
@@ -86,18 +91,46 @@ function ChatBubble({ message, isNew }: { message: SmsMessage; isNew?: boolean }
 
 export function ConversationThread({
   messages,
+  earlierMessages = [],
   loading,
+  hasMore = false,
+  isLoadingEarlier = false,
+  onLoadEarlier,
   className,
 }: ConversationThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(messages.length);
+  const preserveScrollRef = useRef(false);
 
-  // Auto-scroll to bottom when messages change
+  // All messages combined: earlier + current
+  const allMessages = [...earlierMessages, ...messages];
+
+  // Auto-scroll to bottom when new messages arrive (not when loading earlier)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !preserveScrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    preserveScrollRef.current = false;
   }, [messages]);
+
+  // Preserve scroll position when earlier messages are prepended
+  const handleLoadEarlier = useCallback(() => {
+    if (!scrollRef.current || !onLoadEarlier) return;
+
+    const scrollEl = scrollRef.current;
+    const prevScrollHeight = scrollEl.scrollHeight;
+
+    preserveScrollRef.current = true;
+    onLoadEarlier();
+
+    // After render, restore scroll position
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const newScrollHeight = scrollRef.current.scrollHeight;
+        scrollRef.current.scrollTop = newScrollHeight - prevScrollHeight;
+      }
+    });
+  }, [onLoadEarlier]);
 
   // Track which messages are new
   useEffect(() => {
@@ -116,7 +149,7 @@ export function ConversationThread({
     );
   }
 
-  if (messages.length === 0) {
+  if (allMessages.length === 0) {
     return (
       <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
         <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-3" />
@@ -136,11 +169,33 @@ export function ConversationThread({
         className
       )}
     >
-      {messages.map((message, index) => (
+      {/* Load earlier button */}
+      {hasMore && onLoadEarlier && (
+        <div className="flex justify-center py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLoadEarlier}
+            disabled={isLoadingEarlier}
+            className="text-xs text-muted-foreground"
+          >
+            {isLoadingEarlier ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load earlier messages"
+            )}
+          </Button>
+        </div>
+      )}
+
+      {allMessages.map((message, index) => (
         <ChatBubble
           key={message.id}
           message={message}
-          isNew={index >= prevLengthRef.current}
+          isNew={index >= earlierMessages.length + prevLengthRef.current}
         />
       ))}
     </div>

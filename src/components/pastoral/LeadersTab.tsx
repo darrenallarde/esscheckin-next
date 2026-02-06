@@ -23,6 +23,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { useSendSms } from '@/hooks/useSendSms';
 import { supabase } from '@/integrations/supabase/client';
+import { countSmsSegments } from '@/lib/sms-segments';
 
 interface LeadersTabProps {
   students: StudentPastoralData[];
@@ -348,8 +349,8 @@ const LeadersTab: React.FC<LeadersTabProps> = ({
 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{currentMessage.length} characters</span>
-                      <span className={currentMessage.length > 160 ? 'text-orange-500' : ''}>
-                        {currentMessage.length > 160 ? 'Multiple SMS' : 'Single SMS'}
+                      <span className={countSmsSegments(currentMessage) > 1 ? 'text-amber-600' : ''}>
+                        {countSmsSegments(currentMessage)} segment{countSmsSegments(currentMessage) === 1 ? '' : 's'}
                       </span>
                     </div>
 
