@@ -30,13 +30,21 @@ export function buildSqlGenerationPrompt(
   const todayDayName = dayNames[todayDate.getDay()];
   const todayDayNum = todayDate.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
 
-  // Pre-compute "last <day>" dates for each day of the week
-  // "Last Wednesday" = the most recent Wednesday before today
+  // Pre-compute "this past <day>" dates — the most recent occurrence of each day
   const recentDays = dayNames.map((name, dayIdx) => {
     let daysBack = (todayDayNum - dayIdx + 7) % 7;
     if (daysBack === 0) daysBack = 7; // "last Monday" when today is Monday = 7 days ago
     const d = new Date(todayDate);
     d.setDate(d.getDate() - daysBack);
+    return `${name} = '${d.toISOString().split("T")[0]}'`;
+  }).join(", ");
+
+  // Pre-compute "last week's <day>" dates — 7 days before each "this past" date
+  const prevWeekDays = dayNames.map((name, dayIdx) => {
+    let daysBack = (todayDayNum - dayIdx + 7) % 7;
+    if (daysBack === 0) daysBack = 7;
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - daysBack - 7); // subtract additional 7 days
     return `${name} = '${d.toISOString().split("T")[0]}'`;
   }).join(", ");
 
@@ -89,7 +97,8 @@ Available groups in this org: ${groupList}
 Grade range: ${orgContext.gradeRange.min}-${orgContext.gradeRange.max}
 Timezone: ${orgContext.timezone || "America/Los_Angeles"}
 Today's date (in org timezone): ${todayLocal || new Date().toISOString().split("T")[0]} (${todayDayName})
-Most recent day-of-week dates: ${recentDays}
+This past (most recent) day-of-week dates: ${recentDays}
+Last week's day-of-week dates: ${prevWeekDays}
 
 ## RULES
 
@@ -105,7 +114,10 @@ Most recent day-of-week dates: ${recentDays}
 10. **For "who showed up on a specific date"** — use: \`WHERE '${todayLocal || "2026-02-04"}'::date = ANY(recent_check_in_dates)\`. This array contains dates in the org's local timezone from the last 90 days. For older dates, fall back to \`last_check_in\`.
 11. **For "who showed up this week/last week"** — generate the date range using today's date (${todayLocal || "2026-02-04"}) and use: \`WHERE recent_check_in_dates && ARRAY[dates...]\` or simply \`WHERE last_check_in >= NOW() - INTERVAL '7 days'\` for approximate matches.
 12. **CRITICAL: For relative dates ("yesterday", "last week", "today")** — Always compute dates relative to today's date shown above (${todayLocal || "2026-02-04"}), NOT from CURRENT_DATE or NOW()::date which use UTC. For example, "yesterday" = '${todayLocal || "2026-02-04"}'::date - 1. The recent_check_in_dates array stores dates in the org's local timezone, so always use literal dates derived from today's date above.
-13. **Day-of-week references ("last Wednesday", "this past Friday")** — Use the pre-computed dates above. "Last Wednesday" or "this past Wednesday" means the MOST RECENT Wednesday before today. Use the exact date from "Most recent day-of-week dates" — do NOT use date_trunc or EXTRACT(DOW). Always output a literal date like \`'2026-02-04'::date = ANY(recent_check_in_dates)\`.
+13. **Day-of-week references** — NEVER compute dates yourself. Always use the lookup tables above:
+   - "last Wednesday" / "this past Wednesday" / "Wednesday" → use **"This past"** row
+   - "last week Wednesday" / "last week's Wednesday" → use **"Last week's"** row
+   Do NOT use date_trunc, EXTRACT(DOW), or manual arithmetic. Always output a literal date like \`'2026-01-28'::date = ANY(recent_check_in_dates)\`.
 14. **Default to active students** — unless explicitly asked about archived or all statuses, add: \`WHERE status = 'active'\`
 15. **Default to student role** — unless explicitly asking about leaders, admins, or all roles, filter: \`WHERE role IN ('student', 'leader')\`
 16. **Birth month names** — January=1, February=2, ..., December=12
