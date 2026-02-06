@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Send, Users, Loader2, AlertCircle } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { Send, Users, Loader2, AlertCircle, Search, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -27,6 +29,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useGroups } from "@/hooks/queries/use-groups";
+import { useOrgContacts, type OrgContact } from "@/hooks/queries/use-org-contacts";
 import {
   useRecipientPreview,
   useRecipientsByProfileIds,
@@ -43,11 +46,12 @@ interface BroadcastComposerProps {
 }
 
 const SMS_CHAR_LIMIT = 160;
+const DRAFT_STORAGE_KEY = "broadcast-draft-message";
 
 export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfileIds }: BroadcastComposerProps) {
   const { toast } = useToast();
 
-  // When we have pre-selected profiles, use "profiles" as target type
+  // When we have pre-selected profiles from Insights, default to "profiles"
   const hasPreSelectedProfiles = preSelectedProfileIds && preSelectedProfileIds.length > 0;
   const [targetType, setTargetType] = useState<BroadcastTargetType>(
     hasPreSelectedProfiles ? "profiles" : "all"
@@ -55,11 +59,72 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [includeLeaders, setIncludeLeaders] = useState(true);
   const [includeMembers, setIncludeMembers] = useState(true);
-  const [messageBody, setMessageBody] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Message body with localStorage persistence
+  const [messageBody, setMessageBody] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(DRAFT_STORAGE_KEY) || "";
+    }
+    return "";
+  });
+
+  // Persist message to localStorage on change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (messageBody) {
+        localStorage.setItem(DRAFT_STORAGE_KEY, messageBody);
+      } else {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    }
+  }, [messageBody]);
+
+  // Manual people picker state
+  const [manualContacts, setManualContacts] = useState<OrgContact[]>([]);
+  const [peopleSearch, setPeopleSearch] = useState("");
+
   const { data: groups } = useGroups(orgId);
+  const { data: allContacts, isLoading: contactsLoading } = useOrgContacts(orgId);
   const createAndSend = useCreateAndSendBroadcast();
+
+  // Combine pre-selected + manually picked profile IDs
+  const allSelectedProfileIds = useMemo(() => {
+    const manual = manualContacts.map((c) => c.id);
+    if (hasPreSelectedProfiles) {
+      // Merge, dedup
+      return [...new Set([...preSelectedProfileIds, ...manual])];
+    }
+    return manual;
+  }, [preSelectedProfileIds, hasPreSelectedProfiles, manualContacts]);
+
+  // Filter contacts for people search
+  const filteredContacts = useMemo(() => {
+    if (!allContacts || !peopleSearch.trim()) return [];
+    const selectedIds = new Set(allSelectedProfileIds);
+    const q = peopleSearch.toLowerCase();
+    return allContacts
+      .filter((c) => !selectedIds.has(c.id))
+      .filter(
+        (c) =>
+          c.firstName.toLowerCase().includes(q) ||
+          c.lastName.toLowerCase().includes(q) ||
+          c.phoneNumber.includes(peopleSearch.trim())
+      )
+      .slice(0, 15);
+  }, [allContacts, peopleSearch, allSelectedProfileIds]);
+
+  const handleAddContact = useCallback((contact: OrgContact) => {
+    setManualContacts((prev) => {
+      if (prev.some((c) => c.id === contact.id)) return prev;
+      return [...prev, contact];
+    });
+    setPeopleSearch("");
+  }, []);
+
+  const handleRemoveContact = useCallback((contactId: string) => {
+    setManualContacts((prev) => prev.filter((c) => c.id !== contactId));
+  }, []);
 
   // Get recipient preview for group-based targeting
   const { data: groupRecipients, isLoading: groupRecipientsLoading } = useRecipientPreview(
@@ -73,7 +138,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
   // Get recipients by profile IDs when using "profiles" target type
   const { data: profileRecipients, isLoading: profileRecipientsLoading } = useRecipientsByProfileIds(
     orgId,
-    hasPreSelectedProfiles && targetType === "profiles" ? preSelectedProfileIds : []
+    targetType === "profiles" ? allSelectedProfileIds : []
   );
 
   // Determine which recipients to use based on target type
@@ -96,7 +161,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
   const charCount = messageBody.length;
   const isOverLimit = charCount > SMS_CHAR_LIMIT;
 
-  // Validation - different rules for profiles vs groups
+  // Validation
   const isValid =
     messageBody.trim().length > 0 &&
     !isOverLimit &&
@@ -126,7 +191,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
         messageBody: messageBody.trim(),
         targetType,
         targetGroupIds: targetType === "groups" ? selectedGroupIds : [],
-        targetProfileIds: targetType === "profiles" ? preSelectedProfileIds : [],
+        targetProfileIds: targetType === "profiles" ? allSelectedProfileIds : [],
         includeLeaders,
         includeMembers,
       });
@@ -136,10 +201,13 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
         description: `Message sent to ${recipientCounts.total} recipient${recipientCounts.total === 1 ? "" : "s"}.`,
       });
 
-      // Reset form
+      // Reset form and clear draft
       setMessageBody("");
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
       setTargetType(hasPreSelectedProfiles ? "profiles" : "all");
       setSelectedGroupIds([]);
+      setManualContacts([]);
+      setPeopleSearch("");
       setIncludeLeaders(true);
       setIncludeMembers(true);
       setConfirmOpen(false);
@@ -166,136 +234,171 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
           </SheetHeader>
 
           <div className="space-y-6 mt-6">
-            {/* Pre-selected recipients from Insights */}
-            {hasPreSelectedProfiles && targetType === "profiles" && (
-              <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-sm">Recipients from Insights</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {preSelectedProfileIds.length} people selected from your query results
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTargetType("all")}
-                  >
-                    Change
-                  </Button>
+            {/* Target Selection */}
+            <div className="space-y-3">
+              <Label>Target Audience</Label>
+              <RadioGroup
+                value={targetType}
+                onValueChange={(v) => setTargetType(v as BroadcastTargetType)}
+                className="gap-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="profiles" id="target-people" />
+                  <Label htmlFor="target-people" className="font-normal cursor-pointer">
+                    Select people
+                  </Label>
                 </div>
-                {/* Show recipient names */}
-                {profileRecipients && profileRecipients.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-primary/10">
-                    <p className="text-xs text-muted-foreground mb-2">Sending to:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {profileRecipients.slice(0, 10).map((r) => (
-                        <span
-                          key={r.profileId}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted"
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="target-all" />
+                  <Label htmlFor="target-all" className="font-normal cursor-pointer">
+                    All groups
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="groups" id="target-groups" />
+                  <Label htmlFor="target-groups" className="font-normal cursor-pointer">
+                    Select groups
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {/* People Picker */}
+              {targetType === "profiles" && (
+                <div className="space-y-3 ml-6 border-l-2 border-muted pl-4">
+                  {/* Pre-selected from Insights */}
+                  {hasPreSelectedProfiles && (
+                    <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        {preSelectedProfileIds.length} people from Insights query
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Selected people chips */}
+                  {manualContacts.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {manualContacts.map((contact) => (
+                        <Badge
+                          key={contact.id}
+                          variant="secondary"
+                          className="flex items-center gap-1 pr-1"
                         >
-                          {r.firstName} {r.lastName}
-                        </span>
+                          {contact.firstName} {contact.lastName}
+                          <button
+                            onClick={() => handleRemoveContact(contact.id)}
+                            className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
                       ))}
-                      {profileRecipients.length > 10 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{profileRecipients.length - 10} more
-                        </span>
-                      )}
                     </div>
+                  )}
+
+                  {/* Search input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or phone..."
+                      value={peopleSearch}
+                      onChange={(e) => setPeopleSearch(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Target Selection - show when NOT using pre-selected profiles */}
-            {targetType !== "profiles" && (
-              <>
-                <div className="space-y-3">
-                  <Label>Target Audience</Label>
-                  <RadioGroup
-                    value={targetType}
-                    onValueChange={(v) => setTargetType(v as BroadcastTargetType)}
-                    className="gap-3"
-                  >
-                    {hasPreSelectedProfiles && (
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="profiles" id="target-profiles" />
-                        <Label htmlFor="target-profiles" className="font-normal cursor-pointer">
-                          Insights results ({preSelectedProfileIds.length} people)
-                        </Label>
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="all" id="target-all" />
-                      <Label htmlFor="target-all" className="font-normal cursor-pointer">
-                        All groups
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="groups" id="target-groups" />
-                      <Label htmlFor="target-groups" className="font-normal cursor-pointer">
-                        Select groups
-                      </Label>
-                    </div>
-                  </RadioGroup>
-
-                  {/* Group Selection */}
-                  {targetType === "groups" && (
-                    <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
-                      {groups && groups.length > 0 ? (
-                        groups.map((group) => (
-                          <div key={group.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`group-${group.id}`}
-                              checked={selectedGroupIds.includes(group.id)}
-                              onCheckedChange={() => handleGroupToggle(group.id)}
-                            />
-                            <Label
-                              htmlFor={`group-${group.id}`}
-                              className="font-normal cursor-pointer text-sm"
-                            >
-                              {group.name}
-                              <span className="text-muted-foreground ml-1">
-                                ({group.member_count} members)
-                              </span>
-                            </Label>
-                          </div>
-                        ))
+                  {/* Search results */}
+                  {peopleSearch.trim() && (
+                    <div className="border rounded-md max-h-48 overflow-y-auto">
+                      {contactsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : filteredContacts.length === 0 ? (
+                        <div className="py-4 text-center text-sm text-muted-foreground">
+                          No contacts found
+                        </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No groups available</p>
+                        filteredContacts.map((contact) => (
+                          <button
+                            key={contact.id}
+                            onClick={() => handleAddContact(contact)}
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors text-left border-b last:border-b-0"
+                          >
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <User className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-sm">
+                                {contact.firstName} {contact.lastName}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                {contact.role}
+                              </span>
+                            </div>
+                          </button>
+                        ))
                       )}
                     </div>
                   )}
                 </div>
+              )}
 
-                {/* Role Selection - only for group-based targeting */}
-                <div className="space-y-3">
-                  <Label>Include</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="include-leaders"
-                        checked={includeLeaders}
-                        onCheckedChange={(checked) => setIncludeLeaders(!!checked)}
-                      />
-                      <Label htmlFor="include-leaders" className="font-normal cursor-pointer">
-                        Leaders
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="include-members"
-                        checked={includeMembers}
-                        onCheckedChange={(checked) => setIncludeMembers(!!checked)}
-                      />
-                      <Label htmlFor="include-members" className="font-normal cursor-pointer">
-                        Members
-                      </Label>
-                    </div>
+              {/* Group Selection */}
+              {targetType === "groups" && (
+                <div className="ml-6 space-y-2 border-l-2 border-muted pl-4">
+                  {groups && groups.length > 0 ? (
+                    groups.map((group) => (
+                      <div key={group.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`group-${group.id}`}
+                          checked={selectedGroupIds.includes(group.id)}
+                          onCheckedChange={() => handleGroupToggle(group.id)}
+                        />
+                        <Label
+                          htmlFor={`group-${group.id}`}
+                          className="font-normal cursor-pointer text-sm"
+                        >
+                          {group.name}
+                          <span className="text-muted-foreground ml-1">
+                            ({group.member_count} members)
+                          </span>
+                        </Label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No groups available</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Role Selection - only for group-based targeting */}
+            {(targetType === "all" || targetType === "groups") && (
+              <div className="space-y-3">
+                <Label>Include</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-leaders"
+                      checked={includeLeaders}
+                      onCheckedChange={(checked) => setIncludeLeaders(!!checked)}
+                    />
+                    <Label htmlFor="include-leaders" className="font-normal cursor-pointer">
+                      Leaders
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-members"
+                      checked={includeMembers}
+                      onCheckedChange={(checked) => setIncludeMembers(!!checked)}
+                    />
+                    <Label htmlFor="include-members" className="font-normal cursor-pointer">
+                      Members
+                    </Label>
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Recipient Preview */}
@@ -305,7 +408,11 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
                 {recipientsLoading ? (
                   <span className="text-muted-foreground">Calculating recipients...</span>
                 ) : recipientCounts.total === 0 ? (
-                  <span className="text-muted-foreground">No recipients match your criteria</span>
+                  <span className="text-muted-foreground">
+                    {targetType === "profiles"
+                      ? "Search and select people above"
+                      : "No recipients match your criteria"}
+                  </span>
                 ) : (
                   <span>
                     <span className="font-medium">{recipientCounts.total}</span> recipient
@@ -344,7 +451,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
             </div>
 
             {/* Validation Warning - only show for group targeting */}
-            {targetType !== "profiles" && !includeLeaders && !includeMembers && (
+            {(targetType === "all" || targetType === "groups") && !includeLeaders && !includeMembers && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
