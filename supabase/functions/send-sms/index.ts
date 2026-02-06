@@ -95,7 +95,7 @@ serve(async (req) => {
         from_number: twilioData.from || TWILIO_PHONE_NUMBER,
         to_number: cleanTo,
         twilio_sid: twilioData.sid,
-        status: twilioData.status,
+        status: "sent",
         sent_by: sentBy,
       });
 
@@ -121,7 +121,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         messageSid: twilioData.sid,
-        status: twilioData.status,
+        status: "sent",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
