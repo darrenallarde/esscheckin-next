@@ -101,6 +101,7 @@ export function useSmsConversation(profileId: string | null) {
     queryKey: ["sms-conversation", profileId],
     queryFn: () => fetchSmsConversation(profileId!),
     enabled: !!profileId,
+    refetchInterval: 3000, // Poll every 3s for live updates (realtime is best-effort backup)
   });
 }
 
@@ -165,6 +166,8 @@ export function useSmsRealtimeConversation(orgId: string | null, profileId: stri
     if (!orgId || !profileId) return;
 
     const supabase = createClient();
+    console.log("[Realtime] Subscribing to sms-conversation for profile:", profileId, "org:", orgId);
+
     const channel = supabase
       .channel(`sms-conversation-${profileId}`)
       .on(
@@ -176,18 +179,23 @@ export function useSmsRealtimeConversation(orgId: string | null, profileId: stri
           filter: `organization_id=eq.${orgId}`,
         },
         (payload) => {
+          console.log("[Realtime] Got sms_messages INSERT:", payload.new);
           const newMsg = payload.new as { profile_id?: string; student_id?: string };
           if (newMsg.profile_id === profileId || newMsg.student_id === profileId) {
+            console.log("[Realtime] Matches current conversation, invalidating queries");
             queryClient.invalidateQueries({ queryKey: ["sms-conversation", profileId] });
             queryClient.invalidateQueries({ queryKey: ["sms-inbox", orgId] });
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log("[Realtime] Subscription status:", status, err || "");
+      });
 
     channelRef.current = channel;
 
     return () => {
+      console.log("[Realtime] Unsubscribing from sms-conversation for profile:", profileId);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }

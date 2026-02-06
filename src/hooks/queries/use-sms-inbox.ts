@@ -133,6 +133,8 @@ export function useSmsRealtimeInbox(orgId: string | null) {
     if (!orgId) return;
 
     const supabase = createClient();
+    console.log("[Realtime] Subscribing to sms-inbox for org:", orgId);
+
     const channel = supabase
       .channel(`sms-inbox-${orgId}`)
       .on(
@@ -143,15 +145,19 @@ export function useSmsRealtimeInbox(orgId: string | null) {
           table: "sms_messages",
           filter: `organization_id=eq.${orgId}`,
         },
-        () => {
+        (payload) => {
+          console.log("[Realtime] Inbox got sms_messages INSERT:", payload.new);
           queryClient.invalidateQueries({ queryKey: ["sms-inbox", orgId] });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log("[Realtime] Inbox subscription status:", status, err || "");
+      });
 
     channelRef.current = channel;
 
     return () => {
+      console.log("[Realtime] Unsubscribing from sms-inbox for org:", orgId);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
