@@ -93,7 +93,7 @@ export function BroadcastComposer({ open, onOpenChange, orgId, preSelectedProfil
     const manual = manualContacts.map((c) => c.id);
     if (hasPreSelectedProfiles) {
       // Merge, dedup
-      return [...new Set([...preSelectedProfileIds, ...manual])];
+      return Array.from(new Set([...preSelectedProfileIds, ...manual]));
     }
     return manual;
   }, [preSelectedProfileIds, hasPreSelectedProfiles, manualContacts]);
