@@ -105,6 +105,14 @@ export async function POST(
       });
     }
 
+    // Log generated SQL for debugging
+    console.log("INSIGHTS_QUERY", JSON.stringify({
+      userQuery: query.trim(),
+      generatedSql: llmResponse.sql,
+      orgId: organizationId,
+      canAnswer: llmResponse.can_answer,
+    }));
+
     // Validate the SQL with TypeScript validator (Layer 2)
     const validation = validateInsightsSql(llmResponse.sql);
     if (!validation.valid) {
@@ -128,7 +136,7 @@ export async function POST(
     );
 
     if (rpcError) {
-      console.error("Insights RPC error:", rpcError.message);
+      console.error("Insights RPC error:", rpcError.message, "SQL:", llmResponse.sql);
 
       // Check for timeout
       if (rpcError.message.includes("timed out")) {
@@ -152,6 +160,15 @@ export async function POST(
 
     const results = (data as Record<string, unknown>[]) || [];
 
+    console.log("INSIGHTS_RESULT", JSON.stringify({
+      userQuery: query.trim(),
+      orgId: organizationId,
+      rowCount: results.length,
+      dataType: typeof data,
+      dataIsNull: data === null,
+      dataIsArray: Array.isArray(data),
+    }));
+
     const response: InsightsSqlApiResponse = {
       success: true,
       data: results,
@@ -159,9 +176,7 @@ export async function POST(
       displayColumns: llmResponse.display_columns,
       displayLabels: llmResponse.display_labels,
       rowCount: results.length,
-      ...(process.env.NODE_ENV === "development" && {
-        sql: llmResponse.sql,
-      }),
+      sql: llmResponse.sql,
     };
 
     return NextResponse.json(response);

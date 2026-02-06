@@ -101,7 +101,7 @@ If you weren't expecting this invitation, you can safely ignore this email.
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'SheepDoggo <hello@sheepdoggo.app>',
+        from: 'SheepDoggo <hello@sheepdoggo.ai>',
         to: [to],
         subject: `You're invited to join ${organizationName} on SheepDoggo`,
         html: emailHtml,
