@@ -1,0 +1,74 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx prettier *)",
+      "Bash(npx tsc *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git switch*)",
+      "Bash(git add *)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git pull*)",
+      "Bash(git fetch*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git stash*)",
+      "Bash(git cherry-pick*)",
+      "Bash(git worktree*)",
+      "Bash(git remote*)",
+      "Bash(git rev-parse*)",
+      "Bash(git show*)",
+      "Bash(git tag*)",
+      "Bash(gh *)",
+      "Bash(supabase *)",
+      "Bash(npx supabase *)",
+      "Bash(node *)",
+      "Bash(curl *)",
+      "Bash(pkill *)",
+      "Bash(lsof *)",
+      "Bash(pgrep *)",
+      "Bash(kill *)",
+      "Bash(which *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(chmod *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push --force)",
+      "Bash(git push -f *)",
+      "Bash(git push -f)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/darrenallarde/echo/esscheckin-next/.claude/hooks/protect-files.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/darrenallarde/echo/esscheckin-next/.claude/hooks/format-on-save.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
