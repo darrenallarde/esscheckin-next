@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Sun, Cloud, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Sun, Cloud, Moon } from "lucide-react";
 import type { SeriesDevotionalEntry } from "./DevotionalReadView";
 
 interface DevotionalSeriesNavProps {
@@ -21,6 +22,7 @@ function formatShortDate(dateStr: string) {
 }
 
 export function DevotionalSeriesNav({ currentId, devotionals }: DevotionalSeriesNavProps) {
+  const [expanded, setExpanded] = useState(false);
   const currentIndex = devotionals.findIndex((d) => d.id === currentId);
   const prev = currentIndex > 0 ? devotionals[currentIndex - 1] : null;
   const next = currentIndex < devotionals.length - 1 ? devotionals[currentIndex + 1] : null;
@@ -53,36 +55,46 @@ export function DevotionalSeriesNav({ currentId, devotionals }: DevotionalSeries
         )}
       </div>
 
-      {/* Full series list */}
-      <details className="group">
-        <summary className="text-xs font-semibold uppercase tracking-wider text-stone-500 cursor-pointer hover:text-stone-700 transition-colors">
+      {/* Full series list — controlled expand with animation */}
+      <div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500 cursor-pointer hover:text-stone-700 transition-colors"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
           All devotionals in this series
-        </summary>
-        <div className="mt-3 space-y-1">
-          {devotionals.map((d) => {
-            const isCurrent = d.id === currentId;
-            return (
-              <Link
-                key={d.id}
-                href={`/d/${d.id}`}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isCurrent
-                    ? "bg-emerald-50 text-emerald-800 font-medium"
-                    : "text-stone-600 hover:bg-stone-100"
-                }`}
-              >
-                <span className="text-muted-foreground w-4 shrink-0">
-                  {TIME_SLOT_ICONS[d.time_slot]}
-                </span>
-                <span className="truncate flex-1">{d.title}</span>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {formatShortDate(d.scheduled_date)}
-                </span>
-              </Link>
-            );
-          })}
+        </button>
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            expanded ? "max-h-[600px] opacity-100 mt-3" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="space-y-1">
+            {devotionals.map((d) => {
+              const isCurrent = d.id === currentId;
+              return (
+                <Link
+                  key={d.id}
+                  href={`/d/${d.id}`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    isCurrent
+                      ? "bg-emerald-50 text-emerald-800 font-medium"
+                      : "text-stone-600 hover:bg-stone-100"
+                  }`}
+                >
+                  <span className="text-muted-foreground w-4 shrink-0">
+                    {TIME_SLOT_ICONS[d.time_slot]}
+                  </span>
+                  <span className="truncate flex-1">{d.title}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {formatShortDate(d.scheduled_date)}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </details>
+      </div>
     </section>
   );
 }

@@ -10,6 +10,7 @@ import {
   useUpdateRecommendationStatus,
   AIRecommendation,
 } from "@/hooks/queries/use-ai-recommendations";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
 import { RecommendationStatus, InteractionType } from "@/types/interactions";
 
@@ -75,7 +76,8 @@ function KanbanColumn({
 }
 
 export function PastoralKanban() {
-  const { data, isLoading, error } = useAIRecommendations();
+  const { currentOrganization } = useOrganization();
+  const { data, isLoading, error } = useAIRecommendations(currentOrganization?.id || null);
   const updateStatus = useUpdateRecommendationStatus();
   const { toast } = useToast();
 

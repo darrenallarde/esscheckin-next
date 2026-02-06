@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Dog,
   Heart,
+  HandHeart,
   Shield,
   UserCircle,
   MessageSquare,
@@ -81,6 +82,7 @@ const navSections: NavSection[] = [
     items: [
       { title: "Home", path: "/home", icon: Home },
       { title: "Pastoral", path: "/pastoral", icon: Heart },
+      { title: "Prayer Wall", path: "/prayer-wall", icon: HandHeart },
       { title: "Curriculum", path: "/curriculum", icon: BookOpen },
     ],
   },

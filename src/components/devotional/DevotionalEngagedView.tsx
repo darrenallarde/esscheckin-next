@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PenLine, Heart, Check, Loader2, LogOut, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDevotionalEngagement } from "@/hooks/queries/use-devotional-engagement";
+import ConfettiEffect from "@/components/checkin/ConfettiEffect";
 
 interface DevotionalEngagedViewProps {
   devotionalId: string;
@@ -17,16 +18,21 @@ export function DevotionalEngagedView({ devotionalId, firstName, onSignOut }: De
   const [prayerText, setPrayerText] = useState("");
   const [journalSubmitted, setJournalSubmitted] = useState(false);
   const [prayerSubmitted, setPrayerSubmitted] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const journalWasPreloaded = useRef(false);
+  const prayerWasPreloaded = useRef(false);
 
   // Sync from engagement data on load
   useEffect(() => {
     if (engagement?.journal_entry) {
       setJournalText(engagement.journal_entry);
       setJournalSubmitted(true);
+      journalWasPreloaded.current = true;
     }
     if (engagement?.prayer_request) {
       setPrayerText(engagement.prayer_request);
       setPrayerSubmitted(true);
+      prayerWasPreloaded.current = true;
     }
   }, [engagement?.journal_entry, engagement?.prayer_request]);
 
@@ -34,12 +40,22 @@ export function DevotionalEngagedView({ devotionalId, firstName, onSignOut }: De
     if (!journalText.trim()) return;
     await saveJournal(journalText.trim());
     setJournalSubmitted(true);
+    if (!journalWasPreloaded.current) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 100);
+    }
+    journalWasPreloaded.current = false;
   };
 
   const handlePrayerSubmit = async () => {
     if (!prayerText.trim()) return;
     await savePrayerRequest(prayerText.trim());
     setPrayerSubmitted(true);
+    if (!prayerWasPreloaded.current) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 100);
+    }
+    prayerWasPreloaded.current = false;
   };
 
   if (isLoading) {
@@ -54,6 +70,7 @@ export function DevotionalEngagedView({ devotionalId, firstName, onSignOut }: De
 
   return (
     <section className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+      <ConfettiEffect active={showConfetti} duration={2000} />
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-5 pb-3">
         <p className="text-sm text-stone-500">
@@ -78,7 +95,7 @@ export function DevotionalEngagedView({ devotionalId, firstName, onSignOut }: De
         </div>
 
         {journalSubmitted ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 animate-pop-in">
             <p className="text-sm text-stone-700 whitespace-pre-wrap">{journalText}</p>
             <div className="flex items-center gap-1.5 mt-3">
               <Check className="h-3.5 w-3.5 text-amber-600" />
@@ -128,7 +145,7 @@ export function DevotionalEngagedView({ devotionalId, firstName, onSignOut }: De
         </div>
 
         {prayerSubmitted ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 animate-pop-in">
             <p className="text-sm text-stone-700 whitespace-pre-wrap">{prayerText}</p>
             <div className="flex items-center gap-1.5 mt-3">
               <Check className="h-3.5 w-3.5 text-rose-600" />

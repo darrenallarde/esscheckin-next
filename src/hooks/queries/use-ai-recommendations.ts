@@ -29,10 +29,10 @@ interface RecommendationsByStatus {
   no_response: AIRecommendation[];
 }
 
-async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
+async function fetchAIRecommendations(organizationId: string): Promise<RecommendationsByStatus> {
   const supabase = createClient();
 
-  // Get AI recommendations with student info
+  // Get AI recommendations with student info - MUST filter by org
   const { data: recommendations, error } = await supabase
     .from("ai_recommendations")
     .select(`
@@ -53,6 +53,7 @@ async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
       generated_at,
       profiles(first_name, last_name)
     `)
+    .eq("organization_id", organizationId)
     .in("status", ["pending", "accepted", "completed", "dismissed"])
     .eq("is_dismissed", false)
     .order("generated_at", { ascending: false });
@@ -136,10 +137,11 @@ async function fetchAIRecommendations(): Promise<RecommendationsByStatus> {
   return result;
 }
 
-export function useAIRecommendations() {
+export function useAIRecommendations(organizationId: string | null) {
   return useQuery({
-    queryKey: ["ai-recommendations"],
-    queryFn: fetchAIRecommendations,
+    queryKey: ["ai-recommendations", organizationId],
+    queryFn: () => fetchAIRecommendations(organizationId!),
+    enabled: !!organizationId,
   });
 }
 

@@ -485,6 +485,90 @@ export function useBulkAddStudentsToGroup() {
   });
 }
 
+export function useUpdateGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: string;
+      name: string;
+      description?: string;
+      color?: string;
+      organization_id: string;
+      meeting_times: Array<{ id?: string; day_of_week: number; start_time: string; end_time: string; frequency?: MeetingFrequency }>;
+      is_default?: boolean;
+      default_grades?: string[];
+      default_gender?: string;
+    }) => {
+      // Update group
+      const { error: groupError } = await supabase
+        .from("groups")
+        .update({
+          name: data.name,
+          description: data.description || null,
+          color: data.color,
+          is_default: data.is_default || false,
+          default_grades: data.default_grades || null,
+          default_gender: data.default_gender || null,
+        })
+        .eq("id", data.id);
+
+      if (groupError) throw groupError;
+
+      // Replace meeting times: delete old, insert new
+      await supabase
+        .from("group_meeting_times")
+        .delete()
+        .eq("group_id", data.id);
+
+      if (data.meeting_times.length > 0) {
+        const { error: meetingError } = await supabase
+          .from("group_meeting_times")
+          .insert(
+            data.meeting_times.map((mt) => ({
+              group_id: data.id,
+              day_of_week: mt.day_of_week,
+              start_time: mt.start_time,
+              end_time: mt.end_time,
+              frequency: mt.frequency || "weekly",
+            }))
+          );
+
+        if (meetingError) throw meetingError;
+      }
+
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.organization_id] });
+    },
+  });
+}
+
+export function useDeleteGroup() {
+  const queryClient = useQueryClient();
+  const supabase = createClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, organizationId }: { groupId: string; organizationId: string }) => {
+      // Delete meeting times first
+      await supabase.from("group_meeting_times").delete().eq("group_id", groupId);
+      // Delete memberships
+      await supabase.from("group_memberships").delete().eq("group_id", groupId);
+      await supabase.from("group_members").delete().eq("group_id", groupId);
+      await supabase.from("group_leaders").delete().eq("group_id", groupId);
+      // Delete group
+      const { error } = await supabase.from("groups").delete().eq("id", groupId);
+      if (error) throw error;
+      return { organizationId };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["groups", result.organizationId] });
+    },
+  });
+}
+
 // Day names helper
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 

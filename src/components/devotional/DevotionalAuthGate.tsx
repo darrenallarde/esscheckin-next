@@ -75,7 +75,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
   // Auth form screens
   if (screen === "phone_otp") {
     return (
-      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
         <PhoneOtpForm
           auth={auth}
           onSuccess={handleAuthSuccess}
@@ -87,7 +87,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
 
   if (screen === "email_otp") {
     return (
-      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
         <EmailOtpForm
           auth={auth}
           onSuccess={handleAuthSuccess}
@@ -99,7 +99,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
 
   if (screen === "username_signup") {
     return (
-      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
         <UsernameSignUpFlow
           auth={auth}
           orgId={orgId}
@@ -113,7 +113,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
 
   // Default: Gate screen — sign in prompt
   return (
-    <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+    <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
       <div className="text-center space-y-4">
         <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">
           Want to engage deeper?
@@ -140,7 +140,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
         <div className="space-y-2">
           <button
             onClick={() => setScreen("phone_otp")}
-            className="w-full py-3 px-4 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Phone className="h-4 w-4" />
             Sign in with phone
@@ -148,7 +148,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
 
           <button
             onClick={() => setScreen("email_otp")}
-            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Mail className="h-4 w-4" />
             Sign in with email
@@ -156,7 +156,7 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
 
           <button
             onClick={() => setScreen("username_signup")}
-            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <UserCircle className="h-4 w-4" />
             Create username &amp; password

@@ -105,7 +105,7 @@ export function DevotionalReadView({
       {/* Content */}
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         {/* Title & Date */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 opacity-0 animate-[fade-in-up_0.4s_ease-out_0s_forwards]">
           <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 tracking-tight">
             {devotional.title}
           </h1>
@@ -116,7 +116,7 @@ export function DevotionalReadView({
 
         {/* Scripture */}
         {devotional.scripture_text && (
-          <section className="bg-blue-50/80 rounded-xl p-5 border border-blue-100">
+          <section className="bg-blue-50/80 rounded-xl p-5 border border-blue-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.1s_forwards]">
             <div className="flex items-center gap-2 mb-3">
               <BookOpen className="h-4 w-4 text-blue-600" />
               <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
@@ -135,7 +135,7 @@ export function DevotionalReadView({
         )}
 
         {/* Reflection */}
-        <section className="bg-amber-50/80 rounded-xl p-5 border border-amber-100">
+        <section className="bg-amber-50/80 rounded-xl p-5 border border-amber-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.2s_forwards]">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="h-4 w-4 text-amber-600" />
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
@@ -149,7 +149,7 @@ export function DevotionalReadView({
 
         {/* Prayer Prompt */}
         {devotional.prayer_prompt && (
-          <section className="bg-rose-50/80 rounded-xl p-5 border border-rose-100">
+          <section className="bg-rose-50/80 rounded-xl p-5 border border-rose-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.3s_forwards]">
             <div className="flex items-center gap-2 mb-3">
               <Heart className="h-4 w-4 text-rose-600" />
               <span className="text-xs font-semibold uppercase tracking-wider text-rose-600">
@@ -164,7 +164,7 @@ export function DevotionalReadView({
 
         {/* Discussion Question */}
         {devotional.discussion_question && (
-          <section className="bg-emerald-50/80 rounded-xl p-5 border border-emerald-100">
+          <section className="bg-emerald-50/80 rounded-xl p-5 border border-emerald-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.4s_forwards]">
             <div className="flex items-center gap-2 mb-3">
               <MessageCircle className="h-4 w-4 text-emerald-600" />
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
@@ -178,7 +178,9 @@ export function DevotionalReadView({
         )}
 
         {/* Extensible slot for auth gate, series nav, etc. */}
-        {children}
+        <div className="opacity-0 animate-[fade-in-up_0.4s_ease-out_0.5s_forwards]">
+          {children}
+        </div>
       </main>
     </div>
   );

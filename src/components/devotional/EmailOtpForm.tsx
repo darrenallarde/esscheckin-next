@@ -54,7 +54,9 @@ export function EmailOtpForm({ auth, onSuccess, onBack }: EmailOtpFormProps) {
           placeholder="000000"
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          className="text-center text-2xl tracking-widest font-mono"
+          className={`text-center text-2xl tracking-widest font-mono ${
+            code.length === 6 ? "ring-2 ring-emerald-400 animate-glow-pulse" : ""
+          } ${auth.error ? "animate-shake" : ""}`}
           disabled={auth.isLoading}
           autoFocus
           onKeyDown={(e) => {
@@ -63,7 +65,7 @@ export function EmailOtpForm({ auth, onSuccess, onBack }: EmailOtpFormProps) {
         />
 
         {auth.error && (
-          <p className="text-sm text-red-600 text-center">{auth.error}</p>
+          <p className="text-sm text-red-600 text-center animate-fade-in-up">{auth.error}</p>
         )}
 
         <Button

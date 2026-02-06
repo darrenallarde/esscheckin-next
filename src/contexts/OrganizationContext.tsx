@@ -77,6 +77,14 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       });
       setIsSuperAdmin(!!superAdminCheck);
 
+      // Auto-accept any pending invitations for this user's email
+      if (user.email) {
+        await supabase.rpc("accept_pending_invitations", {
+          p_user_id: user.id,
+          p_user_email: user.email,
+        });
+      }
+
       // Get user's organizations
       const { data: orgs, error } = await supabase.rpc("get_user_organizations", {
         p_user_id: user.id,

@@ -33,17 +33,19 @@ export function useDevotionalAuth() {
 
   const clearError = useCallback(() => setError(null), []);
 
-  // Phone OTP: Send code
+  // Phone OTP: Send code via custom API (bypasses Supabase Auth phone provider)
   const sendPhoneOtp = useCallback(async (phone: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        phone,
+      const response = await fetch("/api/devotional/send-phone-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
       });
-      if (otpError) {
-        setError(otpError.message);
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setError(result.error || "Failed to send code");
         return false;
       }
       return true;
@@ -55,16 +57,28 @@ export function useDevotionalAuth() {
     }
   }, []);
 
-  // Phone OTP: Verify code + link profile
+  // Phone OTP: Verify code via custom API + establish session + link profile
   const verifyPhoneOtp = useCallback(async (phone: string, code: string): Promise<LinkResult | null> => {
     setIsLoading(true);
     setError(null);
     try {
+      // Step 1: Verify OTP code via our API (returns token_hash + email)
+      const response = await fetch("/api/devotional/verify-phone-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, code }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setError(result.error || "Verification failed");
+        return null;
+      }
+
+      // Step 2: Establish client session using the magic link token
       const supabase = createClient();
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        phone,
-        token: code,
-        type: "sms",
+        token_hash: result.token_hash,
+        type: "email",
       });
       if (verifyError) {
         setError(verifyError.message);
@@ -74,7 +88,7 @@ export function useDevotionalAuth() {
         setSession(data.session);
       }
 
-      // Link profile
+      // Step 3: Link phone to profile
       const { data: linkData, error: linkError } = await supabase.rpc("link_phone_to_profile", {
         p_phone: phone,
       });
@@ -82,12 +96,12 @@ export function useDevotionalAuth() {
         setError(linkError.message);
         return null;
       }
-      const result = linkData as unknown as LinkResult;
-      if (!result.success) {
-        setError(result.error || "Failed to link profile");
+      const linkResult = linkData as unknown as LinkResult;
+      if (!linkResult.success) {
+        setError(linkResult.error || "Failed to link profile");
         return null;
       }
-      return result;
+      return linkResult;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
       return null;

@@ -97,6 +97,26 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(350%)" },
         },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "pop-in": {
+          "0%": { opacity: "0", transform: "scale(0.9)" },
+          "70%": { transform: "scale(1.02)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%": { transform: "translateX(-4px)" },
+          "40%": { transform: "translateX(4px)" },
+          "60%": { transform: "translateX(-4px)" },
+          "80%": { transform: "translateX(4px)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0.3)" },
+          "50%": { boxShadow: "0 0 0 6px rgba(16, 185, 129, 0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -104,6 +124,10 @@ const config: Config = {
         "collapsible-down": "collapsible-down 0.2s ease-out",
         "collapsible-up": "collapsible-up 0.2s ease-out",
         "indeterminate-progress": "indeterminate-progress 1.5s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.4s ease-out forwards",
+        "pop-in": "pop-in 0.3s ease-out forwards",
+        shake: "shake 0.4s ease-out",
+        "glow-pulse": "glow-pulse 1.5s ease-in-out infinite",
       },
     },
   },

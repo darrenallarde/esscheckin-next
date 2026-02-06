@@ -8,6 +8,7 @@ import { Plus, UsersRound } from "lucide-react";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { GroupDetailModal } from "@/components/groups/GroupDetailModal";
 import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
+import { GroupSettingsModal } from "@/components/groups/GroupSettingsModal";
 import { AddStudentToGroupModal } from "@/components/groups/AddStudentToGroupModal";
 import { useGroups, Group, useGroupMembers } from "@/hooks/queries/use-groups";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -15,6 +16,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 export default function GroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
 
   const { currentOrganization, userRole, isLoading: orgLoading } = useOrganization();
@@ -35,8 +37,7 @@ export default function GroupsPage() {
   };
 
   const handleEditSettings = () => {
-    // TODO: Implement group settings modal
-    console.log("Edit settings for group:", selectedGroup?.id);
+    setShowSettingsModal(true);
   };
 
   const existingMemberIds = groupMembers?.map((m) => m.student_id) || [];
@@ -121,6 +122,19 @@ export default function GroupsPage() {
         <CreateGroupModal
           open={showCreateModal}
           onOpenChange={setShowCreateModal}
+          organizationId={organizationId}
+        />
+      )}
+
+      {/* Group Settings Modal */}
+      {selectedGroup && organizationId && (
+        <GroupSettingsModal
+          group={selectedGroup}
+          open={showSettingsModal}
+          onOpenChange={(open) => {
+            setShowSettingsModal(open);
+            if (!open) setSelectedGroup(null);
+          }}
           organizationId={organizationId}
         />
       )}

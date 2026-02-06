@@ -6,6 +6,7 @@ import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
 import { QuestBoard } from "@/components/home/QuestBoard";
+import { PrayerRequestsCard } from "@/components/home/PrayerRequestsCard";
 import { HomeProfileDrawer, HomeProfilePerson } from "@/components/home/HomeProfileDrawer";
 import { HomeMessageDrawer } from "@/components/home/HomeMessageDrawer";
 import { HomePeopleListDrawer, BelongingPerson } from "@/components/home/HomePeopleListDrawer";
@@ -13,6 +14,7 @@ import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations"
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { useNewStudents, NewStudent } from "@/hooks/queries/use-new-students";
+import { usePrayerRequests, PrayerRequest } from "@/hooks/queries/use-prayer-requests";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMyOrgProfile } from "@/hooks/queries/use-my-profile";
 import { orgPath } from "@/lib/navigation";
@@ -28,6 +30,7 @@ export default function HomePage() {
   const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
   const { data: smsInbox, isLoading: smsLoading } = useSmsInbox(organizationId);
   const { data: newStudents, isLoading: newStudentsLoading } = useNewStudents(organizationId);
+  const { data: prayerRequests, isLoading: prayerLoading } = usePrayerRequests(organizationId, 4);
 
   // Profile drawer state
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
@@ -129,6 +132,21 @@ export default function HomePage() {
     setProfileDrawerOpen(true);
   };
 
+  // Handle clicking a prayer request → open profile drawer
+  const handlePrayerPersonClick = (request: PrayerRequest) => {
+    setSelectedPerson({
+      profile_id: request.profile_id,
+      first_name: request.first_name,
+      last_name: request.last_name,
+      phone_number: request.phone_number,
+      email: null,
+      grade: null,
+      gender: null,
+      high_school: null,
+    });
+    setProfileDrawerOpen(true);
+  };
+
   // Handle "Send Text" from profile drawer → close profile, open message drawer
   const handleSendMessageFromProfile = (person: HomeProfilePerson) => {
     setProfileDrawerOpen(false);
@@ -190,15 +208,14 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Pastoral Queue + Recent Messages - Two Column Layout */}
+      {/* Prayer Requests + Recent Messages - Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pastoral Queue */}
-        <PastoralQueue
-          data={recommendations ?? []}
-          loading={orgLoading || recsLoading}
-          viewAllHref={orgPath(orgSlug, "/pastoral")}
-          useDrawer
-          onPersonClick={handlePastoralPersonClick}
+        {/* Prayer Requests Card */}
+        <PrayerRequestsCard
+          data={prayerRequests ?? []}
+          loading={prayerLoading}
+          viewAllHref={orgPath(orgSlug, "/prayer-wall")}
+          onPersonClick={handlePrayerPersonClick}
         />
 
         {/* Recent Messages */}
@@ -209,6 +226,15 @@ export default function HomePage() {
           onConversationClick={handleConversationClick}
         />
       </div>
+
+      {/* Pastoral Queue - Full Width */}
+      <PastoralQueue
+        data={recommendations ?? []}
+        loading={orgLoading || recsLoading}
+        viewAllHref={orgPath(orgSlug, "/pastoral")}
+        useDrawer
+        onPersonClick={handlePastoralPersonClick}
+      />
 
       {/* Drawers - rendered at page level */}
       <HomeProfileDrawer
