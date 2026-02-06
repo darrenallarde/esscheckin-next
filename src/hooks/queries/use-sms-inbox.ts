@@ -71,6 +71,7 @@ export function useSmsInbox(orgId: string | null) {
     queryKey: ["sms-inbox", orgId],
     queryFn: () => fetchSmsConversations(orgId!),
     enabled: !!orgId,
+    refetchInterval: 3000, // Poll every 3s for live inbox updates
   });
 }
 

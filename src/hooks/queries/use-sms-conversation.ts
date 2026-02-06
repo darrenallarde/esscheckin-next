@@ -101,7 +101,7 @@ export function useSmsConversation(profileId: string | null) {
     queryKey: ["sms-conversation", profileId],
     queryFn: () => fetchSmsConversation(profileId!),
     enabled: !!profileId,
-    refetchInterval: 3000, // Poll every 3s for live updates (realtime is best-effort backup)
+    refetchInterval: 1000, // Poll every 1s for live conversation updates
   });
 }
 
