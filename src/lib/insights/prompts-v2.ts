@@ -24,6 +24,22 @@ export function buildSqlGenerationPrompt(
     ? orgContext.groupNames.map((g) => `'${g}'`).join(", ")
     : "none defined yet";
 
+  // Compute day-of-week context so the LLM can resolve "last Wednesday" etc.
+  const todayDate = todayLocal ? new Date(todayLocal + "T12:00:00") : new Date();
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const todayDayName = dayNames[todayDate.getDay()];
+  const todayDayNum = todayDate.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+
+  // Pre-compute "last <day>" dates for each day of the week
+  // "Last Wednesday" = the most recent Wednesday before today
+  const recentDays = dayNames.map((name, dayIdx) => {
+    let daysBack = (todayDayNum - dayIdx + 7) % 7;
+    if (daysBack === 0) daysBack = 7; // "last Monday" when today is Monday = 7 days ago
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - daysBack);
+    return `${name} = '${d.toISOString().split("T")[0]}'`;
+  }).join(", ");
+
   return `You are a SQL query generator for a student ministry check-in application.
 
 Given a natural language question, write a SQL SELECT query against the \`insights_people\` view.
@@ -72,7 +88,8 @@ Given a natural language question, write a SQL SELECT query against the \`insigh
 Available groups in this org: ${groupList}
 Grade range: ${orgContext.gradeRange.min}-${orgContext.gradeRange.max}
 Timezone: ${orgContext.timezone || "America/Los_Angeles"}
-Today's date (in org timezone): ${todayLocal || new Date().toISOString().split("T")[0]}
+Today's date (in org timezone): ${todayLocal || new Date().toISOString().split("T")[0]} (${todayDayName})
+Most recent day-of-week dates: ${recentDays}
 
 ## RULES
 
@@ -88,15 +105,16 @@ Today's date (in org timezone): ${todayLocal || new Date().toISOString().split("
 10. **For "who showed up on a specific date"** — use: \`WHERE '${todayLocal || "2026-02-04"}'::date = ANY(recent_check_in_dates)\`. This array contains dates in the org's local timezone from the last 90 days. For older dates, fall back to \`last_check_in\`.
 11. **For "who showed up this week/last week"** — generate the date range using today's date (${todayLocal || "2026-02-04"}) and use: \`WHERE recent_check_in_dates && ARRAY[dates...]\` or simply \`WHERE last_check_in >= NOW() - INTERVAL '7 days'\` for approximate matches.
 12. **CRITICAL: For relative dates ("yesterday", "last week", "today")** — Always compute dates relative to today's date shown above (${todayLocal || "2026-02-04"}), NOT from CURRENT_DATE or NOW()::date which use UTC. For example, "yesterday" = '${todayLocal || "2026-02-04"}'::date - 1. The recent_check_in_dates array stores dates in the org's local timezone, so always use literal dates derived from today's date above.
-13. **Default to active students** — unless explicitly asked about archived or all statuses, add: \`WHERE status = 'active'\`
-14. **Default to student role** — unless explicitly asking about leaders, admins, or all roles, filter: \`WHERE role IN ('student', 'leader')\`
-15. **Birth month names** — January=1, February=2, ..., December=12
-16. **MS/HS mapping** — Middle School = grades 6-8, High School = grades 9-12
-17. **Gender mapping** — "boys"/"guys" = 'male', "girls"/"gals" = 'female'
-18. **Do NOT use semicolons** at the end of your SQL.
-19. **Do NOT use SQL comments** (-- or /* */).
-20. **Only query insights_people** — never reference other tables directly.
-21. **Keep ORDER BY sensible** — alphabetical by name for people lists, DESC for rankings.
+13. **Day-of-week references ("last Wednesday", "this past Friday")** — Use the pre-computed dates above. "Last Wednesday" or "this past Wednesday" means the MOST RECENT Wednesday before today. Use the exact date from "Most recent day-of-week dates" — do NOT use date_trunc or EXTRACT(DOW). Always output a literal date like \`'2026-02-04'::date = ANY(recent_check_in_dates)\`.
+14. **Default to active students** — unless explicitly asked about archived or all statuses, add: \`WHERE status = 'active'\`
+15. **Default to student role** — unless explicitly asking about leaders, admins, or all roles, filter: \`WHERE role IN ('student', 'leader')\`
+16. **Birth month names** — January=1, February=2, ..., December=12
+17. **MS/HS mapping** — Middle School = grades 6-8, High School = grades 9-12
+18. **Gender mapping** — "boys"/"guys" = 'male', "girls"/"gals" = 'female'
+19. **Do NOT use semicolons** at the end of your SQL.
+20. **Do NOT use SQL comments** (-- or /* */).
+21. **Only query insights_people** — never reference other tables directly.
+22. **Keep ORDER BY sensible** — alphabetical by name for people lists, DESC for rankings.
 
 ## OUTPUT FORMAT
 
