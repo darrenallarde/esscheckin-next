@@ -226,8 +226,8 @@
 
 /* JRPG text box style */
 .jrpg-textbox {
-  background: linear-gradient(to bottom, #f5f5dc 0%, #e8dcc4 100%);
-  border: 4px solid #8B6914;
+  background: linear-gradient(to bottom, #E8EEF6 0%, #D4DEEC 100%);
+  border: 4px solid #2E5090;
   border-radius: 0;
   box-shadow:
     inset 0 0 0 2px #228B22,
@@ -290,8 +290,8 @@
 
 /* JRPG input field */
 .jrpg-input {
-  background: #FAFAF0 !important;
-  border: 3px solid #8B6914 !important;
+  background: #F0F4FA !important;
+  border: 3px solid #2E5090 !important;
   border-radius: 0 !important;
   color: #2F4F2F !important;
   font-family: 'Press Start 2P', cursive !important;
@@ -383,7 +383,7 @@
 .jrpg-gold-text {
   color: #FFD700;
   text-shadow:
-    2px 2px 0 #8B6914,
+    2px 2px 0 #2E5090,
     -1px -1px 0 #FFF8DC;
 }
 
