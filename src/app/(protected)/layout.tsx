@@ -4,9 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Providers } from "./providers";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { PLATFORM_NAME } from "@/lib/copy";
 
 export default function ProtectedLayout({
@@ -15,7 +20,10 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [user, setUser] = useState<{ email?: string; displayName?: string | null } | null>(null);
+  const [user, setUser] = useState<{
+    email?: string;
+    displayName?: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,20 +67,19 @@ export default function ProtectedLayout({
 
   return (
     <Providers>
-      <SidebarProvider>
-        <AppSidebar
-          userEmail={user?.email}
-          onSignOut={handleSignOut}
-        />
-        <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="h-6" />
-            <span className="font-semibold">{PLATFORM_NAME}</span>
-          </header>
-          <div className="flex flex-1 flex-col">{children}</div>
-        </SidebarInset>
-      </SidebarProvider>
+      <ThemeProvider>
+        <SidebarProvider>
+          <AppSidebar userEmail={user?.email} onSignOut={handleSignOut} />
+          <SidebarInset>
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+              <SidebarTrigger />
+              <Separator orientation="vertical" className="h-6" />
+              <span className="font-semibold">{PLATFORM_NAME}</span>
+            </header>
+            <div className="flex flex-1 flex-col">{children}</div>
+          </SidebarInset>
+        </SidebarProvider>
+      </ThemeProvider>
     </Providers>
   );
 }

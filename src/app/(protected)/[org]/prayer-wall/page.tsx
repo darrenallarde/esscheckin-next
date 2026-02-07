@@ -15,10 +15,17 @@ import {
   Square,
   Send,
 } from "lucide-react";
-import { usePrayerRequests, useRespondToPrayer, PrayerRequest } from "@/hooks/queries/use-prayer-requests";
+import {
+  usePrayerRequests,
+  useRespondToPrayer,
+  PrayerRequest,
+} from "@/hooks/queries/use-prayer-requests";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMyOrgProfile } from "@/hooks/queries/use-my-profile";
-import { HomeProfileDrawer, HomeProfilePerson } from "@/components/home/HomeProfileDrawer";
+import {
+  HomeProfileDrawer,
+  HomeProfilePerson,
+} from "@/components/home/HomeProfileDrawer";
 import { HomeMessageDrawer } from "@/components/home/HomeMessageDrawer";
 import { createClient } from "@/lib/supabase/client";
 
@@ -40,7 +47,8 @@ export default function PrayerWallPage() {
 
   // Profile drawer state
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<HomeProfilePerson | null>(null);
+  const [selectedPerson, setSelectedPerson] =
+    useState<HomeProfilePerson | null>(null);
 
   // Message drawer state
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
@@ -195,15 +203,18 @@ export default function PrayerWallPage() {
     setMessageDrawerOpen(true);
   };
 
-  const handleSendMessageFromProfile = useCallback((person: HomeProfilePerson) => {
-    setProfileDrawerOpen(false);
-    setSelectedConversation({
-      profileId: person.profile_id,
-      phoneNumber: person.phone_number,
-      personName: `${person.first_name} ${person.last_name}`,
-    });
-    setMessageDrawerOpen(true);
-  }, []);
+  const handleSendMessageFromProfile = useCallback(
+    (person: HomeProfilePerson) => {
+      setProfileDrawerOpen(false);
+      setSelectedConversation({
+        profileId: person.profile_id,
+        phoneNumber: person.phone_number,
+        personName: `${person.first_name} ${person.last_name}`,
+      });
+      setMessageDrawerOpen(true);
+    },
+    [],
+  );
 
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
@@ -224,7 +235,9 @@ export default function PrayerWallPage() {
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Prayer Wall</h1>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+          Prayer Wall
+        </h1>
         <p className="text-muted-foreground text-lg">
           Students are trusting you with their hearts. Pray for them.
         </p>
@@ -239,9 +252,10 @@ export default function PrayerWallPage() {
       ) : !requests || requests.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Heart className="h-8 w-8 text-rose-300 mx-auto mb-3" />
+            <Heart className="h-8 w-8 text-primary/40 mx-auto mb-3" />
             <p className="text-muted-foreground">
-              No prayer requests yet. When students share prayer requests on their devotional page, they&apos;ll appear here.
+              No prayer requests yet. When students share prayer requests on
+              their devotional page, they&apos;ll appear here.
             </p>
           </CardContent>
         </Card>
@@ -249,13 +263,18 @@ export default function PrayerWallPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {requests.map((request) => {
             const isPrayedFor = request.response_count > 0;
-            const isVoiceActive = activeAction?.engagementId === request.engagement_id && activeAction.type === "voice";
+            const isVoiceActive =
+              activeAction?.engagementId === request.engagement_id &&
+              activeAction.type === "voice";
 
             return (
-              <Card key={request.engagement_id} className="relative overflow-hidden">
+              <Card
+                key={request.engagement_id}
+                className="relative overflow-hidden"
+              >
                 {isPrayedFor && (
                   <div className="absolute top-3 right-3">
-                    <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                    <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                       <Check className="h-3 w-3" />
                       Prayed for
                     </span>
@@ -266,23 +285,25 @@ export default function PrayerWallPage() {
                   <div>
                     <button
                       onClick={() => handlePersonClick(request)}
-                      className="text-sm font-semibold text-stone-800 hover:text-stone-600 transition-colors"
+                      className="text-sm font-semibold text-foreground hover:text-foreground/70 transition-colors"
                     >
                       {request.first_name} {request.last_name}
                     </button>
                     <p className="text-xs text-muted-foreground">
-                      {request.devotional_title} &middot; {formatDate(request.scheduled_date)} &middot; {timeAgo(request.prayed_at)}
+                      {request.devotional_title} &middot;{" "}
+                      {formatDate(request.scheduled_date)} &middot;{" "}
+                      {timeAgo(request.prayed_at)}
                     </p>
                   </div>
 
                   {/* Prayer text */}
-                  <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
                     {request.prayer_request}
                   </p>
 
                   {/* Voice recording UI */}
                   {isVoiceActive && (
-                    <div className="bg-stone-50 rounded-lg p-3 space-y-2">
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                       {recordingState === "idle" && (
                         <Button
                           onClick={startRecording}
@@ -308,7 +329,11 @@ export default function PrayerWallPage() {
                       {recordingState === "recorded" && (
                         <div className="space-y-2">
                           {audioUrlRef.current && (
-                            <audio src={audioUrlRef.current} controls className="w-full h-8" />
+                            <audio
+                              src={audioUrlRef.current}
+                              controls
+                              className="w-full h-8"
+                            />
                           )}
                           <div className="flex gap-2">
                             <Button
@@ -326,7 +351,7 @@ export default function PrayerWallPage() {
                             <Button
                               onClick={() => sendVoicePrayer(request)}
                               size="sm"
-                              className="flex-1 bg-rose-600 hover:bg-rose-700"
+                              className="flex-1 bg-primary hover:bg-primary/90"
                             >
                               <Send className="h-3.5 w-3.5 mr-1" />
                               Send
@@ -337,7 +362,9 @@ export default function PrayerWallPage() {
                       {recordingState === "uploading" && (
                         <div className="flex items-center justify-center py-2">
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          <span className="text-sm text-muted-foreground">Sending prayer...</span>
+                          <span className="text-sm text-muted-foreground">
+                            Sending prayer...
+                          </span>
                         </div>
                       )}
                       <Button
@@ -367,13 +394,16 @@ export default function PrayerWallPage() {
                         {respondMutation.isPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                         ) : (
-                          <Heart className="h-3.5 w-3.5 mr-1 text-rose-500" />
+                          <Heart className="h-3.5 w-3.5 mr-1 text-primary" />
                         )}
                         Pray for them
                       </Button>
                       <Button
                         onClick={() => {
-                          setActiveAction({ engagementId: request.engagement_id, type: "voice" });
+                          setActiveAction({
+                            engagementId: request.engagement_id,
+                            type: "voice",
+                          });
                           setRecordingState("idle");
                         }}
                         size="sm"

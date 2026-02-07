@@ -37,7 +37,7 @@ export function PrayerRequestsCard({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Heart className="h-4 w-4 text-rose-500" />
+            <Heart className="h-4 w-4 text-primary" />
             Prayer Requests
           </CardTitle>
         </CardHeader>
@@ -55,7 +55,7 @@ export function PrayerRequestsCard({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Heart className="h-4 w-4 text-rose-500" />
+            <Heart className="h-4 w-4 text-primary" />
             Prayer Requests
           </CardTitle>
         </CardHeader>
@@ -75,7 +75,7 @@ export function PrayerRequestsCard({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Heart className="h-4 w-4 text-rose-500" />
+            <Heart className="h-4 w-4 text-primary" />
             Prayer Requests
           </CardTitle>
           <Link
@@ -92,14 +92,14 @@ export function PrayerRequestsCard({
           <button
             key={request.engagement_id}
             onClick={() => onPersonClick?.(request)}
-            className="w-full text-left p-3 rounded-lg border border-stone-100 hover:bg-stone-50 transition-colors"
+            className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-stone-800 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {request.first_name} {request.last_name}
                 </p>
-                <p className="text-xs text-stone-500 line-clamp-2 mt-0.5">
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                   {request.prayer_request}
                 </p>
               </div>
@@ -108,7 +108,7 @@ export function PrayerRequestsCard({
                   {timeAgo(request.prayed_at)}
                 </span>
                 {request.response_count > 0 && (
-                  <span className="text-xs text-emerald-600 font-medium mt-0.5">
+                  <span className="text-xs text-primary font-medium mt-0.5">
                     Prayed for
                   </span>
                 )}
