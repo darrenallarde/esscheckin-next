@@ -64,7 +64,10 @@ Assign a NEW rank based on how popular it would be if 100,000 teens were surveye
 Place it honestly: common new answers near rank ${Math.round(answerCount * 0.6)}-${answerCount}, obscure ones ${answerCount + 1}-${answerCount + 50}.
 Set matched_to to "new".
 
-When in doubt between rejecting and accepting as new, ACCEPT as new with a high rank.
+**IMPORTANT: Contrarian, ironic, and "wrong" answers are VALID.**
+This game has LOW rounds where players TRY to give unpopular answers. Answers like "phone", "nothing", "food", "sleep", "money", "social media", "snacks", "wifi", "homework" are all valid — they're what honest teenagers would actually say even if they're not the "right" spiritual answer. Accept these as new answers with HIGH ranks (unpopular). Only reject answers that are genuinely inappropriate (profanity, sexual, etc. per Step 1).
+
+When in doubt between rejecting and accepting as new, ALWAYS ACCEPT as new with a high rank.
 
 Respond in JSON ONLY:
 {"valid": true/false, "rank": <number or null>, "matched_to": "<seed word or 'new' or null>", "reason": "<5 words max>"}`;

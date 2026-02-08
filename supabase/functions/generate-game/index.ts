@@ -79,20 +79,24 @@ A single question that can be answered in ONE WORD. The question must be:
 - Open-ended enough that many different words are valid answers
 - Could range from theological to cultural to practical
 
-### 5. answers (100-150 ranked answers)
-100-150 single-word answers ranked from 1 (most popular — what most teenagers would say) to N (least popular — what almost no one would think of).
+### 5. answers (300+ ranked answers)
+300-400 single-word answers ranked from 1 (most popular — what most teenagers would say) to N (least popular — what almost no one would think of).
 
-Imagine you surveyed 100,000 random teenagers with this question. Rank the answers by how many people would give each response.
+Imagine you surveyed 100,000 random teenagers with this question. Rank the answers by how many people would give each response. MORE answers = better game. Aim for 350+.
 
 **PERSONA BRAINSTORMING — DO THIS FIRST:**
-Before writing the answer list, mentally adopt each of these 4 teenager personas and brainstorm 15-20 answers EACH persona would give. This ensures the final list captures the full range of real teen responses:
+Before writing the answer list, mentally adopt each of these 5 teenager personas and brainstorm 15-20 answers EACH persona would give. This ensures the final list captures the full range of real teen responses:
 
 1. **The Church Kid** — grew up in youth group, knows the "right" answers (faith, prayer, Jesus, grace...)
 2. **The Pragmatist** — thinks practically and concretely about real life (money, food, family, sleep, health...)
 3. **The Athlete / Social Kid** — thinks about relationships, competition, status (friends, winning, teamwork, respect...)
 4. **The Quiet Thinker** — introspective, creative, sometimes unexpected (peace, silence, art, nature, purpose...)
+5. **The Honest/Contrarian Kid** — gives real but "wrong" or ironic answers that are the OPPOSITE of what's expected. These make EXCELLENT low-ranked answers. For "What do you need most in quiet time with God?" they'd say: phone, nothing, social media, snacks, wifi, sleep. For "What word describes God's love?" they'd say: boring, whatever, idk. These are NOT inappropriate — they're honest teenage answers that belong in ranks 100-150.
 
-Merge all 4 lists together, remove duplicates, then rank by overall popularity across ALL 100,000 teens (not just one type). The church kid's answers should NOT dominate — remember most teens are a MIX of these personas. Practical/concrete answers like "money", "food", "family" are often MORE popular than theological answers.
+Merge all 5 lists together, remove duplicates, then rank by overall popularity across ALL 100,000 teens (not just one type). The church kid's answers should NOT dominate — remember most teens are a MIX of these personas. Practical/concrete answers like "money", "food", "family" are often MORE popular than theological answers.
+
+**CRITICAL: LOW-RANK ANSWERS MATTER.**
+The game has HIGH rounds (guess popular answers) AND LOW rounds (guess UNpopular answers). If you only include "good" spiritual answers, there's nothing interesting for LOW rounds. You MUST include 20-30 contrarian/ironic/unexpected answers in ranks 100-150. These are answers that are technically valid but deliberately miss the spiritual point. Examples: "phone", "nothing", "money", "sleep", "snacks", "tiktok", "homework". A teen submitting "phone" for "What do you need in quiet time with God?" should find it on the list as a low-ranked answer — because some teens WOULD honestly say that.
 
 **ANSWER CONTENT GUARDRAILS:**
 - NO profanity, slurs, or crude humor
@@ -105,15 +109,17 @@ Merge all 4 lists together, remove duplicates, then rank by overall popularity a
 Rules for the answer list:
 - Rank 1 MUST be the devotional's actual answer/theme word (the most obvious response)
 - Each answer is a single word (or at most two words for compound concepts like "olive oil")
-- All answers must be legitimate responses to the question
+- All answers must be legitimate responses to the question — including ironic, contrarian, or "wrong" answers
 - Include a MIX of word types: nouns, verbs, adjectives, and adverbs — not just nouns
 - Use everyday, accessible words teenagers actually know — avoid SAT words or overly academic vocabulary
-- Rank 1-15: The obvious, first-thing-you'd-think-of answers — MUST include at least 3-4 practical/concrete answers (not all theological)
-- Rank 16-50: Common but slightly less obvious — mix of spiritual AND everyday answers
-- Rank 51-100: Reasonable but require some thought — good variety of verbs and adjectives here
-- Rank 101-150: Creative, less common but still valid answers
+- Rank 1-20: The obvious, first-thing-you'd-think-of answers — MUST include practical/concrete answers (not all theological)
+- Rank 21-80: Common but slightly less obvious — mix of spiritual AND everyday answers
+- Rank 81-200: Reasonable but require some thought — good variety of verbs, adjectives, practical items
+- Rank 201-300: Creative, uncommon but still valid answers — include everyday objects, activities, feelings
+- Rank 301-400: Contrarian, ironic, or "technically valid" answers — phone, nothing, sleep, snacks, money, wifi, etc.
 - NO duplicate words
 - Think about what a room of 100 teenagers would actually shout out — not just the "Sunday school" answers
+- "food", "phone", "sleep", "nothing", "money" are ALL valid answers for almost any question — include them
 
 ## OUTPUT FORMAT
 Return ONLY a JSON object (no other text):
@@ -133,7 +139,7 @@ Return ONLY a JSON object (no other text):
   "answers": [
     { "answer": "word1", "rank": 1 },
     { "answer": "word2", "rank": 2 },
-    ...
+    ...300-400 answers total...
     { "answer": "wordN", "rank": N }
   ]
 }`;
@@ -235,7 +241,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 16384,
+        max_tokens: 32768,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -280,12 +286,12 @@ serve(async (req) => {
       throw new Error("Failed to parse AI response as JSON");
     }
 
-    // 4. Validate the response (80-200 answers)
+    // 4. Validate the response (250+ answers)
     if (
       !parsed.core_question ||
       !parsed.scripture_verses ||
       !Array.isArray(parsed.answers) ||
-      parsed.answers.length < 80
+      parsed.answers.length < 250
     ) {
       console.error("Invalid AI response structure");
       await supabase
@@ -293,7 +299,7 @@ serve(async (req) => {
         .update({ status: "ready" })
         .eq("id", game_id);
       throw new Error(
-        `Invalid AI response: expected 80-200 answers, got ${parsed.answers?.length || 0}`,
+        `Invalid AI response: expected 250+ answers, got ${parsed.answers?.length || 0}`,
       );
     }
 
