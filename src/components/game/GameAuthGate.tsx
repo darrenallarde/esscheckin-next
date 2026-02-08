@@ -34,6 +34,7 @@ export function GameAuthGate({
       <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
         <PhoneOtpForm
           auth={auth}
+          orgId={orgId}
           onSuccess={handleAuthSuccess}
           onBack={() => {
             setScreen("gate");

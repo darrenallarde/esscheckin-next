@@ -3,19 +3,27 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Loader2 } from "lucide-react";
+import { ArrowLeft, Phone, Loader2, UserCircle } from "lucide-react";
 import type { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 
 interface PhoneOtpFormProps {
   auth: ReturnType<typeof useDevotionalAuth>;
+  orgId?: string;
   onSuccess: (profileId: string, firstName: string) => void;
   onBack: () => void;
 }
 
-export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
+export function PhoneOtpForm({
+  auth,
+  orgId,
+  onSuccess,
+  onBack,
+}: PhoneOtpFormProps) {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [needsName, setNeedsName] = useState(false);
+  const [firstName, setFirstName] = useState("");
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -47,9 +55,79 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
     const result = await auth.verifyPhoneOtp(rawPhone, code);
     if (result?.success && result.profile_id && result.first_name) {
       onSuccess(result.profile_id, result.first_name);
+    } else if (
+      auth.error?.toLowerCase().includes("no profile found") &&
+      orgId
+    ) {
+      // Phone verified but no profile exists — ask for name to create one
+      auth.clearError();
+      setNeedsName(true);
     }
   };
 
+  const handleCreateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName.trim() || !orgId) return;
+    auth.clearError();
+    const rawPhone = getRawPhone();
+    const result = await auth.createPhoneProfile(
+      rawPhone,
+      orgId,
+      firstName.trim(),
+    );
+    if (result?.success && result.profile_id) {
+      onSuccess(result.profile_id, result.first_name || firstName.trim());
+    }
+  };
+
+  // Step 3: Name input for new players
+  if (needsName) {
+    return (
+      <form onSubmit={handleCreateProfile} className="space-y-4">
+        <div className="text-center">
+          <div className="h-10 w-10 rounded-full bg-violet-100 flex items-center justify-center mx-auto mb-3">
+            <UserCircle className="h-5 w-5 text-violet-600" />
+          </div>
+          <p className="text-sm font-medium text-stone-800">
+            Welcome! What&apos;s your first name?
+          </p>
+          <p className="text-xs text-stone-400 mt-1">
+            Phone verified — just need your name to get started
+          </p>
+        </div>
+
+        <Input
+          type="text"
+          placeholder="First name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          disabled={auth.isLoading}
+          autoFocus
+        />
+
+        {auth.error && (
+          <p className="text-sm text-red-600 text-center">{auth.error}</p>
+        )}
+
+        <Button
+          type="submit"
+          disabled={auth.isLoading || !firstName.trim()}
+          className="w-full bg-stone-900 text-white"
+        >
+          {auth.isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Creating...
+            </>
+          ) : (
+            "Let's Go!"
+          )}
+        </Button>
+      </form>
+    );
+  }
+
+  // Step 2: Code entry
   if (codeSent) {
     return (
       <div className="space-y-4">
@@ -57,7 +135,9 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
           <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
             <Phone className="h-5 w-5 text-emerald-600" />
           </div>
-          <p className="text-sm font-medium text-stone-800">Enter the code sent to</p>
+          <p className="text-sm font-medium text-stone-800">
+            Enter the code sent to
+          </p>
           <p className="text-sm text-stone-500">{phone}</p>
         </div>
 
@@ -70,7 +150,9 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
           className={`text-center text-2xl tracking-widest font-mono ${
-            code.length === 6 ? "ring-2 ring-emerald-400 animate-glow-pulse" : ""
+            code.length === 6
+              ? "ring-2 ring-emerald-400 animate-glow-pulse"
+              : ""
           } ${auth.error ? "animate-shake" : ""}`}
           disabled={auth.isLoading}
           autoFocus
@@ -80,7 +162,9 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
         />
 
         {auth.error && (
-          <p className="text-sm text-red-600 text-center animate-fade-in-up">{auth.error}</p>
+          <p className="text-sm text-red-600 text-center animate-fade-in-up">
+            {auth.error}
+          </p>
         )}
 
         <Button
@@ -89,14 +173,21 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
           className="w-full bg-stone-900 text-white"
         >
           {auth.isLoading ? (
-            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verifying...</>
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Verifying...
+            </>
           ) : (
             "Verify Code"
           )}
         </Button>
 
         <Button
-          onClick={() => { setCodeSent(false); setCode(""); auth.clearError(); }}
+          onClick={() => {
+            setCodeSent(false);
+            setCode("");
+            auth.clearError();
+          }}
           variant="ghost"
           size="sm"
           className="w-full text-stone-500"
@@ -108,6 +199,7 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
     );
   }
 
+  // Step 1: Phone input
   return (
     <form onSubmit={handleSendCode} className="space-y-4">
       <div className="text-center">
@@ -138,7 +230,10 @@ export function PhoneOtpForm({ auth, onSuccess, onBack }: PhoneOtpFormProps) {
         className="w-full bg-stone-900 text-white"
       >
         {auth.isLoading ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Sending...</>
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Sending...
+          </>
         ) : (
           "Send Code"
         )}

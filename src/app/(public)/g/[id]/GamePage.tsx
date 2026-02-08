@@ -260,11 +260,31 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             </p>
             <p className="text-sm text-muted-foreground">Hi-Lo Game</p>
           </div>
-          {state.totalScore > 0 && (
-            <div className="text-sm font-semibold text-stone-700">
-              {state.totalScore.toLocaleString()} pts
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {state.totalScore > 0 && (
+              <div className="text-sm font-semibold text-stone-700">
+                {state.totalScore.toLocaleString()} pts
+              </div>
+            )}
+            {state.authenticated && state.firstName && (
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary">
+                    {state.firstName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    await auth.signOut();
+                    window.location.reload();
+                  }}
+                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
