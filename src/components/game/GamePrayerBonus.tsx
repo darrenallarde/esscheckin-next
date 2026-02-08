@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Heart, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { tapScale } from "@/lib/game/timing";
 
 const PRAYER_BONUS_POINTS = 500;
 
@@ -30,27 +32,37 @@ export function GamePrayerBonus({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-3">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 text-purple-800">
+        <div
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+          style={{
+            background: "hsla(258, 90%, 66%, 0.15)",
+            color: "var(--game-accent)",
+            boxShadow: "0 0 16px hsla(258, 90%, 66%, 0.2)",
+          }}
+        >
           <Sparkles className="h-4 w-4" />
           <span className="text-sm font-bold">
             {prayerBonusAwarded ? "Pray Again" : "Bonus Round"}
           </span>
         </div>
-        <h2 className="text-xl font-bold text-stone-900">
+        <h2 className="text-xl font-bold">
           {prayerBonusAwarded
             ? `${firstName ? `${firstName}, share` : "Share"} another prayer`
             : `${firstName ? `${firstName}, one` : "One"} more thing...`}
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className="text-sm" style={{ color: "var(--game-muted)" }}>
           {prayerBonusAwarded ? (
             "Your leaders will see this and pray for you"
           ) : (
             <>
               Share a prayer request and earn{" "}
-              <span className="font-bold text-purple-700">
+              <span
+                className="font-bold"
+                style={{ color: "var(--game-accent)" }}
+              >
                 +{PRAYER_BONUS_POINTS} bonus points
               </span>
             </>
@@ -59,8 +71,17 @@ export function GamePrayerBonus({
       </div>
 
       {/* Prayer form */}
-      <div className="bg-white rounded-xl p-5 border border-stone-200 shadow-sm space-y-4">
-        <div className="flex items-center gap-2 text-sm text-stone-500">
+      <div
+        className="rounded-xl p-5 border space-y-4"
+        style={{
+          background: "var(--game-surface)",
+          borderColor: "var(--game-border)",
+        }}
+      >
+        <div
+          className="flex items-center gap-2 text-sm"
+          style={{ color: "var(--game-muted)" }}
+        >
           <Heart className="h-4 w-4 text-rose-400" />
           <span>Your leaders will see this and pray for you</span>
         </div>
@@ -73,13 +94,24 @@ export function GamePrayerBonus({
             disabled={submitting}
             rows={3}
             autoFocus
-            className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-300 disabled:opacity-50 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl border text-base placeholder:text-white/30 focus:outline-none focus:ring-2 disabled:opacity-50 transition-all resize-none"
+            style={{
+              background: "var(--game-surface)",
+              borderColor: "var(--game-border)",
+              color: "var(--game-text)",
+            }}
           />
 
-          <button
+          <motion.button
             type="submit"
             disabled={!prayer.trim() || submitting}
-            className="w-full py-3.5 px-6 rounded-xl bg-purple-600 text-white text-base font-semibold hover:bg-purple-700 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2"
+            whileTap={!prayer.trim() || submitting ? undefined : tapScale}
+            className="w-full py-3.5 px-6 rounded-xl text-base font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{
+              background: "var(--game-accent)",
+              color: "#fff",
+              boxShadow: "0 0 16px hsla(258, 90%, 66%, 0.3)",
+            }}
           >
             {submitting ? (
               <>
@@ -94,7 +126,7 @@ export function GamePrayerBonus({
                   : `Submit Prayer (+${PRAYER_BONUS_POINTS} pts)`}
               </>
             )}
-          </button>
+          </motion.button>
         </form>
       </div>
 
@@ -102,7 +134,8 @@ export function GamePrayerBonus({
       <button
         onClick={onSkip}
         disabled={submitting}
-        className="w-full py-3 text-sm text-stone-400 hover:text-stone-600 transition-colors flex items-center justify-center gap-1"
+        className="w-full py-3 text-sm transition-colors flex items-center justify-center gap-1 hover:opacity-80"
+        style={{ color: "var(--game-muted)" }}
       >
         <ArrowLeft className="h-4 w-4" />
         Back to results

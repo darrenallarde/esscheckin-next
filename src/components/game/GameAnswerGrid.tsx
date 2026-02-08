@@ -4,7 +4,6 @@ import { normalizeAnswer } from "@/lib/game/utils";
 
 interface GameAnswerGridProps {
   answers: { answer: string; rank: number }[];
-  /** Single player answer (round result) or array (final reveal) */
   playerAnswers?: string | string[];
   playerRank?: number | null;
   mode: "condensed" | "full";
@@ -18,7 +17,6 @@ export function GameAnswerGrid({
   mode,
   hideWords = false,
 }: GameAnswerGridProps) {
-  // Normalize to array
   const playerList = !playerAnswers
     ? []
     : Array.isArray(playerAnswers)
@@ -26,7 +24,6 @@ export function GameAnswerGrid({
       : [playerAnswers];
   const normalizedPlayers = new Set(playerList.map((a) => normalizeAnswer(a)));
 
-  // Deduplicate by rank (AI-judged entries can share ranks with seeds)
   const deduped = deduplicateByRank(answers);
   const sorted = [...deduped].sort((a, b) => a.rank - b.rank);
 
@@ -50,7 +47,8 @@ export function GameAnswerGrid({
           return (
             <div
               key={`gap-${i}`}
-              className="text-center text-xs text-stone-400 py-1"
+              className="text-center text-xs py-1"
+              style={{ color: "var(--game-muted)" }}
             >
               &middot;&middot;&middot;
             </div>
@@ -62,20 +60,33 @@ export function GameAnswerGrid({
         return (
           <div
             key={item.rank}
-            className={`flex items-center gap-2 px-3 rounded-lg text-sm transition-colors ${
-              isPlayer
-                ? "py-2 bg-emerald-100 border-2 border-emerald-400 text-emerald-900 shadow-sm"
-                : "py-1.5 bg-white border border-stone-100 text-stone-600"
-            }`}
+            className="flex items-center gap-2 px-3 rounded-lg text-sm transition-colors"
+            style={{
+              padding: isPlayer ? "0.5rem 0.75rem" : "0.375rem 0.75rem",
+              background: isPlayer
+                ? "hsla(142, 71%, 45%, 0.12)"
+                : "transparent",
+              border: isPlayer
+                ? "2px solid hsla(142, 71%, 45%, 0.4)"
+                : "1px solid var(--game-border)",
+              boxShadow: isPlayer
+                ? "0 0 8px hsla(142, 71%, 45%, 0.15)"
+                : "none",
+            }}
           >
             <span
-              className={`w-8 shrink-0 text-right font-mono text-xs ${
-                isPlayer ? "text-emerald-600 font-bold" : "text-stone-400"
-              }`}
+              className="w-8 shrink-0 text-right font-mono text-xs"
+              style={{
+                color: isPlayer ? "var(--game-correct)" : "var(--game-muted)",
+                fontWeight: isPlayer ? "bold" : "normal",
+              }}
             >
               {item.rank}
             </span>
-            <span className={`flex-1 truncate ${isPlayer ? "font-bold" : ""}`}>
+            <span
+              className="flex-1 truncate"
+              style={{ fontWeight: isPlayer ? "bold" : "normal" }}
+            >
               {item.answer}
             </span>
           </div>
@@ -85,7 +96,6 @@ export function GameAnswerGrid({
   );
 }
 
-/** Vertical rank table — numbers only, player's row highlighted with their word */
 function RankTable({
   visible,
   playerRank,
@@ -104,7 +114,10 @@ function RankTable({
               key={`gap-${i}`}
               className="flex items-center justify-center py-1"
             >
-              <span className="text-xs text-stone-300 tracking-widest">
+              <span
+                className="text-xs tracking-widest"
+                style={{ color: "var(--game-muted)" }}
+              >
                 &bull; &bull; &bull;
               </span>
             </div>
@@ -117,12 +130,23 @@ function RankTable({
           return (
             <div
               key={item.rank}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg bg-emerald-100 border-2 border-emerald-400 shadow-sm"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg"
+              style={{
+                background: "hsla(142, 71%, 45%, 0.12)",
+                border: "2px solid hsla(142, 71%, 45%, 0.4)",
+                boxShadow: "0 0 8px hsla(142, 71%, 45%, 0.15)",
+              }}
             >
-              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-600 text-white text-xs font-bold">
+              <span
+                className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold"
+                style={{
+                  background: "var(--game-correct)",
+                  color: "#000",
+                }}
+              >
                 {item.rank}
               </span>
-              <span className="font-bold text-emerald-900 text-base">
+              <span className="font-bold text-base">
                 {playerAnswer || item.answer}
               </span>
             </div>
@@ -134,7 +158,10 @@ function RankTable({
             key={item.rank}
             className="flex items-center px-3 py-1 rounded text-sm"
           >
-            <span className="w-7 text-right font-mono text-xs text-stone-300">
+            <span
+              className="w-7 text-right font-mono text-xs"
+              style={{ color: "var(--game-muted)" }}
+            >
               {item.rank}
             </span>
           </div>
@@ -144,7 +171,6 @@ function RankTable({
   );
 }
 
-/** Remove duplicate ranks — keep the first (seed) entry at each rank */
 function deduplicateByRank(
   answers: { answer: string; rank: number }[],
 ): { answer: string; rank: number }[] {
