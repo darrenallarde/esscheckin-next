@@ -70,7 +70,7 @@ export function isGameOpen(
  * An 'active' game past its closes_at is reported as 'expired'.
  */
 export function getGameStatus(
-  game: GameRecord,
+  game: Pick<GameRecord, "status" | "closes_at">,
   now: Date = new Date(),
 ): GameStatus {
   if (game.status === "completed") return "completed";
