@@ -65,7 +65,7 @@ The Hi-Lo game state machine (`src/lib/game/state-machine.ts`) was built entirel
 
 ## What Makes a Good Unit Test
 
-Lessons from the state machine test suite:
+Lessons from the Hi-Lo game test suite (102 tests across 5 files):
 
 1. **Test every action × every valid source screen** — `GAME_LOADED` from `loading`, `START_GAME` from `intro`, etc.
 2. **Test invalid transitions are no-ops** — `START_GAME` from `round_play` returns same state
@@ -74,6 +74,66 @@ Lessons from the state machine test suite:
 5. **Test accumulation** — scores adding up, rounds array growing
 6. **Descriptive test names** — `"transitions from round_result to final_results after round 4"`
 7. **Use helpers for readable setup** — `stateAt("round_play", { currentRound: 2 })` not raw object literals
+8. **End with a full happy-path test** — Walk through the entire flow in one test as a capstone
+9. **Test error paths explicitly** — `expect(() => fn(badInput)).toThrow()` for invalid inputs
+
+## Test Helper Patterns
+
+Helpers are critical for readable tests. Here are the patterns from our codebase:
+
+### State factory — for reducers/state machines
+
+```ts
+function stateAt(
+  screen: GameScreen,
+  overrides: Partial<GameState> = {},
+): GameState {
+  return { ...initialState(), ...overrides, screen };
+}
+// Usage: stateAt("round_play", { currentRound: 2, authenticated: true })
+```
+
+### Record factory — for domain objects
+
+```ts
+function makeGame(overrides: Partial<GameRecord> = {}): GameRecord {
+  return { id: "test-id", status: "ready", opens_at: null, ...overrides };
+}
+// Usage: makeGame({ status: "active", opens_at: "2026-02-07T00:00:00Z" })
+```
+
+### Parameterized data factory — for bulk test data
+
+```ts
+function makeAnswers(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    answer: `word${i + 1}`,
+    rank: i + 1,
+  }));
+}
+// Usage: makeAnswers(200) for valid set, makeAnswers(199) for invalid count
+```
+
+### Time injection — for deterministic time tests
+
+```ts
+// Function signature accepts `now` parameter:
+function isGameOpen(game: GameRecord, now: Date = new Date()): boolean { ... }
+
+// Test injects a fixed time:
+const now = new Date("2026-02-07T12:00:00Z");
+expect(isGameOpen(game, now)).toBe(true);
+```
+
+### Discriminated union narrowing — for result types
+
+```ts
+const result = parseResponse(raw);
+expect(result.success).toBe(true);
+if (result.success) {
+  expect(result.data.answers).toHaveLength(200); // TypeScript knows data exists
+}
+```
 
 ## File Structure
 

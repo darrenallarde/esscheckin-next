@@ -10,20 +10,67 @@ user-invocable: true
 
 Use this when building a feature or fixing a bug with TDD. Argument: `$ARGUMENTS` (what to build/fix)
 
-## Workflow
+## Step 0: Decide What to Test
 
-1. **Understand:** Parse `$ARGUMENTS`. Read relevant code and specs. Identify what behavior needs to be tested.
-2. **Write failing tests:** Create or update test files in `__tests__/` (Vitest) or `e2e/` (Playwright) that describe the expected behavior. Run `npm run test:run` to confirm they fail.
-3. **Get approval:** Show the failing tests to the user. Explain what each test covers. Wait for confirmation before implementing.
-4. **Implement:** Write the minimum code to make all tests pass. Run `npm run test:run` after each change.
-5. **Green check:** All tests pass. Run `npm run typecheck` to verify types.
-6. **Refactor (optional):** If the code can be cleaner, refactor while keeping tests green.
-7. **Summary:** Show what was built, what tests cover, and any edge cases not yet tested.
+Read `docs/claude/testing.md` decision matrix. Not everything needs a unit test:
 
-## Guidelines
+| Code Type                                                    | Test?                                     |
+| ------------------------------------------------------------ | ----------------------------------------- |
+| Pure functions, state machines, scoring, validators, parsers | **Vitest TDD (always)**                   |
+| UI components with complex logic                             | Extract logic to pure function → TDD that |
+| React Query hooks (thin Supabase wrappers)                   | **Skip** — E2E or manual                  |
+| UI components (rendering only)                               | **Skip** — E2E or manual                  |
+| Server Components                                            | **Playwright E2E only**                   |
 
-- Prefer Vitest for pure functions, hooks, and components
-- Use Playwright for full-page flows and async Server Components
-- Mock Supabase in unit tests; use staging in E2E tests
-- Reference: `docs/claude/testing.md`
-- If unsure what to test, ask the user before writing tests
+## Step 1: Run Existing Tests First
+
+```bash
+npm run test:run
+```
+
+Know the baseline. If tests are already broken, fix them before writing new ones.
+
+## Step 2: Write Failing Tests (RED)
+
+Create test file in `__tests__/lib/` mirroring source path. Use these patterns:
+
+- **Helper factories** for readable setup: `stateAt("round_play", { currentRound: 2 })`, `makeGame({ status: "active" })`
+- **Test every input × every valid state** systematically (the matrix approach)
+- **Test boundary values**: min, max, null, empty, off-by-one
+- **Test error paths**: `expect(() => fn(bad)).toThrow()`
+- **Test invalid operations are no-ops**: reducer returns same state
+- **Inject time** as a parameter for time-dependent logic (never use `Date.now()` in tests)
+- **Discriminated unions**: narrow with `if (result.success)` before asserting data fields
+- **End with a full happy-path integration test** that walks through the entire flow
+
+Run `npm run test:run` — confirm they fail (RED).
+
+## Step 3: Get Approval
+
+Show the failing tests. Explain what each covers. Wait for user confirmation.
+
+## Step 4: Implement (GREEN)
+
+Write the minimum code to make all tests pass. Run `npm run test:run` after each change.
+
+**Never mock Supabase.** If the code calls Supabase, it's not a unit test candidate.
+
+## Step 5: Verify
+
+```bash
+npm run test:run     # All green
+npx tsc --noEmit     # Types clean
+npm run build        # Build clean
+```
+
+## Step 6: Refactor (optional)
+
+Clean up while tests stay green. Tests catch regressions.
+
+## Step 7: Summary
+
+Report: what was built, test count (should only go UP), edge cases not yet covered.
+
+## Reference
+
+Full patterns, anti-patterns, and checklist: `docs/claude/testing.md`
