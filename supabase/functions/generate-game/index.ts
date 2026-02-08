@@ -281,14 +281,21 @@ serve(async (req) => {
       throw new Error(`Failed to update game: ${updateError.message}`);
     }
 
-    // 6. Insert the 200 answers
-    const answerRecords = parsed.answers.map(
-      (a: { answer: string; rank: number }) => ({
-        game_id: game_id,
-        answer: a.answer.trim().toLowerCase(),
-        rank: a.rank,
-      }),
-    );
+    // 6. Insert answers (deduplicate — AI sometimes generates duplicate words)
+    const seen = new Set<string>();
+    const answerRecords: { game_id: string; answer: string; rank: number }[] =
+      [];
+    for (const a of parsed.answers) {
+      const normalized = a.answer.trim().toLowerCase();
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        answerRecords.push({
+          game_id: game_id,
+          answer: normalized,
+          rank: a.rank,
+        });
+      }
+    }
 
     const { error: answerError } = await supabase
       .from("game_answers")
