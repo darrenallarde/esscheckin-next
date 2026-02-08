@@ -21,7 +21,7 @@ function buildJudgePrompt(
   answers: { answer: string; rank: number }[],
   answerCount: number,
 ): string {
-  return `You are a friendly game master for a youth ministry Hi-Lo trivia game. Your job is to HELP players, not block them. Be generous — in a real youth group, teens shout all kinds of creative answers and a good game master finds a way to make them work.
+  return `You are the game master for a youth ministry Hi-Lo trivia game. Judge the player's answer by following these steps IN ORDER.
 
 Question: "${coreQuestion}"
 Player's answer: "${answer}"
@@ -29,24 +29,41 @@ Player's answer: "${answer}"
 The ${answerCount} seed answers (1 = most popular):
 ${answers.map((a) => `${a.rank}. ${a.answer}`).join("\n")}
 
-ACCEPT the answer and assign a rank if ANY of these apply:
-- Word form of a seed answer (plural, past tense, gerund, etc.) → give it that answer's rank
-- Synonym or close variant of a seed answer → rank near that answer
-- A new word that legitimately answers the question, even loosely → rank by popularity if 100,000 teens were surveyed
-- A creative stretch that a teen could argue answers the question → accept with a high rank (near ${answerCount + 30}-${answerCount + 50})
+## STEP 1: Content check
+Reject ONLY if genuinely inappropriate for a church screen: profanity, slurs, sexual content, demonic/occult references, or gratuitous violence.
+→ If inappropriate: {"valid": false, "rank": null, "matched_to": null, "reason": "inappropriate"}
 
-Ranks can range from 1 to ${answerCount + 50}.
+## STEP 2: Word form match
+Is the answer a different FORM of a seed answer? (plural ↔ singular, tense change, gerund, etc.)
+Examples: "save" → "saves" ✓, "forgiving" → "forgives" ✓, "helped" → "helps" ✓
+→ If word form: use that seed answer's EXACT rank. Set matched_to to the seed word.
 
-ONLY reject if the word is genuinely inappropriate for a church screen:
-- Profanity, slurs, or crude humor
-- Sexual or suggestive content
-- Demonic/occult references (satan, witchcraft, etc.)
-- Gratuitous violence (kill, murder, stab)
+## STEP 3: True synonym match
+Is the answer the SAME CONCEPT as a seed answer — would a reasonable person say "that's basically the same answer"?
+The test: substitute them in the question. If the meaning is the same, it's a match.
 
-When in doubt, ACCEPT and rank it low. A good game master says "yes, and..." not "no."
+YES — same concept:
+- "rescue" ↔ "saves" (both = delivering from danger)
+- "pardons" ↔ "forgives" (both = releasing from guilt)
+
+NO — different concepts, even if loosely related:
+- "yell" ≠ "speaks" (yelling is aggressive, speaking is communication)
+- "think" ≠ "guides" (thinking is cognitive, guiding is directional)
+- "walk" ≠ "carries" (walking is self-powered, carrying is lifting someone)
+
+Be STRICT here. If you have to stretch to justify the match, it's NOT a match.
+→ If true synonym: use that seed answer's rank. Set matched_to to the seed word.
+
+## STEP 4: New valid answer
+The answer doesn't match any seed, but it's a legitimate response to the question.
+Assign a NEW rank based on how popular it would be if 100,000 teens were surveyed.
+Place it honestly: common new answers near rank ${Math.round(answerCount * 0.6)}-${answerCount}, obscure ones ${answerCount + 1}-${answerCount + 50}.
+Set matched_to to "new".
+
+When in doubt between rejecting and accepting as new, ACCEPT as new with a high rank.
 
 Respond in JSON ONLY:
-{"valid": true/false, "rank": <number or null>, "reason": "<5 words max>"}`;
+{"valid": true/false, "rank": <number or null>, "matched_to": "<seed word or 'new' or null>", "reason": "<5 words max>"}`;
 }
 
 serve(async (req) => {
@@ -246,7 +263,12 @@ serve(async (req) => {
     const aiText = aiData.content[0].text.trim();
 
     // Parse AI response
-    let judgment: { valid: boolean; rank: number | null; reason: string };
+    let judgment: {
+      valid: boolean;
+      rank: number | null;
+      matched_to?: string | null;
+      reason: string;
+    };
     try {
       // Strip code fences if present
       let cleanText = aiText;
@@ -265,6 +287,7 @@ serve(async (req) => {
         answer: normalized,
         valid: judgment.valid,
         rank: judgment.rank,
+        matched_to: judgment.matched_to || null,
         reason: judgment.reason,
         raw_response: aiText,
         game_id,
