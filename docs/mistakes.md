@@ -11,6 +11,7 @@ Detailed post-mortems for bugs caused by Claude. CLAUDE.md has the summary table
 **What happened:** `useAIRecommendations()` hook had no `organizationId` parameter. It queried `ai_recommendations` without `.eq("organization_id", ...)`, returning pastoral care data for ALL orgs. Amarp staff saw ESS students on their home page pastoral queue.
 
 **Two failures:**
+
 1. **Client-side:** Hook missing org_id parameter and filter
 2. **Database:** `ai_recommendations` table had no RLS policies — no safety net
 
@@ -65,3 +66,19 @@ Detailed post-mortems for bugs caused by Claude. CLAUDE.md has the summary table
 **Fix:** Updated email template to match OTP email design (SheepDoggo purple, correct logo).
 
 **Rule:** Check all email/notification templates for branding consistency when restyling.
+
+---
+
+## Feb 7: Recommended `/cleanup` skill without reading its definition
+
+**What happened:** In `/guide`, confidently recommended `/cleanup` for a feature removal task based solely on the skill name. After actually reading the SKILL.md, `/cleanup` is for lint-style cleanup (console.logs, `any` types, unused imports) — completely wrong for intentional feature deletion.
+
+**Rule:** NEVER recommend a skill/command without first reading its SKILL.md definition. Infer nothing from names alone.
+
+---
+
+## Feb 7: Recommended `/ship` before applying migration
+
+**What happened:** Wrote a migration SQL file as Phase 1 of a 4-phase implementation. After completing all phases and the build passing, recommended `/ship` as the next step. The migration had never been applied to staging or production — every new RPC, table, and column the frontend depends on didn't exist yet. User had to correct me to run `/db-migrate` first.
+
+**Rule:** If you wrote a migration file, ALWAYS recommend `/db-migrate` as the immediate next step. Frontend code is useless without the database changes it depends on. Migration → test → ship, never skip the first step.

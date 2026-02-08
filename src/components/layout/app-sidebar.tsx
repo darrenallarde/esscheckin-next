@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   Dog,
-  Heart,
   HandHeart,
   Shield,
   UserCircle,
@@ -81,7 +80,6 @@ const navSections: NavSection[] = [
     icon: Zap,
     items: [
       { title: "Home", path: "/home", icon: Home },
-      { title: "Pastoral", path: "/pastoral", icon: Heart },
       { title: "Prayer Wall", path: "/prayer-wall", icon: HandHeart },
       { title: "Curriculum", path: "/curriculum", icon: BookOpen },
     ],
@@ -140,8 +138,7 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
   const orgSlug = currentOrganization?.slug;
 
   // Check if user is admin (owner or admin role)
-  const isAdmin =
-    isSuperAdmin || userRole === "owner" || userRole === "admin";
+  const isAdmin = isSuperAdmin || userRole === "owner" || userRole === "admin";
 
   // Use all orgs for super admins, otherwise just user's orgs
   const availableOrgs =
@@ -211,7 +208,7 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
                   )}
                   {availableOrgs.map((org) => {
                     const isUserMember = organizations.some(
-                      (o) => o.id === org.id
+                      (o) => o.id === org.id,
                     );
                     return (
                       <DropdownMenuItem
@@ -219,7 +216,7 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
                         onClick={() => {
                           if (isUserMember) {
                             const memberOrg = organizations.find(
-                              (o) => o.id === org.id
+                              (o) => o.id === org.id,
                             );
                             if (memberOrg) switchOrganization(memberOrg);
                           } else {
@@ -257,10 +254,15 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
       <SidebarContent className="px-2">
         {/* Categorized Navigation Sections */}
         {navSections.map((section, sectionIndex) => (
-          <SidebarGroup key={section.title} className={cn(sectionIndex > 0 && "mt-4")}>
+          <SidebarGroup
+            key={section.title}
+            className={cn(sectionIndex > 0 && "mt-4")}
+          >
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50 px-3 mb-1">
               <section.icon className="h-3.5 w-3.5 mr-1.5 inline-block" />
-              <span className="group-data-[collapsible=icon]:hidden">{section.title}</span>
+              <span className="group-data-[collapsible=icon]:hidden">
+                {section.title}
+              </span>
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -277,7 +279,8 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
                         tooltip={item.title}
                         className={cn(
                           "text-base py-2.5",
-                          active && "border-l-2 border-primary bg-sidebar-accent font-medium"
+                          active &&
+                            "border-l-2 border-primary bg-sidebar-accent font-medium",
                         )}
                       >
                         <Link href={getNavUrl(item.path)}>
@@ -354,7 +357,10 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={getNavUrl("/settings/account")} className="cursor-pointer">
+              <Link
+                href={getNavUrl("/settings/account")}
+                className="cursor-pointer"
+              >
                 <User className="mr-2 h-4 w-4" />
                 My Account
               </Link>
