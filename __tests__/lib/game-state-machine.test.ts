@@ -309,13 +309,20 @@ describe("gameReducer", () => {
       expect(next.currentRound).toBe(2);
     });
 
+    it("transitions from round 2 result to halftime", () => {
+      const state = stateAt("round_result", { currentRound: 2 });
+      const next = gameReducer(state, { type: "NEXT_ROUND" });
+      expect(next.screen).toBe("halftime");
+      expect(next.currentRound).toBe(3);
+    });
+
     it("transitions from round_result to final_results after round 4", () => {
       const state = stateAt("round_result", { currentRound: 4 });
       const next = gameReducer(state, { type: "NEXT_ROUND" });
       expect(next.screen).toBe("final_results");
     });
 
-    it("increments through all 4 rounds", () => {
+    it("increments through all 4 rounds with halftime", () => {
       let state = stateAt("round_result", { currentRound: 1 });
       state = gameReducer(state, { type: "NEXT_ROUND" });
       expect(state.currentRound).toBe(2);
@@ -324,14 +331,39 @@ describe("gameReducer", () => {
       state = { ...state, screen: "round_result" as const };
       state = gameReducer(state, { type: "NEXT_ROUND" });
       expect(state.currentRound).toBe(3);
+      expect(state.screen).toBe("halftime");
+
+      // Continue from halftime
+      state = gameReducer(state, { type: "CONTINUE_HALFTIME" });
+      expect(state.screen).toBe("round_play");
+      expect(state.currentRound).toBe(3);
 
       state = { ...state, screen: "round_result" as const };
       state = gameReducer(state, { type: "NEXT_ROUND" });
       expect(state.currentRound).toBe(4);
+      expect(state.screen).toBe("round_play");
 
       state = { ...state, screen: "round_result" as const };
       state = gameReducer(state, { type: "NEXT_ROUND" });
       expect(state.screen).toBe("final_results");
+    });
+  });
+
+  // ============================================================
+  // CONTINUE_HALFTIME
+  // ============================================================
+  describe("CONTINUE_HALFTIME", () => {
+    it("transitions from halftime to round_play", () => {
+      const state = stateAt("halftime", { currentRound: 3 });
+      const next = gameReducer(state, { type: "CONTINUE_HALFTIME" });
+      expect(next.screen).toBe("round_play");
+      expect(next.currentRound).toBe(3);
+    });
+
+    it("ignores CONTINUE_HALFTIME from non-halftime screen", () => {
+      const state = stateAt("round_play", { currentRound: 3 });
+      const next = gameReducer(state, { type: "CONTINUE_HALFTIME" });
+      expect(next).toEqual(state);
     });
   });
 
@@ -596,6 +628,7 @@ describe("gameReducer", () => {
         "auth",
         "round_play",
         "round_result",
+        "halftime",
       ];
       for (const screen of screens) {
         const state = stateAt(screen);
@@ -822,7 +855,13 @@ describe("gameReducer", () => {
 
         // Next round
         state = gameReducer(state, { type: "NEXT_ROUND" });
-        if (round < 4) {
+        if (round === 2) {
+          // After round 2, halftime screen shows before LOW rounds
+          expect(state.screen).toBe("halftime");
+          expect(state.currentRound).toBe(3);
+          state = gameReducer(state, { type: "CONTINUE_HALFTIME" });
+          expect(state.screen).toBe("round_play");
+        } else if (round < 4) {
           expect(state.screen).toBe("round_play");
           expect(state.currentRound).toBe(round + 1);
         } else {

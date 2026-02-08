@@ -1,27 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Mail, UserCircle, Loader2, Gamepad2 } from "lucide-react";
+import { Phone, Mail, Gamepad2 } from "lucide-react";
 import type { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 import { PhoneOtpForm } from "@/components/devotional/PhoneOtpForm";
 import { EmailOtpForm } from "@/components/devotional/EmailOtpForm";
-import { UsernameSignUpFlow } from "@/components/devotional/UsernameSignUpFlow";
 
-type AuthScreen = "gate" | "phone_otp" | "email_otp" | "username_signup";
+type AuthScreen = "gate" | "phone_otp" | "email_otp";
 
 interface GameAuthGateProps {
   auth: ReturnType<typeof useDevotionalAuth>;
   orgId: string;
-  orgSlug: string;
   onSuccess: (profileId: string, firstName: string) => void;
 }
 
-export function GameAuthGate({
-  auth,
-  orgId,
-  orgSlug,
-  onSuccess,
-}: GameAuthGateProps) {
+export function GameAuthGate({ auth, orgId, onSuccess }: GameAuthGateProps) {
   const [screen, setScreen] = useState<AuthScreen>("gate");
 
   const handleAuthSuccess = (profileId: string, name: string) => {
@@ -50,23 +43,6 @@ export function GameAuthGate({
       <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
         <EmailOtpForm
           auth={auth}
-          onSuccess={handleAuthSuccess}
-          onBack={() => {
-            setScreen("gate");
-            auth.clearError();
-          }}
-        />
-      </section>
-    );
-  }
-
-  if (screen === "username_signup") {
-    return (
-      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
-        <UsernameSignUpFlow
-          auth={auth}
-          orgId={orgId}
-          orgSlug={orgSlug}
           onSuccess={handleAuthSuccess}
           onBack={() => {
             setScreen("gate");
@@ -111,14 +87,6 @@ export function GameAuthGate({
           >
             <Mail className="h-4 w-4" />
             Sign in with email
-          </button>
-
-          <button
-            onClick={() => setScreen("username_signup")}
-            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            <UserCircle className="h-4 w-4" />
-            Create username &amp; password
           </button>
         </div>
       </div>

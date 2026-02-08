@@ -101,3 +101,44 @@ The git status at the top of the continued session clearly showed `Current branc
 **Fix:** Added startup rule to CLAUDE.md — at session start, always check `git worktree list` and verify you're on the correct branch. If worktrees exist and you're on main, STOP and ask.
 
 **Rule:** NEVER commit to main when worktrees exist without explicitly confirming with the user. At every session start, check `git worktree list`. If active worktrees exist, verify you're in the right one before writing any code.
+
+---
+
+## Feb 7: Rewrote RPC with assumed table/column names — 5 errors in one migration
+
+**Severity:** HIGH (broke production game for all players)
+
+**What happened:** Rewrote `submit_game_answer` RPC with new scoring logic. Instead of querying the actual database schema first, assumed table and column names from memory. Every assumption was wrong:
+
+| Assumed                   | Actual                           |
+| ------------------------- | -------------------------------- |
+| `game_session_answers`    | `game_rounds`                    |
+| `session_id`              | `game_session_id`                |
+| `answer`                  | `submitted_answer`               |
+| `rank`                    | `answer_rank`                    |
+| `created_at`              | `started_at`                     |
+| `auth.uid()` = profile_id | `profiles.id` via user_id lookup |
+
+Each error produced a different runtime error in production, discovered one at a time as users played. Took 4 sequential hotfix migrations to fully resolve instead of 1 correct one.
+
+**Root cause:** Didn't run `SELECT column_name FROM information_schema.columns WHERE table_name = 'game_rounds'` before writing. The rule existed in CLAUDE.md but was not followed.
+
+**Rule (strengthened):** Before writing ANY RPC that touches a table, run the schema query FIRST. Not after the first error. Not "I think I remember." Actually query the database. Every time. No exceptions.
+
+---
+
+## Feb 7: Phone number format mismatch — link_phone_to_profile couldn't find existing users
+
+**Severity:** MEDIUM (existing leaders couldn't sign into game)
+
+**What happened:** `link_phone_to_profile` RPC normalized phone input to `+16503465544` format but only matched against that and the raw input. Existing profiles had phone numbers stored as `6503465544` (10 raw digits, no prefix). The WHERE clause had no fallback to raw-digit matching.
+
+Similarly, `create_phone_profile` tried to INSERT `organization_id` into `profiles` — a column that doesn't exist. Organization membership lives in `organization_memberships`.
+
+**Root cause:** Same as above — assumed data format and column existence without checking. Phone numbers in `profiles.phone_number` can be stored in any format depending on how they were originally imported.
+
+**Rules:**
+
+1. When matching user-provided data against stored data, check what format the stored data is actually in — don't assume it matches your normalization.
+2. When writing INSERT/UPDATE statements, verify the target table's columns first.
+3. Phone number matching should be fuzzy: check normalized (+1xxx), raw digits (xxx), and original input.

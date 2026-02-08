@@ -34,7 +34,6 @@ export function DevotionalPage({
       <DevotionalAuthGate
         devotionalId={devotional.id}
         orgId={organization.id}
-        orgSlug={organization.slug}
       />
 
       {/* Series navigation */}

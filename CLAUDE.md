@@ -52,7 +52,7 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 ## Code Standards
 
 1. **Every query MUST filter by organization_id.** Multi-tenant app. Missing this = cross-org data leak. Every hook accepts `organizationId` and passes `.eq("organization_id", ...)` or RPC `p_org_id`.
-2. **Read before writing.** Never modify a file you haven't read. Never write SQL against a table without checking its schema via `mcp__supabase__list_tables`.
+2. **Read before writing.** Never modify a file you haven't read. Never write SQL against a table without checking its schema via `mcp__supabase__execute_sql` (`SELECT column_name FROM information_schema.columns WHERE table_name = '...'`). This means EVERY RPC rewrite — query the schema FIRST, not after the first runtime error. Also check stored data formats (e.g., phone numbers may be raw digits, not normalized).
 3. **RPC column names = frontend expectations.** Changing a return column silently breaks the UI. Before modifying any RPC, `grep -r "function_name" src/` and match columns exactly. See `docs/api-reference.md` for the critical RPC → consumer table.
 4. **RLS uses SECURITY DEFINER helpers.** Never reference an RLS-protected table directly inside a policy. Use `auth_is_super_admin()`, `auth_profile_org_ids()`, `auth_has_org_role()`. See `docs/security.md`.
 5. **One profile per person.** `profiles` is the identity table. Roles come from `organization_memberships`. Never create duplicate profiles.
@@ -99,5 +99,7 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 | Feb 7 | Recommended `/cleanup` skill without reading its definition                | Read SKILL.md first      |
 | Feb 7 | Recommended `/ship` before applying migration                              | Database Rules #2        |
 | Feb 7 | Committed Co-Pilot V2 to main instead of worktree branch                   | Session Startup Protocol |
+| Feb 7 | Rewrote RPC with 5 wrong table/column names — 4 sequential hotfixes        | Code Standards #2        |
+| Feb 7 | Phone lookup missed raw-digit format + INSERT into non-existent column     | Code Standards #2        |
 
 Full details: `docs/mistakes.md`

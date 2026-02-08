@@ -14,13 +14,12 @@ import { Button } from "@/components/ui/button";
 import { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 import { PhoneOtpForm } from "@/components/devotional/PhoneOtpForm";
 import { EmailOtpForm } from "@/components/devotional/EmailOtpForm";
-import { UsernameSignUpFlow } from "@/components/devotional/UsernameSignUpFlow";
 import { StudentPrayerList } from "@/components/devotional/StudentPrayerList";
 import { StudentDevotionalHistory } from "@/components/devotional/StudentDevotionalHistory";
 import { StudentProfileEditor } from "@/components/devotional/StudentProfileEditor";
 import { createClient } from "@/lib/supabase/client";
 
-type AuthScreen = "gate" | "phone_otp" | "email_otp" | "username_signup";
+type AuthScreen = "gate" | "phone_otp" | "email_otp";
 type HubTab = "prayers" | "devotionals" | "profile";
 
 export function StudentHub() {
@@ -30,14 +29,6 @@ export function StudentHub() {
   const [firstName, setFirstName] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
   const [activeTab, setActiveTab] = useState<HubTab>("prayers");
-
-  // Username/pw needs org context
-  const [orgCode, setOrgCode] = useState("");
-  const [orgData, setOrgData] = useState<{ id: string; slug: string } | null>(
-    null,
-  );
-  const [orgError, setOrgError] = useState<string | null>(null);
-  const [lookingUpOrg, setLookingUpOrg] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -75,30 +66,6 @@ export function StudentHub() {
     setAuthenticated(false);
     setFirstName("");
     setScreen("gate");
-  };
-
-  const handleOrgCodeLookup = async () => {
-    if (!orgCode.trim()) return;
-    setLookingUpOrg(true);
-    setOrgError(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("organizations")
-        .select("id, slug")
-        .eq("slug", orgCode.trim().toLowerCase())
-        .single();
-      if (error || !data) {
-        setOrgError("Organization not found. Check the code and try again.");
-      } else {
-        setOrgData({ id: data.id, slug: data.slug });
-        setScreen("username_signup");
-      }
-    } catch {
-      setOrgError("Something went wrong. Try again.");
-    } finally {
-      setLookingUpOrg(false);
-    }
   };
 
   // Loading
@@ -152,22 +119,6 @@ export function StudentHub() {
             </section>
           )}
 
-          {screen === "username_signup" && orgData && (
-            <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
-              <UsernameSignUpFlow
-                auth={auth}
-                orgId={orgData.id}
-                orgSlug={orgData.slug}
-                onSuccess={handleAuthSuccess}
-                onBack={() => {
-                  setScreen("gate");
-                  auth.clearError();
-                  setOrgData(null);
-                }}
-              />
-            </section>
-          )}
-
           {screen === "gate" && (
             <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
               <div className="text-center space-y-4">
@@ -197,43 +148,6 @@ export function StudentHub() {
                     <Mail className="h-4 w-4" />
                     Sign in with email
                   </button>
-
-                  {/* Username/password needs org code first */}
-                  <div className="pt-2 border-t border-stone-100 mt-2">
-                    <p className="text-xs text-stone-400 mb-2">
-                      Have a username? Enter your org code first:
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={orgCode}
-                        onChange={(e) => {
-                          setOrgCode(e.target.value);
-                          setOrgError(null);
-                        }}
-                        placeholder="Org code (e.g. ess)"
-                        className="flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-300"
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleOrgCodeLookup()
-                        }
-                      />
-                      <Button
-                        onClick={handleOrgCodeLookup}
-                        disabled={!orgCode.trim() || lookingUpOrg}
-                        size="sm"
-                        variant="outline"
-                      >
-                        {lookingUpOrg ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <UserCircle className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    {orgError && (
-                      <p className="text-xs text-red-500 mt-1">{orgError}</p>
-                    )}
-                  </div>
                 </div>
               </div>
             </section>

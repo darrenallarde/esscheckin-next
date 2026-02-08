@@ -15,6 +15,7 @@ import { GameRoundResult } from "@/components/game/GameRoundResult";
 import { GameFinalResults } from "@/components/game/GameFinalResults";
 import { GameLeaderboard } from "@/components/game/GameLeaderboard";
 import { GameExpired } from "@/components/game/GameExpired";
+import { GameHalftime } from "@/components/game/GameHalftime";
 import {
   GamePrayerBonus,
   PRAYER_BONUS_POINTS,
@@ -345,7 +346,6 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
           <GameAuthGate
             auth={auth}
             orgId={organization.id}
-            orgSlug={organization.slug}
             onSuccess={handleAuthSuccess}
           />
         )}
@@ -369,6 +369,14 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             totalScore={state.totalScore}
             answerCount={answerCount}
             onNext={handleNextRound}
+          />
+        )}
+
+        {state.screen === "halftime" && (
+          <GameHalftime
+            game={game}
+            totalScore={state.totalScore}
+            onContinue={() => dispatch({ type: "CONTINUE_HALFTIME" })}
           />
         )}
 

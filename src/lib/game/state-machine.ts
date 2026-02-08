@@ -13,6 +13,7 @@ export type GameScreen =
   | "auth"
   | "round_play"
   | "round_result"
+  | "halftime"
   | "final_results"
   | "prayer_bonus"
   | "leaderboard"
@@ -79,6 +80,7 @@ export type GameAction =
   | { type: "GO_TO_PRAYER" }
   | { type: "PRAYER_SUBMITTED"; bonusPoints: number }
   | { type: "SKIP_PRAYER" }
+  | { type: "CONTINUE_HALFTIME" }
   | { type: "GAME_EXPIRED" };
 
 export function initialState(): GameState {
@@ -177,11 +179,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.currentRound >= 4) {
         return { ...state, screen: "final_results" };
       }
+      // After round 2, show halftime before switching to LOW rounds
+      if (state.currentRound === 2) {
+        return {
+          ...state,
+          screen: "halftime",
+          currentRound: 3,
+        };
+      }
       return {
         ...state,
         screen: "round_play",
         currentRound: state.currentRound + 1,
       };
+    }
+
+    case "CONTINUE_HALFTIME": {
+      if (state.screen !== "halftime") return state;
+      return { ...state, screen: "round_play" };
     }
 
     case "VIEW_LEADERBOARD": {

@@ -1,26 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookHeart, Phone, Mail, UserCircle, Loader2 } from "lucide-react";
+import { BookHeart, Phone, Mail, Loader2 } from "lucide-react";
 import { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 import { PhoneOtpForm } from "./PhoneOtpForm";
 import { EmailOtpForm } from "./EmailOtpForm";
-import { UsernameSignUpFlow } from "./UsernameSignUpFlow";
 import { DevotionalEngagedView } from "./DevotionalEngagedView";
 
-type AuthScreen = "gate" | "phone_otp" | "email_otp" | "username_signup";
+type AuthScreen = "gate" | "phone_otp" | "email_otp";
 
 interface DevotionalAuthGateProps {
   devotionalId: string;
-  orgId: string;
-  orgSlug: string;
+  orgId?: string;
 }
 
-export function DevotionalAuthGate({
-  devotionalId,
-  orgId,
-  orgSlug,
-}: DevotionalAuthGateProps) {
+export function DevotionalAuthGate({ devotionalId }: DevotionalAuthGateProps) {
   const auth = useDevotionalAuth();
   const [screen, setScreen] = useState<AuthScreen>("gate");
   const [authenticated, setAuthenticated] = useState(false);
@@ -120,23 +114,6 @@ export function DevotionalAuthGate({
     );
   }
 
-  if (screen === "username_signup") {
-    return (
-      <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
-        <UsernameSignUpFlow
-          auth={auth}
-          orgId={orgId}
-          orgSlug={orgSlug}
-          onSuccess={handleAuthSuccess}
-          onBack={() => {
-            setScreen("gate");
-            auth.clearError();
-          }}
-        />
-      </section>
-    );
-  }
-
   // Default: Gate screen — sign in prompt
   return (
     <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
@@ -172,14 +149,6 @@ export function DevotionalAuthGate({
           >
             <Mail className="h-4 w-4" />
             Sign in with email
-          </button>
-
-          <button
-            onClick={() => setScreen("username_signup")}
-            className="w-full py-2.5 px-4 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-50 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            <UserCircle className="h-4 w-4" />
-            Create username &amp; password
           </button>
         </div>
       </div>
