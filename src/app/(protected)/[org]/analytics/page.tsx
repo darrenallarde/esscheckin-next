@@ -1,19 +1,77 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download, Trophy, Award, Loader2, Users, CalendarCheck, TrendingUp, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Download,
+  Trophy,
+  Award,
+  Loader2,
+  Users,
+  CalendarCheck,
+  TrendingUp,
+  AlertCircle,
+} from "lucide-react";
 import { DateRangePicker } from "@/components/analytics/DateRangePicker";
-import { AttendanceTrendChart } from "@/components/analytics/AttendanceTrendChart";
-import { DayBreakdownChart } from "@/components/analytics/DayBreakdownChart";
-import { EngagementFunnel } from "@/components/analytics/EngagementFunnel";
-import { LeaderboardTable } from "@/components/analytics/LeaderboardTable";
-import { AchievementGrid } from "@/components/analytics/AchievementGrid";
-import { NewStudentGrowthChart } from "@/components/analytics/NewStudentGrowthChart";
-import { RetentionChart } from "@/components/analytics/RetentionChart";
 import { StatCard } from "@/components/analytics/StatCard";
 import { TodaysCheckInsModal } from "@/components/dashboard/TodaysCheckInsModal";
+
+const ChartSkeleton = () => (
+  <Skeleton className="h-[200px] md:h-[300px] w-full rounded-xl" />
+);
+
+const AttendanceTrendChart = dynamic(
+  () =>
+    import("@/components/analytics/AttendanceTrendChart").then((m) => ({
+      default: m.AttendanceTrendChart,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const DayBreakdownChart = dynamic(
+  () =>
+    import("@/components/analytics/DayBreakdownChart").then((m) => ({
+      default: m.DayBreakdownChart,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const EngagementFunnel = dynamic(
+  () =>
+    import("@/components/analytics/EngagementFunnel").then((m) => ({
+      default: m.EngagementFunnel,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const NewStudentGrowthChart = dynamic(
+  () =>
+    import("@/components/analytics/NewStudentGrowthChart").then((m) => ({
+      default: m.NewStudentGrowthChart,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const RetentionChart = dynamic(
+  () =>
+    import("@/components/analytics/RetentionChart").then((m) => ({
+      default: m.RetentionChart,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const LeaderboardTable = dynamic(
+  () =>
+    import("@/components/analytics/LeaderboardTable").then((m) => ({
+      default: m.LeaderboardTable,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
+const AchievementGrid = dynamic(
+  () =>
+    import("@/components/analytics/AchievementGrid").then((m) => ({
+      default: m.AchievementGrid,
+    })),
+  { ssr: false, loading: ChartSkeleton },
+);
 import {
   useAttendanceData,
   useDayBreakdown,
@@ -41,17 +99,32 @@ export default function AnalyticsPage() {
   const organizationId = currentOrganization?.id || null;
 
   // Stats data
-  const { data: stats, isLoading: statsLoading } = useDashboardStats(organizationId);
-  const { data: todaysCheckIns, isLoading: todaysLoading } = useTodaysCheckIns(organizationId);
+  const { data: stats, isLoading: statsLoading } =
+    useDashboardStats(organizationId);
+  const { data: todaysCheckIns, isLoading: todaysLoading } =
+    useTodaysCheckIns(organizationId);
 
   // Chart data
-  const { data: attendanceData, isLoading: attendanceLoading } = useAttendanceData(organizationId, dateRange);
-  const { data: dayBreakdown, isLoading: dayLoading } = useDayBreakdown(organizationId, dateRange);
-  const { data: rankDistribution, isLoading: rankLoading } = useRankDistribution(organizationId);
-  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(organizationId, 50);
-  const { data: achievements, isLoading: achievementsLoading } = useAchievementsSummary(organizationId);
-  const { data: newStudentData, isLoading: newStudentLoading } = useNewStudentGrowth(organizationId, dateRange);
-  const { data: retentionData, isLoading: retentionLoading } = useRetentionData(organizationId, dateRange);
+  const { data: attendanceData, isLoading: attendanceLoading } =
+    useAttendanceData(organizationId, dateRange);
+  const { data: dayBreakdown, isLoading: dayLoading } = useDayBreakdown(
+    organizationId,
+    dateRange,
+  );
+  const { data: rankDistribution, isLoading: rankLoading } =
+    useRankDistribution(organizationId);
+  const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(
+    organizationId,
+    50,
+  );
+  const { data: achievements, isLoading: achievementsLoading } =
+    useAchievementsSummary(organizationId);
+  const { data: newStudentData, isLoading: newStudentLoading } =
+    useNewStudentGrowth(organizationId, dateRange);
+  const { data: retentionData, isLoading: retentionLoading } = useRetentionData(
+    organizationId,
+    dateRange,
+  );
 
   const isStatsLoading = orgLoading || statsLoading;
 
@@ -67,7 +140,10 @@ export default function AnalyticsPage() {
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", `attendance-export-${dateRange.start.toISOString().split("T")[0]}-to-${dateRange.end.toISOString().split("T")[0]}.csv`);
+      link.setAttribute(
+        "download",
+        `attendance-export-${dateRange.start.toISOString().split("T")[0]}-to-${dateRange.end.toISOString().split("T")[0]}.csv`,
+      );
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
@@ -84,7 +160,9 @@ export default function AnalyticsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Analytics
+          </h1>
           <p className="text-muted-foreground mt-1">
             Track attendance trends and student engagement
           </p>
@@ -94,7 +172,12 @@ export default function AnalyticsPage() {
             selectedWeeks={selectedWeeks}
             onSelect={setSelectedWeeks}
           />
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting || !organizationId}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={isExporting || !organizationId}
+          >
             {isExporting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -141,18 +224,33 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Main Attendance Chart - Full Width */}
-      <AttendanceTrendChart data={attendanceData ?? []} loading={orgLoading || attendanceLoading} />
+      <AttendanceTrendChart
+        data={attendanceData ?? []}
+        loading={orgLoading || attendanceLoading}
+      />
 
       {/* Two Column Grid - Growth Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <NewStudentGrowthChart data={newStudentData ?? []} loading={orgLoading || newStudentLoading} />
-        <RetentionChart data={retentionData ?? []} loading={orgLoading || retentionLoading} />
+        <NewStudentGrowthChart
+          data={newStudentData ?? []}
+          loading={orgLoading || newStudentLoading}
+        />
+        <RetentionChart
+          data={retentionData ?? []}
+          loading={orgLoading || retentionLoading}
+        />
       </div>
 
       {/* Two Column Grid - Breakdown Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <DayBreakdownChart data={dayBreakdown ?? []} loading={orgLoading || dayLoading} />
-        <EngagementFunnel data={rankDistribution ?? []} loading={orgLoading || rankLoading} />
+        <DayBreakdownChart
+          data={dayBreakdown ?? []}
+          loading={orgLoading || dayLoading}
+        />
+        <EngagementFunnel
+          data={rankDistribution ?? []}
+          loading={orgLoading || rankLoading}
+        />
       </div>
 
       {/* Gamification Section */}
@@ -173,11 +271,17 @@ export default function AnalyticsPage() {
           </div>
 
           <TabsContent value="leaderboard" className="mt-0">
-            <LeaderboardTable data={leaderboard ?? []} loading={orgLoading || leaderboardLoading} />
+            <LeaderboardTable
+              data={leaderboard ?? []}
+              loading={orgLoading || leaderboardLoading}
+            />
           </TabsContent>
 
           <TabsContent value="achievements" className="mt-0">
-            <AchievementGrid data={achievements ?? []} loading={orgLoading || achievementsLoading} />
+            <AchievementGrid
+              data={achievements ?? []}
+              loading={orgLoading || achievementsLoading}
+            />
           </TabsContent>
         </Tabs>
       </div>

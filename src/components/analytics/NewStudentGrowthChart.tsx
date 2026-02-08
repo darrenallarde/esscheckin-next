@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bar,
@@ -31,27 +37,34 @@ export function NewStudentGrowthChart({
           <CardTitle>New Registrations</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[250px] w-full" />
+          <Skeleton className="h-[200px] md:h-[250px] w-full" />
         </CardContent>
       </Card>
     );
   }
 
   const totalNew = data.reduce((sum, d) => sum + d.newStudents, 0);
-  const latestCumulative = data.length > 0 ? data[data.length - 1].cumulative : 0;
+  const latestCumulative =
+    data.length > 0 ? data[data.length - 1].cumulative : 0;
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">New Registrations</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          New Registrations
+        </CardTitle>
         <CardDescription>
-          {totalNew} new registrations in period | {latestCumulative} total ministry reach
+          {totalNew} new registrations in period | {latestCumulative} total
+          ministry reach
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[250px]">
+        <div className="h-[200px] md:h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart
+              data={data}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="displayDate"

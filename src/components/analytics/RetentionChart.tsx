@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Area,
@@ -20,10 +26,7 @@ interface RetentionChartProps {
   loading?: boolean;
 }
 
-export function RetentionChart({
-  data,
-  loading = false,
-}: RetentionChartProps) {
+export function RetentionChart({ data, loading = false }: RetentionChartProps) {
   if (loading) {
     return (
       <Card>
@@ -31,30 +34,39 @@ export function RetentionChart({
           <CardTitle>Weekly Retention</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[250px] w-full" />
+          <Skeleton className="h-[200px] md:h-[250px] w-full" />
         </CardContent>
       </Card>
     );
   }
 
   // Calculate average retention rate
-  const validRates = data.filter(d => d.retentionRate > 0);
-  const avgRetention = validRates.length > 0
-    ? Math.round(validRates.reduce((sum, d) => sum + d.retentionRate, 0) / validRates.length)
-    : 0;
+  const validRates = data.filter((d) => d.retentionRate > 0);
+  const avgRetention =
+    validRates.length > 0
+      ? Math.round(
+          validRates.reduce((sum, d) => sum + d.retentionRate, 0) /
+            validRates.length,
+        )
+      : 0;
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Weekly Retention</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Weekly Retention
+        </CardTitle>
         <CardDescription>
           Students returning week-over-week | Avg: {avgRetention}%
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-[250px]">
+        <div className="h-[200px] md:h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart
+              data={data}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="colorRetention" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />

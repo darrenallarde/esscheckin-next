@@ -402,7 +402,7 @@ export default function PrayerWallPage() {
                         disabled={respondMutation.isPending}
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs min-h-[44px]"
                       >
                         {respondMutation.isPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
@@ -421,7 +421,7 @@ export default function PrayerWallPage() {
                         }}
                         size="sm"
                         variant="outline"
-                        className="text-xs"
+                        className="text-xs min-h-[44px]"
                       >
                         <Mic className="h-3.5 w-3.5 mr-1" />
                         Voice
@@ -431,7 +431,7 @@ export default function PrayerWallPage() {
                           onClick={() => handleOpenMessage(request)}
                           size="sm"
                           variant="outline"
-                          className="text-xs"
+                          className="text-xs min-h-[44px]"
                         >
                           <MessageSquare className="h-3.5 w-3.5 mr-1" />
                           Text
