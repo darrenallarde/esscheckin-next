@@ -26,6 +26,7 @@ interface HomeMessageDrawerProps {
   profileId: string | null;
   phoneNumber: string | null;
   personName: string | null;
+  aiSuggestion?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -43,11 +44,12 @@ export function HomeMessageDrawer({
   profileId,
   phoneNumber,
   personName,
+  aiSuggestion,
   open,
   onOpenChange,
 }: HomeMessageDrawerProps) {
   const { data: messages, isLoading } = useSmsConversation(
-    open && profileId ? profileId : null
+    open && profileId ? profileId : null,
   );
 
   return (
@@ -79,6 +81,7 @@ export function HomeMessageDrawer({
               studentId={profileId}
               phoneNumber={phoneNumber}
               personName={personName ?? undefined}
+              aiSuggestion={aiSuggestion}
             />
           </div>
         )}

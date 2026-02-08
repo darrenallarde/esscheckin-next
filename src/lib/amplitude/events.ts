@@ -202,11 +202,16 @@ export const EVENTS = {
   HOME_NEW_STUDENT_ACTION: "Home New Student Action",
 
   // ============================================
-  // FUTURE: AI & NATURAL LANGUAGE
-  // Uncomment when features ship
+  // CO-PILOT BRIEFING
   // ============================================
-  // DRAFT_MESSAGE_APPROVED: "Draft Message Approved",
-  // AUTO_MESSAGE_SENT: "Auto Message Sent",
+  COPILOT_BRIEFING_VIEWED: "Copilot Briefing Viewed",
+  COPILOT_STUDENT_TEXTED: "Copilot Student Texted",
+  COPILOT_STUDENT_DISMISSED: "Copilot Student Dismissed",
+  COPILOT_STUDENT_VIEWED: "Copilot Student Viewed",
+  COPILOT_DRAFT_EDITED: "Copilot Draft Edited",
+  COPILOT_PARENT_CALLED: "Copilot Parent Called",
+  COPILOT_STUDENT_CALLED: "Copilot Student Called",
+  COPILOT_NOTE_ADDED: "Copilot Note Added",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
 import { PrayerRequestsCard } from "@/components/home/PrayerRequestsCard";
+import { CopilotBriefingCard } from "@/components/home/CopilotBriefingCard";
 import {
   HomeProfileDrawer,
   HomeProfilePerson,
@@ -21,6 +22,10 @@ import {
   usePrayerRequests,
   PrayerRequest,
 } from "@/hooks/queries/use-prayer-requests";
+import {
+  useCopilotBriefing,
+  CopilotStudent,
+} from "@/hooks/queries/use-copilot-briefing";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMyOrgProfile } from "@/hooks/queries/use-my-profile";
 import { orgPath } from "@/lib/navigation";
@@ -41,6 +46,11 @@ export default function HomePage() {
     organizationId,
     4,
   );
+  const {
+    briefingSummary,
+    students: copilotStudents,
+    isLoading: copilotLoading,
+  } = useCopilotBriefing(organizationId);
 
   // Profile drawer state
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
@@ -49,6 +59,7 @@ export default function HomePage() {
 
   // Message drawer state
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<{
     profileId: string | null;
     phoneNumber: string | null;
@@ -62,6 +73,13 @@ export default function HomePage() {
   const [selectedBelongingPeople, setSelectedBelongingPeople] = useState<
     BelongingPerson[]
   >([]);
+
+  // Clear AI suggestion when message drawer closes
+  useEffect(() => {
+    if (!messageDrawerOpen) {
+      setAiSuggestion(null);
+    }
+  }, [messageDrawerOpen]);
 
   // Handle belonging spectrum status click → open people list drawer
   const handleBelongingFilterChange = (status: BelongingStatus | "all") => {
@@ -107,6 +125,7 @@ export default function HomePage() {
 
   // Handle clicking SMS icon in NewStudentsCard → open message drawer
   const handleSmsClick = (student: NewStudent) => {
+    setAiSuggestion(null);
     setSelectedConversation({
       profileId: student.profile_id,
       phoneNumber: student.phone_number,
@@ -117,6 +136,7 @@ export default function HomePage() {
 
   // Handle clicking a conversation in RecentMessages → open message drawer
   const handleConversationClick = (conv: SmsConversation) => {
+    setAiSuggestion(null);
     setSelectedConversation({
       profileId: conv.profileId || conv.studentId,
       phoneNumber: conv.phoneNumber,
@@ -143,12 +163,60 @@ export default function HomePage() {
   // Handle "Send Text" from profile drawer → close profile, open message drawer
   const handleSendMessageFromProfile = (person: HomeProfilePerson) => {
     setProfileDrawerOpen(false);
+    setAiSuggestion(null);
     setSelectedConversation({
       profileId: person.profile_id,
       phoneNumber: person.phone_number,
       personName: `${person.first_name} ${person.last_name}`,
     });
     setMessageDrawerOpen(true);
+  };
+
+  // Co-pilot actions
+  const handleCopilotSendText = (student: CopilotStudent) => {
+    setAiSuggestion(student.draft_message || null);
+    setSelectedConversation({
+      profileId: student.profile_id,
+      phoneNumber: student.phone_number,
+      personName: `${student.first_name} ${student.last_name}`,
+    });
+    setMessageDrawerOpen(true);
+  };
+
+  const handleCopilotView = (student: CopilotStudent) => {
+    setSelectedPerson({
+      profile_id: student.profile_id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      phone_number: student.phone_number,
+      email: student.email,
+      grade: student.grade,
+      gender: student.gender,
+      high_school: null,
+      group_names: student.group_names,
+      days_since_last_check_in: student.days_since_last_seen,
+    });
+    setProfileDrawerOpen(true);
+  };
+
+  const handleCopilotDismiss = () => {
+    // Dismiss is handled locally in the card via state
+  };
+
+  const handleCopilotAlreadyContacted = () => {
+    // Handled locally in the card via state
+  };
+
+  const handleCopilotCallParent = (student: CopilotStudent) => {
+    if (student.primary_parent_phone) {
+      window.open(`tel:${student.primary_parent_phone}`, "_self");
+    }
+  };
+
+  const handleCopilotCallStudent = (student: CopilotStudent) => {
+    if (student.phone_number) {
+      window.open(`tel:${student.phone_number}`, "_self");
+    }
   };
 
   // Get greeting based on time of day
@@ -171,7 +239,20 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Belonging Spectrum - Top placement */}
+      {/* Co-Pilot Briefing Card - Top, most important */}
+      <CopilotBriefingCard
+        briefingSummary={briefingSummary}
+        students={copilotStudents}
+        isLoading={copilotLoading}
+        onSendText={handleCopilotSendText}
+        onView={handleCopilotView}
+        onDismiss={handleCopilotDismiss}
+        onAlreadyContacted={handleCopilotAlreadyContacted}
+        onCallParent={handleCopilotCallParent}
+        onCallStudent={handleCopilotCallStudent}
+      />
+
+      {/* Belonging Spectrum */}
       {!belongingLoading && belongingData && (
         <BelongingSpectrum
           distribution={belongingData.distribution}
@@ -225,6 +306,7 @@ export default function HomePage() {
         profileId={selectedConversation.profileId}
         phoneNumber={selectedConversation.phoneNumber}
         personName={selectedConversation.personName}
+        aiSuggestion={aiSuggestion}
         open={messageDrawerOpen}
         onOpenChange={setMessageDrawerOpen}
       />
