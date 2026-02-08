@@ -11,7 +11,6 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  Dog,
   HandHeart,
   Shield,
   UserCircle,
@@ -24,6 +23,7 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { env } from "@/lib/env";
 import { PLATFORM_NAME } from "@/lib/copy";
 import { orgPath, extractRouteFromPath } from "@/lib/navigation";
@@ -180,7 +180,10 @@ export function AppSidebar({ userEmail, onSignOut }: AppSidebarProps) {
         {/* Logo and Org Selector */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Dog className="h-6 w-6 text-sidebar-primary-foreground" />
+            <DynamicIcon
+              name={currentOrganization?.icon}
+              className="h-6 w-6 text-sidebar-primary-foreground"
+            />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-base font-bold">

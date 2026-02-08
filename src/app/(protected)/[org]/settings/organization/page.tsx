@@ -1,25 +1,45 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Settings, Check, Sprout, Gamepad2, ClipboardList, Minus, Copy, CheckCircle2, MessageSquare } from "lucide-react";
+import {
+  Loader2,
+  Settings,
+  Check,
+  Gamepad2,
+  ClipboardList,
+  Minus,
+  Copy,
+  CheckCircle2,
+  MessageSquare,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
 import { createClient } from "@/lib/supabase/client";
 import { THEME_LIST, getTheme } from "@/lib/themes";
 import { SUCCESS_MESSAGES, PLATFORM_NAME } from "@/lib/copy";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
+import { IconPicker } from "@/components/settings/IconPicker";
 
 export default function OrganizationSettingsPage() {
   const { toast } = useToast();
-  const { currentOrganization, userRole, refreshOrganizations } = useOrganization();
+  const { currentOrganization, userRole, refreshOrganizations } =
+    useOrganization();
 
   const [displayName, setDisplayName] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("default");
   const [checkinStyle, setCheckinStyle] = useState("gamified");
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -32,9 +52,12 @@ export default function OrganizationSettingsPage() {
   // Load current settings
   useEffect(() => {
     if (currentOrganization) {
-      setDisplayName(currentOrganization.displayName || currentOrganization.name || "");
+      setDisplayName(
+        currentOrganization.displayName || currentOrganization.name || "",
+      );
       setSelectedTheme(currentOrganization.themeId || "default");
       setCheckinStyle(currentOrganization.checkinStyle || "gamified");
+      setSelectedIcon(currentOrganization.icon ?? null);
       // Load short code from org data
       const orgShortCode = currentOrganization.shortCode || "";
       setShortCode(orgShortCode);
@@ -46,16 +69,25 @@ export default function OrganizationSettingsPage() {
   useEffect(() => {
     if (!currentOrganization) return;
 
-    const origDisplayName = currentOrganization.displayName || currentOrganization.name || "";
+    const origDisplayName =
+      currentOrganization.displayName || currentOrganization.name || "";
     const origTheme = currentOrganization.themeId || "default";
     const origStyle = currentOrganization.checkinStyle || "gamified";
+    const origIcon = currentOrganization.icon ?? null;
 
     setHasChanges(
       displayName !== origDisplayName ||
-      selectedTheme !== origTheme ||
-      checkinStyle !== origStyle
+        selectedTheme !== origTheme ||
+        checkinStyle !== origStyle ||
+        selectedIcon !== origIcon,
     );
-  }, [displayName, selectedTheme, checkinStyle, currentOrganization]);
+  }, [
+    displayName,
+    selectedTheme,
+    checkinStyle,
+    selectedIcon,
+    currentOrganization,
+  ]);
 
   // Only admins/owners can edit org settings
   const canEdit = userRole === "owner" || userRole === "admin";
@@ -73,6 +105,7 @@ export default function OrganizationSettingsPage() {
           display_name: displayName.trim() || null,
           theme_id: selectedTheme,
           checkin_style: checkinStyle,
+          icon: selectedIcon,
         })
         .eq("id", currentOrganization.id);
 
@@ -231,13 +264,34 @@ export default function OrganizationSettingsPage() {
                   className="flex h-10 w-10 items-center justify-center rounded-lg"
                   style={{ backgroundColor: currentTheme.primary }}
                 >
-                  <Sprout className="h-6 w-6" style={{ color: currentTheme.primaryForeground }} />
+                  <DynamicIcon
+                    name={selectedIcon}
+                    className="h-6 w-6"
+                    style={{ color: currentTheme.primaryForeground }}
+                  />
                 </div>
                 <span className="text-lg font-bold">
                   {displayName || currentOrganization.name}
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Sidebar Icon */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sidebar Icon</CardTitle>
+            <CardDescription>
+              Choose an icon that represents your organization in the sidebar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <IconPicker
+              value={selectedIcon}
+              onChange={setSelectedIcon}
+              disabled={!canEdit}
+            />
           </CardContent>
         </Card>
 
@@ -276,7 +330,9 @@ export default function OrganizationSettingsPage() {
                     )}
                   </div>
                   <p className="font-medium">{theme.name}</p>
-                  <p className="text-xs text-muted-foreground">{theme.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {theme.description}
+                  </p>
                 </button>
               ))}
             </div>
@@ -364,8 +420,14 @@ export default function OrganizationSettingsPage() {
               </span>
             </div>
             <div className="text-center text-sm text-muted-foreground space-y-1">
-              <p>Students text <strong>{shortCode?.toUpperCase() || "your code"}</strong> to your Twilio number</p>
-              <p className="text-xs">They&apos;ll be connected and can start messaging leaders</p>
+              <p>
+                Students text{" "}
+                <strong>{shortCode?.toUpperCase() || "your code"}</strong> to
+                your Twilio number
+              </p>
+              <p className="text-xs">
+                They&apos;ll be connected and can start messaging leaders
+              </p>
             </div>
             {shortCode && (
               <Button
@@ -403,7 +465,9 @@ export default function OrganizationSettingsPage() {
               <p className="font-mono text-lg mt-1">
                 #{currentOrganization.orgNumber || "—"}
               </p>
-              <p className="text-xs text-muted-foreground">Reference this when contacting support</p>
+              <p className="text-xs text-muted-foreground">
+                Reference this when contacting support
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -424,7 +488,11 @@ export default function OrganizationSettingsPage() {
                 <div className="flex items-center gap-2 mt-1">
                   <Input
                     value={shortCode}
-                    onChange={(e) => setShortCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
+                    onChange={(e) =>
+                      setShortCode(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
+                      )
+                    }
                     placeholder="myorg"
                     maxLength={10}
                     className="w-40 font-mono text-lg"
@@ -448,7 +516,9 @@ export default function OrganizationSettingsPage() {
             ) : (
               <div>
                 <Label className="text-muted-foreground">Code</Label>
-                <p className="font-mono text-lg mt-1">{shortCode || "Not set"}</p>
+                <p className="font-mono text-lg mt-1">
+                  {shortCode || "Not set"}
+                </p>
               </div>
             )}
 
@@ -459,7 +529,9 @@ export default function OrganizationSettingsPage() {
                   {shortCodeChanged ? "URLs will be:" : "Your URLs:"}
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}>
+                  <code
+                    className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}
+                  >
                     {origin}/{shortCode}
                   </code>
                   {!shortCodeChanged && (
@@ -477,7 +549,9 @@ export default function OrganizationSettingsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}>
+                  <code
+                    className={`flex-1 p-2 rounded text-sm ${shortCodeChanged ? "bg-primary/10 border border-primary/20" : "bg-muted"}`}
+                  >
                     {origin}/c/{shortCode}
                   </code>
                   {!shortCodeChanged && (
