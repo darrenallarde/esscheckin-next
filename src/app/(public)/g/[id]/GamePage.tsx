@@ -390,6 +390,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             prayerBonusAwarded={state.prayerBonusAwarded}
             prayerCount={state.prayerCount}
             leaderContact={leaderContact}
+            game={game}
             onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
             onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
           />

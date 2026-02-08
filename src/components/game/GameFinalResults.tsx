@@ -10,6 +10,9 @@ import {
   List,
   MessageCircle,
   Check,
+  BookOpen,
+  Lightbulb,
+  Sparkles,
 } from "lucide-react";
 import { GameAnswerGrid } from "./GameAnswerGrid";
 import { getRoundMaxScore } from "@/lib/game/scoring";
@@ -30,6 +33,11 @@ interface GameFinalResultsProps {
   prayerBonusAwarded: boolean;
   prayerCount: number;
   leaderContact: LeaderContact | null;
+  game: {
+    devotional_id: string;
+    scripture_verses: string;
+    fun_facts: { fact: string }[];
+  };
   onGoToPrayer: () => void;
   onViewLeaderboard: () => void;
 }
@@ -42,6 +50,7 @@ export function GameFinalResults({
   answerCount,
   prayerBonusAwarded,
   leaderContact,
+  game,
   onGoToPrayer,
   onViewLeaderboard,
 }: GameFinalResultsProps) {
@@ -223,6 +232,47 @@ export function GameFinalResults({
             Your Answers
           </button>
         )}
+      </div>
+
+      {/* Scripture */}
+      <section className="bg-blue-50/80 rounded-xl p-5 border border-blue-100">
+        <div className="flex items-center gap-2 mb-3">
+          <BookOpen className="h-4 w-4 text-blue-600" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+            Scripture
+          </span>
+        </div>
+        <blockquote className="text-base italic text-blue-900 leading-relaxed border-l-3 border-blue-300 pl-4">
+          {game.scripture_verses}
+        </blockquote>
+      </section>
+
+      {/* Fun Facts */}
+      <section className="bg-amber-50/80 rounded-xl p-5 border border-amber-100">
+        <div className="flex items-center gap-2 mb-3">
+          <Lightbulb className="h-4 w-4 text-amber-600" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+            Did you know?
+          </span>
+        </div>
+        <ul className="space-y-2 text-sm text-stone-700">
+          {game.fun_facts.map((f, i) => (
+            <li key={i} className="flex gap-2">
+              <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <span>{f.fact}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Read the devotional link */}
+      <div className="text-center">
+        <a
+          href={`/d/${game.devotional_id}`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          Read today&apos;s devotional &rarr;
+        </a>
       </div>
 
       {/* Full answer reveal (toggled by "Your Answers" button) */}
