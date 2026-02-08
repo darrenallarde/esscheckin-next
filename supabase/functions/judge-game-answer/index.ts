@@ -133,7 +133,14 @@ serve(async (req) => {
 
     if (exactMatch) {
       // FAST PATH — exact match found, call RPC directly
-      console.log(`⚡ Fast path: "${normalized}" → rank ${exactMatch.rank}`);
+      console.log(
+        JSON.stringify({
+          event: "fast_path_hit",
+          answer: normalized,
+          rank: exactMatch.rank,
+          game_id,
+        }),
+      );
       const { data: rpcResult, error: rpcError } = await userClient.rpc(
         "submit_game_answer",
         {
@@ -178,7 +185,17 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🤖 AI judging: "${normalized}" for "${game.core_question}"`);
+    console.log(
+      JSON.stringify({
+        event: "ai_judge_start",
+        answer: normalized,
+        question: game.core_question,
+        game_id,
+        round_number,
+        answer_count: answerCount,
+        existing_answers: existingAnswers?.length || 0,
+      }),
+    );
 
     const judgePrompt = buildJudgePrompt(
       game.core_question,
@@ -241,18 +258,29 @@ serve(async (req) => {
     }
 
     console.log(
-      `🎯 AI verdict: valid=${judgment.valid}, rank=${judgment.rank}, reason="${judgment.reason}"`,
+      JSON.stringify({
+        event: "ai_judge_result",
+        answer: normalized,
+        valid: judgment.valid,
+        rank: judgment.rank,
+        reason: judgment.reason,
+        raw_response: aiText,
+        game_id,
+      }),
     );
 
     // 6. If invalid/inappropriate — return miss
     if (!judgment.valid || judgment.rank === null) {
-      // Need to call RPC to get session_id and total_score even for misses
+      console.log(
+        `❌ AI rejected: "${normalized}" | reason="${judgment.reason}" | question="${game.core_question}"`,
+      );
+      // Pass player's actual answer — it won't match in game_answers, triggering miss-no-insert
       const { data: rpcResult, error: rpcError } = await userClient.rpc(
         "submit_game_answer",
         {
           p_game_id: game_id,
           p_round_number: round_number,
-          p_answer: `__ai_miss_${Date.now()}`, // guaranteed miss — won't match any answer
+          p_answer: normalized,
         },
       );
 
@@ -285,7 +313,24 @@ serve(async (req) => {
 
     if (insertError) {
       // Could be a duplicate answer — another player may have cached it concurrently
-      console.warn("AI answer insert warning:", insertError.message);
+      console.warn(
+        JSON.stringify({
+          event: "ai_cache_insert_warning",
+          answer: normalized,
+          rank: aiRank,
+          error: insertError.message,
+          game_id,
+        }),
+      );
+    } else {
+      console.log(
+        JSON.stringify({
+          event: "ai_cache_insert",
+          answer: normalized,
+          rank: aiRank,
+          game_id,
+        }),
+      );
     }
 
     // Now call RPC — the answer is in game_answers, so it will match
