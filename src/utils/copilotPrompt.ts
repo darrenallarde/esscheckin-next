@@ -175,13 +175,9 @@ export function buildCopilotBriefingPrompt(
   });
 
   // Build pastoral knowledge sections
-  const phaseKnowledge = Object.entries(PHASE_DESCRIPTIONS)
-    .map(([grade, desc]) => desc)
-    .join("\n\n");
+  const phaseKnowledge = Object.values(PHASE_DESCRIPTIONS).join("\n\n");
 
-  const engagementKnowledge = Object.entries(ENGAGEMENT_GUIDANCE)
-    .map(([status, desc]) => desc)
-    .join("\n\n");
+  const engagementKnowledge = Object.values(ENGAGEMENT_GUIDANCE).join("\n\n");
 
   const genderKnowledge = Object.values(GENDER_GUIDANCE).join("\n\n");
   const ageKnowledge = Object.values(AGE_STRATEGIES).join("\n\n");
