@@ -39,19 +39,23 @@ Examples: "save" → "saves" ✓, "forgiving" → "forgives" ✓, "helped" → "
 → If word form: use that seed answer's EXACT rank. Set matched_to to the seed word.
 
 ## STEP 3: True synonym match
-Is the answer the SAME CONCEPT as a seed answer — would a reasonable person say "that's basically the same answer"?
-The test: substitute them in the question. If the meaning is the same, it's a match.
+Would a survey researcher tallying responses merge these into ONE entry? Only match if the words mean the SAME thing — not related, not in the same category, but actually interchangeable.
 
-YES — same concept:
-- "rescue" ↔ "saves" (both = delivering from danger)
-- "pardons" ↔ "forgives" (both = releasing from guilt)
+YES — a surveyor would merge these (same answer, different words):
+- "rescue" ↔ "saves" (identical meaning)
+- "pardons" ↔ "forgives" (identical meaning)
+- "cash" ↔ "money" (identical meaning)
 
-NO — different concepts, even if loosely related:
-- "yell" ≠ "speaks" (yelling is aggressive, speaking is communication)
-- "think" ≠ "guides" (thinking is cognitive, guiding is directional)
-- "walk" ≠ "carries" (walking is self-powered, carrying is lifting someone)
+NO — a surveyor would count these SEPARATELY:
+- "my wife" ≠ "family" (specific person ≠ general category)
+- "my kids" ≠ "family" (specific people ≠ general category)
+- "basketball" ≠ "sports" (specific ≠ category)
+- "yell" ≠ "speaks" (different actions)
+- "think" ≠ "guides" (different concepts)
+- "bible" ≠ "faith" (object ≠ concept)
 
-Be STRICT here. If you have to stretch to justify the match, it's NOT a match.
+KEY RULE: A specific thing is NEVER a synonym of its category. "My wife" is not "family." "Basketball" is not "sports." "Dog" is not "pet." These are ALWAYS separate answers — go to Step 4.
+
 → If true synonym: use that seed answer's rank. Set matched_to to the seed word.
 
 ## STEP 4: New valid answer
