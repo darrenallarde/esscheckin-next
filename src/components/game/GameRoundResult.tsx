@@ -59,7 +59,7 @@ export function GameRoundResult({
           {round.onList ? (
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-800">
               <Check className="h-5 w-5" />
-              <span className="font-bold">On the list! Rank #{round.rank}</span>
+              <span className="font-bold">On the list!</span>
             </div>
           ) : (
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 text-red-800">
@@ -107,7 +107,7 @@ export function GameRoundResult({
       {round.allAnswers.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-            Answer Rankings
+            Answers
           </p>
           <div className="max-h-80 overflow-y-auto rounded-xl border border-stone-200 bg-stone-50/50 p-3">
             <GameAnswerGrid

@@ -90,9 +90,6 @@ export function GameFinalResults({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-stone-700 truncate">
                     &quot;{round.submittedAnswer}&quot;
-                    {round.onList && round.rank && (
-                      <span className="text-stone-400 ml-1">#{round.rank}</span>
-                    )}
                     {!round.onList && (
                       <span className="text-red-400 ml-1">Not on list</span>
                     )}

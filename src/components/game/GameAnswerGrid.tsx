@@ -42,16 +42,27 @@ export function GameAnswerGrid({
         return (
           <div
             key={item.rank}
-            className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+            className={`flex items-center gap-3 px-3 rounded-lg text-sm transition-colors ${
               isPlayer
-                ? "bg-emerald-100 border border-emerald-300 font-semibold text-emerald-900"
-                : "bg-white border border-stone-100 text-stone-700"
+                ? "py-2.5 bg-emerald-100 border-2 border-emerald-400 text-emerald-900 shadow-sm"
+                : "py-1.5 bg-white border border-stone-100 text-stone-500"
             }`}
           >
-            <span className="w-8 text-right font-mono text-xs text-stone-400">
-              #{item.rank}
-            </span>
-            <span className="flex-1 truncate">{item.answer}</span>
+            {isPlayer ? (
+              <>
+                <span className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                  {item.rank}
+                </span>
+                <span className="flex-1 truncate font-bold text-base">
+                  {item.answer}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="w-6 shrink-0" />
+                <span className="flex-1 truncate">{item.answer}</span>
+              </>
+            )}
           </div>
         );
       })}
