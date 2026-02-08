@@ -62,20 +62,24 @@ Examples of good questions:
 - "What type of food do you think was most commonly eaten in this story?"
 - "What one word would you use to describe God's response?"
 
-### 5. answers (exactly 200)
-200 single-word answers ranked from 1 (most popular — what most teenagers would say) to 200 (least popular — what almost no one would think of).
+### 5. answers (exactly 400)
+400 single-word answers ranked from 1 (most popular — what most teenagers would say) to 400 (least popular — what almost no one would think of).
+
+Imagine you surveyed 100,000 random people with this question. Rank the answers by how many people would give each response.
 
 Rules for the answer list:
 - Each answer is a single word (or at most two words for compound concepts like "olive oil")
 - All answers must be legitimate responses to the question
-- Rank 1-10: The obvious, first-thing-you'd-think-of answers
-- Rank 11-50: Common but slightly less obvious
-- Rank 51-100: Reasonable but require some thought
-- Rank 101-150: Creative, less common answers
-- Rank 151-200: Obscure but still valid answers
+- Include a MIX of word types: nouns, verbs, adjectives, and adverbs — not just nouns
+- Use everyday, accessible words teenagers actually know — avoid SAT words or overly academic vocabulary
+- Rank 1-20: The obvious, first-thing-you'd-think-of answers
+- Rank 21-80: Common but slightly less obvious
+- Rank 81-200: Reasonable but require some thought — good variety of verbs and adjectives here
+- Rank 201-300: Creative, less common answers
+- Rank 301-400: Obscure but still valid answers
 - NO duplicate words
 - NO offensive or inappropriate words
-- Think about what a room of 20 teenagers would actually shout out
+- Think about what a room of 100 teenagers would actually shout out
 
 ## OUTPUT FORMAT
 Return ONLY a JSON object (no other text):
@@ -96,7 +100,7 @@ Return ONLY a JSON object (no other text):
     { "answer": "word1", "rank": 1 },
     { "answer": "word2", "rank": 2 },
     ...
-    { "answer": "word200", "rank": 200 }
+    { "answer": "word400", "rank": 400 }
   ]
 }`;
 }
@@ -197,7 +201,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 16384, // 200 answers needs more tokens
+        max_tokens: 32768, // 400 answers needs more tokens
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -247,7 +251,7 @@ serve(async (req) => {
       !parsed.core_question ||
       !parsed.scripture_verses ||
       !Array.isArray(parsed.answers) ||
-      parsed.answers.length !== 200
+      parsed.answers.length < 350
     ) {
       console.error("Invalid AI response structure");
       await supabase
@@ -255,7 +259,7 @@ serve(async (req) => {
         .update({ status: "ready" })
         .eq("id", game_id);
       throw new Error(
-        `Invalid AI response: expected 200 answers, got ${parsed.answers?.length || 0}`,
+        `Invalid AI response: expected ~400 answers, got ${parsed.answers?.length || 0}`,
       );
     }
 

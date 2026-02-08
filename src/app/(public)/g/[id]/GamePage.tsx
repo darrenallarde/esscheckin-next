@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useEffect, useCallback } from "react";
+import { useReducer, useEffect, useCallback, useState } from "react";
 import { gameReducer, initialState } from "@/lib/game/state-machine";
 import { getGameStatus } from "@/lib/game/utils";
 import { getTheme, getThemeCSSOverrides } from "@/lib/themes";
@@ -14,6 +14,10 @@ import { GameRoundResult } from "@/components/game/GameRoundResult";
 import { GameFinalResults } from "@/components/game/GameFinalResults";
 import { GameLeaderboard } from "@/components/game/GameLeaderboard";
 import { GameExpired } from "@/components/game/GameExpired";
+import {
+  GamePrayerBonus,
+  PRAYER_BONUS_POINTS,
+} from "@/components/game/GamePrayerBonus";
 import { Loader2 } from "lucide-react";
 import type { RoundData } from "@/lib/game/state-machine";
 
@@ -193,6 +197,46 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
     [game, state.currentRound, submitMutation],
   );
 
+  const [prayerSubmitting, setPrayerSubmitting] = useState(false);
+
+  const handleSubmitPrayer = useCallback(
+    async (prayer: string) => {
+      setPrayerSubmitting(true);
+      try {
+        const supabase = createClient();
+        await supabase.rpc("record_devotional_engagement", {
+          p_devotional_id: game.devotional_id,
+          p_action: "prayed",
+          p_journal_text: prayer,
+        });
+
+        // Update game session score with bonus
+        if (state.sessionId) {
+          await supabase
+            .from("game_sessions")
+            .update({
+              total_score: state.totalScore + PRAYER_BONUS_POINTS,
+            })
+            .eq("id", state.sessionId);
+        }
+
+        dispatch({
+          type: "PRAYER_SUBMITTED",
+          bonusPoints: PRAYER_BONUS_POINTS,
+        });
+      } catch {
+        // Best effort — still advance to leaderboard
+        dispatch({
+          type: "PRAYER_SUBMITTED",
+          bonusPoints: PRAYER_BONUS_POINTS,
+        });
+      } finally {
+        setPrayerSubmitting(false);
+      }
+    },
+    [game.devotional_id, state.sessionId, state.totalScore],
+  );
+
   const handleNextRound = useCallback(() => {
     const status = getGameStatus(game);
     if (status !== "active") {
@@ -276,7 +320,17 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             rounds={state.rounds}
             totalScore={state.totalScore}
             firstName={state.firstName}
+            onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
             onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
+          />
+        )}
+
+        {state.screen === "prayer_bonus" && (
+          <GamePrayerBonus
+            firstName={state.firstName}
+            onSubmit={handleSubmitPrayer}
+            onSkip={() => dispatch({ type: "SKIP_PRAYER" })}
+            submitting={prayerSubmitting}
           />
         )}
 

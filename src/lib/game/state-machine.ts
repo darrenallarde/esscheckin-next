@@ -2,7 +2,7 @@
  * Hi-Lo Game State Machine
  *
  * Pure reducer for the player-facing game flow.
- * Screens: loading → intro → auth → round_play → round_result (×4) → final_results → leaderboard
+ * Screens: loading → intro → auth → round_play → round_result (×4) → final_results → prayer_bonus → leaderboard
  *
  * Designed to be used with React's useReducer.
  */
@@ -14,6 +14,7 @@ export type GameScreen =
   | "round_play"
   | "round_result"
   | "final_results"
+  | "prayer_bonus"
   | "leaderboard"
   | "expired";
 
@@ -39,6 +40,7 @@ export interface GameState {
   submitting: boolean;
   error: string | null;
   lastMiss: string | null;
+  prayerSubmitted: boolean;
 }
 
 export type GameAction =
@@ -72,6 +74,9 @@ export type GameAction =
       completedRounds: RoundData[];
       totalScore: number;
     }
+  | { type: "GO_TO_PRAYER" }
+  | { type: "PRAYER_SUBMITTED"; bonusPoints: number }
+  | { type: "SKIP_PRAYER" }
   | { type: "GAME_EXPIRED" };
 
 export function initialState(): GameState {
@@ -87,6 +92,7 @@ export function initialState(): GameState {
     submitting: false,
     error: null,
     lastMiss: null,
+    prayerSubmitted: false,
   };
 }
 
@@ -176,8 +182,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "VIEW_LEADERBOARD": {
-      if (state.screen !== "final_results" && state.screen !== "expired")
+      if (
+        state.screen !== "final_results" &&
+        state.screen !== "expired" &&
+        state.screen !== "prayer_bonus"
+      )
         return state;
+      return { ...state, screen: "leaderboard" };
+    }
+
+    case "GO_TO_PRAYER": {
+      if (state.screen !== "final_results") return state;
+      return { ...state, screen: "prayer_bonus" };
+    }
+
+    case "PRAYER_SUBMITTED": {
+      if (state.screen !== "prayer_bonus") return state;
+      return {
+        ...state,
+        screen: "leaderboard",
+        totalScore: state.totalScore + action.bonusPoints,
+        prayerSubmitted: true,
+      };
+    }
+
+    case "SKIP_PRAYER": {
+      if (state.screen !== "prayer_bonus") return state;
       return { ...state, screen: "leaderboard" };
     }
 

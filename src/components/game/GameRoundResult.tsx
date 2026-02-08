@@ -12,7 +12,7 @@ import { GameAnswerGrid } from "./GameAnswerGrid";
 import { GameScoreBar } from "./GameScoreBar";
 import type { RoundData } from "@/lib/game/state-machine";
 
-const ROUND_MAX = { 1: 200, 2: 400, 3: 600, 4: 800 } as const;
+const ROUND_MAX = { 1: 400, 2: 800, 3: 1200, 4: 1600 } as const;
 
 interface GameRoundResultProps {
   round: RoundData;

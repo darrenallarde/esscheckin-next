@@ -348,6 +348,12 @@ describe("gameReducer", () => {
       const next = gameReducer(state, { type: "VIEW_LEADERBOARD" });
       expect(next.screen).toBe("leaderboard");
     });
+
+    it("transitions from prayer_bonus to leaderboard", () => {
+      const state = stateAt("prayer_bonus");
+      const next = gameReducer(state, { type: "VIEW_LEADERBOARD" });
+      expect(next.screen).toBe("leaderboard");
+    });
   });
 
   // ============================================================
@@ -465,6 +471,67 @@ describe("gameReducer", () => {
       });
       expect(next.screen).toBe("round_play");
       expect(next.currentRound).toBe(1);
+    });
+  });
+
+  // ============================================================
+  // GO_TO_PRAYER
+  // ============================================================
+  describe("GO_TO_PRAYER", () => {
+    it("transitions from final_results to prayer_bonus", () => {
+      const state = stateAt("final_results");
+      const next = gameReducer(state, { type: "GO_TO_PRAYER" });
+      expect(next.screen).toBe("prayer_bonus");
+    });
+
+    it("ignores GO_TO_PRAYER from non-final_results screen", () => {
+      const state = stateAt("round_play");
+      const next = gameReducer(state, { type: "GO_TO_PRAYER" });
+      expect(next).toEqual(state);
+    });
+  });
+
+  // ============================================================
+  // PRAYER_SUBMITTED
+  // ============================================================
+  describe("PRAYER_SUBMITTED", () => {
+    it("transitions from prayer_bonus to leaderboard with bonus points", () => {
+      const state = stateAt("prayer_bonus", { totalScore: 1000 });
+      const next = gameReducer(state, {
+        type: "PRAYER_SUBMITTED",
+        bonusPoints: 500,
+      });
+      expect(next.screen).toBe("leaderboard");
+      expect(next.totalScore).toBe(1500);
+      expect(next.prayerSubmitted).toBe(true);
+    });
+
+    it("ignores PRAYER_SUBMITTED from non-prayer_bonus screen", () => {
+      const state = stateAt("final_results", { totalScore: 1000 });
+      const next = gameReducer(state, {
+        type: "PRAYER_SUBMITTED",
+        bonusPoints: 500,
+      });
+      expect(next).toEqual(state);
+    });
+  });
+
+  // ============================================================
+  // SKIP_PRAYER
+  // ============================================================
+  describe("SKIP_PRAYER", () => {
+    it("transitions from prayer_bonus to leaderboard without bonus", () => {
+      const state = stateAt("prayer_bonus", { totalScore: 1000 });
+      const next = gameReducer(state, { type: "SKIP_PRAYER" });
+      expect(next.screen).toBe("leaderboard");
+      expect(next.totalScore).toBe(1000);
+      expect(next.prayerSubmitted).toBe(false);
+    });
+
+    it("ignores SKIP_PRAYER from non-prayer_bonus screen", () => {
+      const state = stateAt("leaderboard");
+      const next = gameReducer(state, { type: "SKIP_PRAYER" });
+      expect(next).toEqual(state);
     });
   });
 

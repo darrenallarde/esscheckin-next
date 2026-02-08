@@ -15,7 +15,7 @@ describe("parseGameAIResponse", () => {
       expect(result.data.core_question).toBe(
         "What one word describes this food?",
       );
-      expect(result.data.answers).toHaveLength(200);
+      expect(result.data.answers).toHaveLength(400);
       expect(result.data.historical_facts).toHaveLength(3);
       expect(result.data.fun_facts).toHaveLength(3);
     }
@@ -73,24 +73,30 @@ describe("parseGameAIResponse", () => {
 });
 
 describe("validateGameAnswers", () => {
-  it("passes for 200 unique answers with ranks 1-200", () => {
-    const answers = makeAnswers(200);
+  it("passes for 400 unique answers with ranks 1-400", () => {
+    const answers = makeAnswers(400);
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(true);
   });
 
-  it("fails when answer count is not 200", () => {
-    const answers = makeAnswers(199);
+  it("passes for 350 unique answers (minimum threshold)", () => {
+    const answers = makeAnswers(350);
+    const result = validateGameAnswers(answers);
+    expect(result.valid).toBe(true);
+  });
+
+  it("fails when answer count is below 350", () => {
+    const answers = makeAnswers(349);
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.error).toContain("200");
+      expect(result.error).toContain("350");
     }
   });
 
   it("fails when ranks have duplicates", () => {
-    const answers = makeAnswers(200);
-    answers[199].rank = 1; // duplicate rank
+    const answers = makeAnswers(400);
+    answers[399].rank = 1; // duplicate rank
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
     if (!result.valid) {
@@ -99,8 +105,8 @@ describe("validateGameAnswers", () => {
   });
 
   it("fails when answers have duplicates", () => {
-    const answers = makeAnswers(200);
-    answers[199].answer = answers[0].answer; // duplicate word
+    const answers = makeAnswers(400);
+    answers[399].answer = answers[0].answer; // duplicate word
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
     if (!result.valid) {
@@ -109,21 +115,21 @@ describe("validateGameAnswers", () => {
   });
 
   it("fails when a rank is out of range (0)", () => {
-    const answers = makeAnswers(200);
+    const answers = makeAnswers(400);
     answers[0].rank = 0;
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
   });
 
-  it("fails when a rank is out of range (201)", () => {
-    const answers = makeAnswers(200);
-    answers[0].rank = 201;
+  it("fails when a rank is out of range (401)", () => {
+    const answers = makeAnswers(400);
+    answers[0].rank = 401;
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
   });
 
   it("fails when an answer is empty string", () => {
-    const answers = makeAnswers(200);
+    const answers = makeAnswers(400);
     answers[0].answer = "";
     const result = validateGameAnswers(answers);
     expect(result.valid).toBe(false);
@@ -153,6 +159,6 @@ function makeValidResponse(): GameAIResponse {
       { fact: "Fun fact 3" },
     ],
     core_question: "What one word describes this food?",
-    answers: makeAnswers(200),
+    answers: makeAnswers(400),
   };
 }

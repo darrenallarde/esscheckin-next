@@ -1,16 +1,17 @@
 "use client";
 
-import { Trophy, ArrowUp, ArrowDown, BarChart3 } from "lucide-react";
+import { Trophy, ArrowUp, ArrowDown, BarChart3, Heart } from "lucide-react";
 import { GameScoreBar } from "./GameScoreBar";
 import type { RoundData } from "@/lib/game/state-machine";
 
-const ROUND_MAX = { 1: 200, 2: 400, 3: 600, 4: 800 } as const;
-const MAX_TOTAL = 2000;
+const ROUND_MAX = { 1: 400, 2: 800, 3: 1200, 4: 1600 } as const;
+const MAX_TOTAL = 4000;
 
 interface GameFinalResultsProps {
   rounds: RoundData[];
   totalScore: number;
   firstName: string;
+  onGoToPrayer: () => void;
   onViewLeaderboard: () => void;
 }
 
@@ -18,6 +19,7 @@ export function GameFinalResults({
   rounds,
   totalScore,
   firstName,
+  onGoToPrayer,
   onViewLeaderboard,
 }: GameFinalResultsProps) {
   const pct = Math.round((totalScore / MAX_TOTAL) * 100);
@@ -108,13 +110,22 @@ export function GameFinalResults({
         </div>
       </div>
 
-      {/* Leaderboard CTA */}
+      {/* Prayer bonus CTA */}
+      <button
+        onClick={onGoToPrayer}
+        className="w-full py-3.5 px-6 rounded-xl bg-purple-600 text-white text-base font-semibold hover:bg-purple-700 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+      >
+        <Heart className="h-5 w-5" />
+        Bonus Round — Earn +500 pts
+      </button>
+
+      {/* Skip to leaderboard */}
       <button
         onClick={onViewLeaderboard}
-        className="w-full py-3.5 px-6 rounded-xl bg-stone-900 text-white text-base font-semibold hover:bg-stone-800 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        className="w-full py-3 text-sm text-stone-400 hover:text-stone-600 transition-colors flex items-center justify-center gap-1"
       >
-        <Trophy className="h-5 w-5" />
-        View Leaderboard
+        <Trophy className="h-4 w-4" />
+        Skip to Leaderboard
       </button>
     </div>
   );
