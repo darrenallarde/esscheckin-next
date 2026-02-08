@@ -69,6 +69,7 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 4. **Legacy tables exist but are deprecated.** `students`, `organization_members`, `group_members`, `group_leaders` — use `profiles`/`organization_memberships`/`group_memberships` instead.
 5. **Insights queries only touch `insights_people` view** via `run_insights_query` RPC. 4-layer safety: LLM prompt → TS validator → PG RPC → no direct GRANT.
 6. **SMS routing requires org code first.** No auto-routing by phone number. See `docs/architecture.md` for the full routing flow.
+7. **Before rewriting any RPC, read its current source from the database.** `CREATE OR REPLACE FUNCTION` replaces the ENTIRE body. Run `SELECT prosrc FROM pg_proc WHERE proname = '...'` and diff against your new version. Carry forward ALL existing fixes. Migration files are not the source of truth — hotfixes may have been applied directly.
 
 ## Testing
 
@@ -101,5 +102,6 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 | Feb 7 | Committed Co-Pilot V2 to main instead of worktree branch                   | Session Startup Protocol |
 | Feb 7 | Rewrote RPC with 5 wrong table/column names — 4 sequential hotfixes        | Code Standards #2        |
 | Feb 7 | Phone lookup missed raw-digit format + INSERT into non-existent column     | Code Standards #2        |
+| Feb 7 | RPC rewrite dropped miss-no-insert fix — blocked player mid-game           | Database Rules #7        |
 
 Full details: `docs/mistakes.md`

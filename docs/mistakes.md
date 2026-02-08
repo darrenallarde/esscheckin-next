@@ -142,3 +142,23 @@ Similarly, `create_phone_profile` tried to INSERT `organization_id` into `profil
 1. When matching user-provided data against stored data, check what format the stored data is actually in — don't assume it matches your normalization.
 2. When writing INSERT/UPDATE statements, verify the target table's columns first.
 3. Phone number matching should be fuzzy: check normalized (+1xxx), raw digits (xxx), and original input.
+
+---
+
+## Feb 7: RPC rewrite silently dropped a previous bugfix — miss-no-insert regression
+
+**Severity:** HIGH (blocked player mid-game on production)
+
+**What happened:** The `hilo_miss_no_insert` migration fixed `submit_game_answer` so misses (answer not on the list) would NOT insert into `game_rounds`, allowing the player to retry. This worked. Later, `hilo_400_answers_scoring` rewrote the entire `submit_game_answer` RPC to add 400-answer support and new scoring. The rewrite used `CREATE OR REPLACE FUNCTION` — which replaces the **entire function body**. The miss-no-insert logic was not carried forward. Misses started inserting rows again.
+
+When a player missed on round 3 and retried, the second call hit the unique constraint `game_rounds_game_session_id_round_number_key` because a row for that round already existed from the miss.
+
+**Why it wasn't caught:**
+
+- Unit tests cover the client-side state machine, not the server-side RPC
+- The idempotency check (added in the same rewrite) would have returned the stale miss result, masking the duplicate — but under race conditions (rapid retry), the SELECT-then-INSERT pattern fails
+- No integration test exercises "miss → retry → hit" against the actual database
+
+**Fix:** Wrapped INSERT and score UPDATE in `IF v_on_list THEN ... END IF;`. Deleted orphaned miss rows from production.
+
+**Rule (NEW — Database Rules #7):** `CREATE OR REPLACE FUNCTION` replaces the ENTIRE body. Before rewriting any RPC, read the current source from the database (`SELECT prosrc FROM pg_proc WHERE proname = '...'`) and diff against your new version. Carry forward ALL existing fixes. Migration files are not the source of truth — direct RPC applications and hotfixes may not have corresponding files.
