@@ -1,5 +1,20 @@
 # SheepDoggo (ESS Check-in)
 
+## SESSION STARTUP — MANDATORY BEFORE ANY WORK
+
+**Do this BEFORE reading files, writing code, or running any commands.**
+
+1. Read `~/.claude/projects/-home-darrenallarde-echo-esscheckin-next/memory/recollection.md` — this is your save file from the last session or pre-compaction checkpoint. It tells you where you were, what branch you were on, and what you were doing.
+2. Run `git worktree list` and `git branch --show-current`.
+3. **If worktrees exist AND you're on `main`:** STOP. You are almost certainly in the wrong place. Context compaction resets your working directory to the repo root. Ask the user which worktree to work in, then `cd` into it.
+4. **If on a feature branch:** Confirm with the user: "I'm on `feature/X` — is that correct?"
+5. **Only after confirming your location:** proceed with work.
+6. **Update `recollection.md`** at natural checkpoints: after commits, after completing a skill, after reading a batch of files, before any long operation. This is your insurance against compaction.
+
+**Why this exists:** On Feb 7, context compaction silently moved a session from a `feature/copilot-v2` worktree back to `main`. The entire Co-Pilot V2 feature was committed directly to main, bypassing the feature branch and PR review. This protocol prevents that from ever happening again.
+
+---
+
 Youth ministry check-in + engagement platform. Next.js 14 (App Router), Supabase (PostgreSQL + Auth + Edge Functions), shadcn/ui, TanStack Query, Tailwind CSS.
 
 ## Architecture
@@ -64,6 +79,7 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 ## Git & Deploy
 
 - Push `main` → Vercel auto-deploys from `darrenallarde/esscheckin-next`.
+- **Never commit to main when worktrees exist.** You should be on a feature branch. `/ship` enforces this.
 - Env vars: `.env.local` for local, Vercel dashboard for production. `SUPABASE_SERVICE_ROLE_KEY` required for edge functions.
 - Edge functions deploy via Supabase CLI.
 - Kill ports 3000-3003 before starting dev server.
@@ -72,15 +88,16 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 
 <!-- Short summaries only. Full post-mortems: docs/mistakes.md -->
 
-| Date  | Mistake                                                                    | Rule #              |
-| ----- | -------------------------------------------------------------------------- | ------------------- |
-| Feb 6 | No org_id filter on `useAIRecommendations` — cross-org data leak           | #1                  |
-| Feb 4 | RPC returned `role` not `user_role` — admin features disappeared           | #3                  |
-| Feb 5 | SQL referenced `de.created_at` — doesn't exist on `devotional_engagements` | #2                  |
-| Feb 5 | Stored Twilio `"queued"` instead of `"sent"`                               | #2                  |
-| Feb 5 | Session restore didn't hydrate user name                                   | Test both paths     |
-| Feb 5 | Wrong email branding (Seedling/green vs SheepDoggo/purple)                 | Check templates     |
-| Feb 7 | Recommended `/cleanup` skill without reading its definition                | Read SKILL.md first |
-| Feb 7 | Recommended `/ship` before applying migration                              | Migration first     |
+| Date  | Mistake                                                                    | Rule                     |
+| ----- | -------------------------------------------------------------------------- | ------------------------ |
+| Feb 6 | No org_id filter on `useAIRecommendations` — cross-org data leak           | Code Standards #1        |
+| Feb 4 | RPC returned `role` not `user_role` — admin features disappeared           | Code Standards #3        |
+| Feb 5 | SQL referenced `de.created_at` — doesn't exist on `devotional_engagements` | Code Standards #2        |
+| Feb 5 | Stored Twilio `"queued"` instead of `"sent"`                               | Code Standards #2        |
+| Feb 5 | Session restore didn't hydrate user name                                   | Test both paths          |
+| Feb 5 | Wrong email branding (Seedling/green vs SheepDoggo/purple)                 | Check templates          |
+| Feb 7 | Recommended `/cleanup` skill without reading its definition                | Read SKILL.md first      |
+| Feb 7 | Recommended `/ship` before applying migration                              | Database Rules #2        |
+| Feb 7 | Committed Co-Pilot V2 to main instead of worktree branch                   | Session Startup Protocol |
 
 Full details: `docs/mistakes.md`

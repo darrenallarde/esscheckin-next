@@ -16,7 +16,12 @@ Run this checklist before pushing code:
 4. **Build:** Run `npm run build` — must succeed cleanly
 5. **Review changes:** Run `git diff` to show all uncommitted changes. Summarize what changed and why.
 6. **Commit:** Stage relevant files and create a commit with a clear message. Do NOT use `git add -A` — be specific about what files to stage.
-7. **Branch check:** If on `main`, ask if this should go on a feature branch first. If on a feature branch, proceed.
+7. **Branch safety check:**
+   - Run `git worktree list` and `git branch --show-current`.
+   - **If worktrees exist AND you're on `main`:** STOP. REFUSE to commit. Tell the user: "Active worktrees exist — you should be working in a feature branch, not main. Which worktree should this work go to?"
+   - **If on `main` with NO worktrees:** Ask if this should go on a feature branch first. If the user confirms main, proceed.
+   - **If on a feature branch:** Proceed normally.
 8. **Push:** Push the current branch to origin. Confirm before pushing.
+9. **Update recollection.md:** Record the commit hash, what was shipped, and what's next.
 
 If any step fails, stop and fix before continuing. Do not skip steps.

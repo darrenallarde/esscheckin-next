@@ -82,3 +82,22 @@ Detailed post-mortems for bugs caused by Claude. CLAUDE.md has the summary table
 **What happened:** Wrote a migration SQL file as Phase 1 of a 4-phase implementation. After completing all phases and the build passing, recommended `/ship` as the next step. The migration had never been applied to staging or production — every new RPC, table, and column the frontend depends on didn't exist yet. User had to correct me to run `/db-migrate` first.
 
 **Rule:** If you wrote a migration file, ALWAYS recommend `/db-migrate` as the immediate next step. Frontend code is useless without the database changes it depends on. Migration → test → ship, never skip the first step.
+
+---
+
+## Feb 7: Committed feature work directly to main instead of worktree branch
+
+**Severity:** HIGH (bypassed entire branch/PR review workflow)
+
+**What happened:** User ran `/worktree-start` which created `feature/copilot-v2` branch and a worktree at `~/echo/esscheckin-next-copilot-v2`. The previous session was working in that worktree. When the session ran out of context and was continued, the new session started in `~/echo/esscheckin-next` (the main worktree) instead of the copilot-v2 worktree. The session continuation system does NOT preserve working directory.
+
+The git status at the top of the continued session clearly showed `Current branch: main`, but Claude didn't catch this and proceeded to commit the entire Co-Pilot V2 feature (API rewrite, hook rewrite, component rewrite, migration, 128 tests) directly to main — bypassing the feature branch, skipping the PR, and auto-deploying to production without review.
+
+**Two failures:**
+
+1. **System:** Session continuation drops you into the repo root, not the worktree you were working in
+2. **Claude:** Did not verify the branch matched the expected worktree before committing. The signal was right there in the git status header.
+
+**Fix:** Added startup rule to CLAUDE.md — at session start, always check `git worktree list` and verify you're on the correct branch. If worktrees exist and you're on main, STOP and ask.
+
+**Rule:** NEVER commit to main when worktrees exist without explicitly confirming with the user. At every session start, check `git worktree list`. If active worktrees exist, verify you're in the right one before writing any code.

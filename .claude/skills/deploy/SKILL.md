@@ -19,6 +19,10 @@ Merge a feature branch to main for deployment:
    - `git pull origin main`
    - `git merge <feature-branch> --no-ff`
 6. **Push:** Push main to origin (triggers Vercel deploy). Confirm before pushing.
-7. **Cleanup:** Ask if the feature branch should be deleted.
+7. **Branch cleanup — with worktree safety:**
+   - Run `git worktree list`.
+   - If the merged branch has an active worktree: warn "This branch has an active worktree at [path]. Run `/worktree-done` from that worktree to clean it up. Do NOT delete the branch from here."
+   - If no active worktree: ask if the branch should be deleted.
+8. **Update recollection.md:** Record the merge commit and deployment.
 
 Vercel auto-deploys from main. After push, the deploy will be live within ~2 minutes.
