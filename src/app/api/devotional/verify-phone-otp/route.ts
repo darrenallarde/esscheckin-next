@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json(
       { success: false, error: "Server configuration error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid request body" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!phone || !code) {
     return NextResponse.json(
       { success: false, error: "Phone and code are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -48,16 +48,22 @@ export async function POST(request: NextRequest) {
 
   if (lookupError || !otpRecord) {
     return NextResponse.json(
-      { success: false, error: "No valid code found. Please request a new one." },
-      { status: 400 }
+      {
+        success: false,
+        error: "No valid code found. Please request a new one.",
+      },
+      { status: 400 },
     );
   }
 
   // Check attempts
   if (otpRecord.attempts >= 5) {
     return NextResponse.json(
-      { success: false, error: "Too many attempts. Please request a new code." },
-      { status: 429 }
+      {
+        success: false,
+        error: "Too many attempts. Please request a new code.",
+      },
+      { status: 429 },
     );
   }
 
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
   if (otpRecord.code !== code) {
     return NextResponse.json(
       { success: false, error: "Invalid code. Please try again." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -81,82 +87,126 @@ export async function POST(request: NextRequest) {
     .update({ verified: true })
     .eq("id", otpRecord.id);
 
-  // Find or create auth user with synthetic email
+  // --- Profile-first lookup: find existing profile by phone number ---
   const digits = phone.replace(/\D/g, "");
-  const syntheticEmail = `${digits}@phone.sheepdoggo.app`;
+  let normalized: string;
+  let rawDigits = digits;
 
-  // Check if user already exists
-  const { data: existingUsers } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1,
-  });
-
-  let userId: string | null = null;
-
-  // Search by email (listUsers doesn't filter, so search manually)
-  const { data: userByEmail } = await supabase
-    .from("auth.users")
-    .select("id")
-    .eq("email", syntheticEmail)
-    .limit(1);
-
-  // Alternative: use admin API to find by email
-  if (existingUsers) {
-    const found = existingUsers.users.find(u => u.email === syntheticEmail);
-    if (found) {
-      userId = found.id;
-    }
+  if (digits.length === 10) {
+    normalized = "+1" + digits;
+  } else if (digits.length === 11 && digits.startsWith("1")) {
+    normalized = "+" + digits;
+    rawDigits = digits.substring(1); // strip leading 1 for raw match
+  } else if (phone.startsWith("+")) {
+    normalized = "+" + digits;
+  } else {
+    normalized = digits;
   }
 
-  if (!userId) {
-    // Try to find by iterating (admin.listUsers doesn't support email filter well)
-    // Instead, just try to create and handle duplicate error
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email: syntheticEmail,
-      email_confirm: true,
-      phone,
-      phone_confirm: true,
-    });
+  // Query profiles matching any phone format (same logic as link_phone_to_profile RPC)
+  const { data: matchingProfiles } = await supabase
+    .from("profiles")
+    .select("id, first_name, user_id, phone_number")
+    .or(
+      `phone_number.eq.${normalized},phone_number.eq.${rawDigits},phone_number.eq.${phone}`,
+    )
+    .limit(1);
 
-    if (createError) {
-      // User likely already exists — try to generate link anyway
-      if (createError.message.includes("already been registered") || createError.message.includes("duplicate")) {
-        // Find user by generating a magic link (which requires existing user)
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-          type: "magiclink",
-          email: syntheticEmail,
-        });
-        if (linkError) {
-          return NextResponse.json(
-            { success: false, error: "Failed to authenticate. Please try email sign-in." },
-            { status: 500 }
-          );
-        }
-        return NextResponse.json({
-          success: true,
-          token_hash: linkData.properties.hashed_token,
-          email: syntheticEmail,
-        });
-      }
+  const profile = matchingProfiles?.[0] ?? null;
+
+  // Case A: Profile exists and already has a linked auth user
+  if (profile?.user_id) {
+    const { data: existingAuthUser, error: getUserError } =
+      await supabase.auth.admin.getUserById(profile.user_id);
+
+    if (getUserError || !existingAuthUser?.user) {
       return NextResponse.json(
-        { success: false, error: createError.message },
-        { status: 500 }
+        { success: false, error: "Failed to look up existing account" },
+        { status: 500 },
       );
     }
 
-    userId = newUser.user.id;
+    // Generate magic link for the EXISTING auth user's email
+    const { data: linkData, error: linkError } =
+      await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: existingAuthUser.user.email!,
+      });
+
+    if (linkError) {
+      return NextResponse.json(
+        { success: false, error: "Failed to create session" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      token_hash: linkData.properties.hashed_token,
+      email: existingAuthUser.user.email,
+      already_linked: true,
+      profile_id: profile.id,
+      first_name: profile.first_name,
+    });
   }
 
-  // Generate magic link for session
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
+  // Case B & C: No user_id on profile, or no profile at all
+  // Create or find synthetic phone auth user
+  const syntheticEmail = `${rawDigits}@phone.sheepdoggo.app`;
+
+  const { error: createError } = await supabase.auth.admin.createUser({
     email: syntheticEmail,
+    email_confirm: true,
+    phone,
+    phone_confirm: true,
   });
+
+  if (createError) {
+    // User already exists with this synthetic email — generate magic link directly
+    if (
+      createError.message.includes("already been registered") ||
+      createError.message.includes("duplicate")
+    ) {
+      const { data: linkData, error: linkError } =
+        await supabase.auth.admin.generateLink({
+          type: "magiclink",
+          email: syntheticEmail,
+        });
+
+      if (linkError) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Failed to authenticate. Please try email sign-in.",
+          },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        token_hash: linkData.properties.hashed_token,
+        email: syntheticEmail,
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: createError.message },
+      { status: 500 },
+    );
+  }
+
+  // New synthetic user created — generate magic link
+  const { data: linkData, error: linkError } =
+    await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email: syntheticEmail,
+    });
 
   if (linkError) {
     return NextResponse.json(
       { success: false, error: "Failed to create session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

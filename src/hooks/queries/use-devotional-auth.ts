@@ -89,7 +89,16 @@ export function useDevotionalAuth() {
           setSession(data.session);
         }
 
-        // Step 3: Link phone to profile
+        // Step 3: Link phone to profile (skip if API already resolved it)
+        if (result.already_linked) {
+          return {
+            success: true,
+            profile_id: result.profile_id,
+            first_name: result.first_name,
+            already_linked: true,
+          };
+        }
+
         const { data: linkData, error: linkError } = await supabase.rpc(
           "link_phone_to_profile",
           {
