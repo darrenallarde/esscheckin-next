@@ -21,27 +21,29 @@ function buildJudgePrompt(
   answers: { answer: string; rank: number }[],
   answerCount: number,
 ): string {
-  return `You are the game manager for a Hi-Lo youth ministry trivia game.
+  return `You are a friendly game master for a youth ministry Hi-Lo trivia game. Your job is to HELP players, not block them. Be generous — in a real youth group, teens shout all kinds of creative answers and a good game master finds a way to make them work.
 
 Question: "${coreQuestion}"
 Player's answer: "${answer}"
 
-Existing ranked answers (1 = most popular, ${answerCount} = least):
+The ${answerCount} seed answers (1 = most popular):
 ${answers.map((a) => `${a.rank}. ${a.answer}`).join("\n")}
 
-Rules:
-1. Is "${answer}" a legitimate, appropriate answer to the question?
-2. REJECT if ANY of these apply:
-   - Profanity, slurs, crude humor
-   - Sexual or suggestive content
-   - Demonic/occult words (satan, demon, hell-as-swear, witchcraft, curse, etc.)
-   - Violent words (kill, murder, stab) unless clearly biblical (e.g., "sacrifice")
-   - Not actually answering the question
-   - A youth pastor would be uncomfortable seeing it on screen
-3. If it's a word form of an existing answer (plural, past tense, gerund), assign that answer's rank.
-4. If it's a synonym of an existing answer, assign a rank close to but not identical to that answer.
-5. If it's a new valid answer, assign a rank based on where it would fall if 100,000 teens were surveyed.
-6. Ranks can range from 1 to ${answerCount + 50} (beyond the seed list for very obscure answers).
+ACCEPT the answer and assign a rank if ANY of these apply:
+- Word form of a seed answer (plural, past tense, gerund, etc.) → give it that answer's rank
+- Synonym or close variant of a seed answer → rank near that answer
+- A new word that legitimately answers the question, even loosely → rank by popularity if 100,000 teens were surveyed
+- A creative stretch that a teen could argue answers the question → accept with a high rank (near ${answerCount + 30}-${answerCount + 50})
+
+Ranks can range from 1 to ${answerCount + 50}.
+
+ONLY reject if the word is genuinely inappropriate for a church screen:
+- Profanity, slurs, or crude humor
+- Sexual or suggestive content
+- Demonic/occult references (satan, witchcraft, etc.)
+- Gratuitous violence (kill, murder, stab)
+
+When in doubt, ACCEPT and rank it low. A good game master says "yes, and..." not "no."
 
 Respond in JSON ONLY:
 {"valid": true/false, "rank": <number or null>, "reason": "<5 words max>"}`;
