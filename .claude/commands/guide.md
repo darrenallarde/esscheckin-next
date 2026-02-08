@@ -58,3 +58,4 @@ Touches 3+ areas (database, backend, frontend, edge functions), spans multiple c
 - Never prescribe `/ship` in the middle — it's always the last step after all phases complete.
 - If the user describes a bug, check if it matches anything in the CLAUDE.md mistakes log or MEMORY.md known issues before prescribing.
 - If the task requires manual steps (env vars, Supabase dashboard changes, third-party config), call those out explicitly — commands can't do them.
+- **ALWAYS read the SKILL.md for any command before recommending it.** Never infer what a command does from its name alone. Read `.claude/skills/<name>/SKILL.md` to confirm it actually fits the task.

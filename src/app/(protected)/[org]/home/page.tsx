@@ -1,20 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { PastoralQueue, PastoralRecommendation } from "@/components/pastoral/PastoralQueue";
 import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import BelongingSpectrum from "@/components/pastoral/BelongingSpectrum";
 import { NewStudentsCard } from "@/components/dashboard/NewStudentsCard";
-import { QuestBoard } from "@/components/home/QuestBoard";
 import { PrayerRequestsCard } from "@/components/home/PrayerRequestsCard";
-import { HomeProfileDrawer, HomeProfilePerson } from "@/components/home/HomeProfileDrawer";
+import {
+  HomeProfileDrawer,
+  HomeProfilePerson,
+} from "@/components/home/HomeProfileDrawer";
 import { HomeMessageDrawer } from "@/components/home/HomeMessageDrawer";
-import { HomePeopleListDrawer, BelongingPerson } from "@/components/home/HomePeopleListDrawer";
-import { usePastoralRecommendations } from "@/hooks/queries/use-recommendations";
+import {
+  HomePeopleListDrawer,
+  BelongingPerson,
+} from "@/components/home/HomePeopleListDrawer";
 import { useBelongingDistribution } from "@/hooks/queries/use-belonging-distribution";
 import { useSmsInbox, SmsConversation } from "@/hooks/queries/use-sms-inbox";
 import { useNewStudents, NewStudent } from "@/hooks/queries/use-new-students";
-import { usePrayerRequests, PrayerRequest } from "@/hooks/queries/use-prayer-requests";
+import {
+  usePrayerRequests,
+  PrayerRequest,
+} from "@/hooks/queries/use-prayer-requests";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMyOrgProfile } from "@/hooks/queries/use-my-profile";
 import { orgPath } from "@/lib/navigation";
@@ -26,15 +32,20 @@ export default function HomePage() {
   const orgSlug = currentOrganization?.slug;
 
   const { data: profile } = useMyOrgProfile(organizationId);
-  const { data: recommendations, isLoading: recsLoading } = usePastoralRecommendations(organizationId, 5);
-  const { data: belongingData, isLoading: belongingLoading } = useBelongingDistribution(organizationId);
+  const { data: belongingData, isLoading: belongingLoading } =
+    useBelongingDistribution(organizationId);
   const { data: smsInbox, isLoading: smsLoading } = useSmsInbox(organizationId);
-  const { data: newStudents, isLoading: newStudentsLoading } = useNewStudents(organizationId);
-  const { data: prayerRequests, isLoading: prayerLoading } = usePrayerRequests(organizationId, 4);
+  const { data: newStudents, isLoading: newStudentsLoading } =
+    useNewStudents(organizationId);
+  const { data: prayerRequests, isLoading: prayerLoading } = usePrayerRequests(
+    organizationId,
+    4,
+  );
 
   // Profile drawer state
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<HomeProfilePerson | null>(null);
+  const [selectedPerson, setSelectedPerson] =
+    useState<HomeProfilePerson | null>(null);
 
   // Message drawer state
   const [messageDrawerOpen, setMessageDrawerOpen] = useState(false);
@@ -46,8 +57,11 @@ export default function HomePage() {
 
   // People list drawer state (for BelongingSpectrum)
   const [peopleListDrawerOpen, setPeopleListDrawerOpen] = useState(false);
-  const [selectedBelongingStatus, setSelectedBelongingStatus] = useState<BelongingStatus | null>(null);
-  const [selectedBelongingPeople, setSelectedBelongingPeople] = useState<BelongingPerson[]>([]);
+  const [selectedBelongingStatus, setSelectedBelongingStatus] =
+    useState<BelongingStatus | null>(null);
+  const [selectedBelongingPeople, setSelectedBelongingPeople] = useState<
+    BelongingPerson[]
+  >([]);
 
   // Handle belonging spectrum status click → open people list drawer
   const handleBelongingFilterChange = (status: BelongingStatus | "all") => {
@@ -111,27 +125,6 @@ export default function HomePage() {
     setMessageDrawerOpen(true);
   };
 
-  // Handle clicking a person in PastoralQueue → open profile drawer
-  const handlePastoralPersonClick = (rec: PastoralRecommendation) => {
-    const nameParts = rec.student_name.split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
-    setSelectedPerson({
-      profile_id: rec.student_id,
-      first_name: firstName,
-      last_name: lastName,
-      phone_number: null,
-      email: null,
-      grade: null,
-      gender: null,
-      high_school: null,
-      last_check_in: rec.last_seen,
-      days_since_last_check_in: rec.days_absent,
-    });
-    setProfileDrawerOpen(true);
-  };
-
   // Handle clicking a prayer request → open profile drawer
   const handlePrayerPersonClick = (request: PrayerRequest) => {
     setSelectedPerson({
@@ -187,26 +180,18 @@ export default function HomePage() {
         />
       )}
 
-      {/* Quest Board + New Students - Two Column Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Quest Board - Daily Habits & Priority Actions */}
-        {organizationId && (
-          <QuestBoard organizationId={organizationId} orgSlug={orgSlug} />
-        )}
-
-        {/* New Students Card */}
-        {organizationId && orgSlug && (
-          <NewStudentsCard
-            data={newStudents ?? []}
-            loading={newStudentsLoading}
-            organizationId={organizationId}
-            orgSlug={orgSlug}
-            viewAllHref={orgPath(orgSlug, "/people?filter=new")}
-            onPersonClick={handlePersonClick}
-            onSmsClick={handleSmsClick}
-          />
-        )}
-      </div>
+      {/* New Students Card */}
+      {organizationId && orgSlug && (
+        <NewStudentsCard
+          data={newStudents ?? []}
+          loading={newStudentsLoading}
+          organizationId={organizationId}
+          orgSlug={orgSlug}
+          viewAllHref={orgPath(orgSlug, "/people?filter=new")}
+          onPersonClick={handlePersonClick}
+          onSmsClick={handleSmsClick}
+        />
+      )}
 
       {/* Prayer Requests + Recent Messages - Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -226,15 +211,6 @@ export default function HomePage() {
           onConversationClick={handleConversationClick}
         />
       </div>
-
-      {/* Pastoral Queue - Full Width */}
-      <PastoralQueue
-        data={recommendations ?? []}
-        loading={orgLoading || recsLoading}
-        viewAllHref={orgPath(orgSlug, "/pastoral")}
-        useDrawer
-        onPersonClick={handlePastoralPersonClick}
-      />
 
       {/* Drawers - rendered at page level */}
       <HomeProfileDrawer
