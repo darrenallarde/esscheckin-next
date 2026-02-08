@@ -49,8 +49,8 @@ export function GameGenerationModal({
                 {devotionalTitle}
               </p>
             )}
-            <div className="flex items-center gap-2 w-full">
-              <code className="flex-1 px-3 py-2 bg-muted rounded-md text-sm truncate">
+            <div className="flex items-center gap-2 w-full min-w-0">
+              <code className="flex-1 min-w-0 px-3 py-2 bg-muted rounded-md text-xs break-all">
                 {gameUrl}
               </code>
               <Button variant="outline" size="icon" onClick={handleCopy}>
