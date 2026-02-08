@@ -17,14 +17,22 @@ export function GameAnswerGrid({
   mode,
   hideWords = false,
 }: GameAnswerGridProps) {
-  const sorted = [...answers].sort((a, b) => a.rank - b.rank);
+  // Deduplicate by rank (AI-judged entries can share ranks with seeds)
+  const deduped = deduplicateByRank(answers);
+  const sorted = [...deduped].sort((a, b) => a.rank - b.rank);
   const normalizedPlayer = playerAnswer ? normalizeAnswer(playerAnswer) : null;
 
   const visible =
     mode === "full" ? sorted : getCondensedAnswers(sorted, playerRank);
 
   if (hideWords) {
-    return <RankPillGrid visible={visible} playerRank={playerRank ?? null} />;
+    return (
+      <RankTable
+        visible={visible}
+        playerRank={playerRank ?? null}
+        playerAnswer={playerAnswer}
+      />
+    );
   }
 
   return (
@@ -75,45 +83,80 @@ export function GameAnswerGrid({
   );
 }
 
-/** Compact number-only grid — shows rank pills, highlights the player's rank */
-function RankPillGrid({
+/** Vertical rank table — numbers only, player's row highlighted with their word */
+function RankTable({
   visible,
   playerRank,
+  playerAnswer,
 }: {
   visible: VisibleItem[];
   playerRank: number | null;
+  playerAnswer?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5 items-center">
+    <div className="space-y-0.5">
       {visible.map((item, i) => {
         if ("gap" in item) {
           return (
-            <span
+            <div
               key={`gap-${i}`}
-              className="text-stone-300 text-xs px-1 select-none"
+              className="flex items-center justify-center py-1"
             >
-              &middot;&middot;&middot;
-            </span>
+              <span className="text-xs text-stone-300 tracking-widest">
+                &bull; &bull; &bull;
+              </span>
+            </div>
           );
         }
 
         const isPlayer = playerRank === item.rank;
 
+        if (isPlayer) {
+          return (
+            <div
+              key={item.rank}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg bg-emerald-100 border-2 border-emerald-400 shadow-sm"
+            >
+              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-600 text-white text-xs font-bold">
+                {item.rank}
+              </span>
+              <span className="font-bold text-emerald-900 text-base">
+                {playerAnswer || item.answer}
+              </span>
+            </div>
+          );
+        }
+
         return (
-          <span
+          <div
             key={item.rank}
-            className={`inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors ${
-              isPlayer
-                ? "h-8 min-w-[2rem] px-1.5 bg-emerald-600 text-white font-bold shadow-sm ring-2 ring-emerald-300"
-                : "h-6 min-w-[1.5rem] px-1 bg-stone-100 text-stone-400"
-            }`}
+            className="flex items-center px-3 py-1 rounded text-sm"
           >
-            {item.rank}
-          </span>
+            <span className="w-7 text-right font-mono text-xs text-stone-300">
+              {item.rank}
+            </span>
+          </div>
         );
       })}
     </div>
   );
+}
+
+/** Remove duplicate ranks — keep the first (seed) entry at each rank */
+function deduplicateByRank(
+  answers: { answer: string; rank: number }[],
+): { answer: string; rank: number }[] {
+  const seen = new Set<number>();
+  const result: { answer: string; rank: number }[] = [];
+  // Sort by rank, prefer non-AI-judged (original seeds) by putting them first
+  const sorted = [...answers].sort((a, b) => a.rank - b.rank);
+  for (const a of sorted) {
+    if (!seen.has(a.rank)) {
+      seen.add(a.rank);
+      result.push(a);
+    }
+  }
+  return result;
 }
 
 type VisibleItem = { answer: string; rank: number } | { gap: true };
