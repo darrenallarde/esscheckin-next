@@ -2,6 +2,9 @@
 -- Multipliers: R1=2, R2=3, R3=2, R4=3 (was 1,2,3,4)
 -- LOW rounds capped at answer_count (prevents AI-judged answers scoring extra)
 -- Total max still = answer_count * 10
+--
+-- Actual table: game_rounds (not game_session_answers)
+-- Columns: game_session_id, submitted_answer, answer_rank, direction
 
 CREATE OR REPLACE FUNCTION submit_game_answer(
   p_game_id UUID,
@@ -35,14 +38,13 @@ BEGIN
     RAISE EXCEPTION 'No profile found for authenticated user';
   END IF;
 
-  -- Normalize the answer
   v_normalized := LOWER(TRIM(p_answer));
 
   -- Get answer_count from the game
   SELECT COALESCE(answer_count, 400) INTO v_answer_count
   FROM games WHERE id = p_game_id;
 
-  -- Set direction and multiplier based on round (balanced: 2, 3, 2, 3)
+  -- Set direction and multiplier (balanced: 2, 3, 2, 3)
   IF p_round_number <= 2 THEN
     v_direction := 'high';
   ELSE
@@ -72,11 +74,10 @@ BEGIN
 
   -- Check if this round was already submitted
   SELECT * INTO v_existing_round
-  FROM game_session_answers
-  WHERE session_id = v_session_id AND round_number = p_round_number;
+  FROM game_rounds
+  WHERE game_session_id = v_session_id AND round_number = p_round_number;
 
   IF v_existing_round IS NOT NULL THEN
-    -- Return existing round result
     SELECT COALESCE(jsonb_agg(jsonb_build_object('answer', ga.answer, 'rank', ga.rank) ORDER BY ga.rank), '[]'::jsonb)
     INTO v_all_answers
     FROM game_answers ga WHERE ga.game_id = p_game_id;
@@ -84,9 +85,9 @@ BEGIN
     RETURN jsonb_build_object(
       'session_id', v_session_id,
       'round_number', p_round_number,
-      'submitted_answer', v_existing_round.answer,
+      'submitted_answer', v_existing_round.submitted_answer,
       'on_list', v_existing_round.on_list,
-      'rank', v_existing_round.rank,
+      'rank', v_existing_round.answer_rank,
       'round_score', v_existing_round.round_score,
       'total_score', v_total_score,
       'direction', v_direction,
@@ -102,11 +103,9 @@ BEGIN
 
   IF v_rank IS NOT NULL THEN
     v_on_list := TRUE;
-    -- Score calculation (balanced)
     IF v_direction = 'high' THEN
       v_score := GREATEST(0, (v_answer_count + 1 - v_rank) * v_multiplier);
     ELSE
-      -- Cap at answer_count to prevent AI-judged answers beyond list from scoring extra
       v_score := LEAST(v_rank, v_answer_count) * v_multiplier;
     END IF;
   END IF;
@@ -115,9 +114,9 @@ BEGIN
   v_total_score := v_total_score + v_score;
   UPDATE game_sessions SET total_score = v_total_score WHERE id = v_session_id;
 
-  -- Record the round answer (miss-no-insert: only save if on list, or save miss without modifying answer list)
-  INSERT INTO game_session_answers (session_id, round_number, answer, on_list, rank, round_score)
-  VALUES (v_session_id, p_round_number, v_normalized, v_on_list, v_rank, v_score);
+  -- Record the round
+  INSERT INTO game_rounds (game_session_id, round_number, direction, submitted_answer, answer_rank, on_list, round_score)
+  VALUES (v_session_id, p_round_number, v_direction, v_normalized, v_rank, v_on_list, v_score);
 
   -- Get all answers for display
   SELECT COALESCE(jsonb_agg(jsonb_build_object('answer', ga.answer, 'rank', ga.rank) ORDER BY ga.rank), '[]'::jsonb)
