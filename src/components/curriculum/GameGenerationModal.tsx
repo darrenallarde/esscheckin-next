@@ -37,7 +37,7 @@ export function GameGenerationModal({
   if (isComplete && gameUrl) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md">
           <DialogTitle>Game Ready!</DialogTitle>
           <DialogDescription>
             Share this link with your students to play.
@@ -70,7 +70,7 @@ export function GameGenerationModal({
   return (
     <Dialog open={isOpen}>
       <DialogContent
-        className="sm:max-w-md [&>button]:hidden"
+        className="max-w-[calc(100%-2rem)] sm:max-w-md [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -92,7 +92,7 @@ export function GameGenerationModal({
             </p>
           )}
           <p className="text-sm text-muted-foreground mt-4 text-center px-4">
-            Creating 200 ranked answers and game content.
+            Creating 400 ranked answers and game content.
             <br />
             This usually takes 30-60 seconds.
           </p>
