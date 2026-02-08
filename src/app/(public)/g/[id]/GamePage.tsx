@@ -6,6 +6,7 @@ import { getGameStatus } from "@/lib/game/utils";
 import { getTheme, getThemeCSSOverrides } from "@/lib/themes";
 import { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 import { useSubmitAnswer } from "@/hooks/mutations/use-submit-answer";
+import { useOrgLeaderContact } from "@/hooks/queries/use-org-leader-contact";
 import { createClient } from "@/lib/supabase/client";
 import { GameIntro } from "@/components/game/GameIntro";
 import { GameAuthGate } from "@/components/game/GameAuthGate";
@@ -55,6 +56,19 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
   const orgName = organization.display_name || organization.name;
   const answerCount = game.answer_count || 400;
 
+  // Fetch org leader contact for "Message Pastor" button
+  const { data: leaderContactData } = useOrgLeaderContact(organization.id);
+  const leaderContact =
+    leaderContactData?.first_name && leaderContactData?.phone_number
+      ? {
+          name: leaderContactData.first_name,
+          phone: leaderContactData.phone_number,
+        }
+      : null;
+
+  // Game score = sum of round scores only (no prayer bonus)
+  const gameScore = state.rounds.reduce((s, r) => s + r.roundScore, 0);
+
   // Check game status and restore auth on mount
   useEffect(() => {
     const init = async () => {
@@ -100,24 +114,29 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
                   allAnswers: [],
                 }),
               );
-              const totalScore = completedRounds.reduce(
+              const roundScoreSum = completedRounds.reduce(
                 (s, r) => s + r.roundScore,
                 0,
               );
 
-              // Get session ID
+              // Get session ID and DB total_score
               const { data: sessionData } = await supabase
                 .from("game_sessions")
-                .select("id")
+                .select("id, total_score")
                 .eq("game_id", game.id)
                 .eq("profile_id", data.id)
                 .single();
+
+              // Use DB total_score directly — it includes prayer bonus
+              const dbTotalScore = sessionData?.total_score ?? roundScoreSum;
+              const prayerBonusAwarded = dbTotalScore > roundScoreSum;
 
               dispatch({
                 type: "RESUME_SESSION",
                 sessionId: sessionData?.id ?? "",
                 completedRounds,
-                totalScore,
+                totalScore: dbTotalScore,
+                prayerBonusAwarded,
               });
 
               // Check game status after resuming
@@ -212,14 +231,24 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
           p_journal_text: prayer,
         });
 
-        // Update game session score with bonus
-        if (state.sessionId) {
-          await supabase
+        // Only update game session score with bonus on FIRST prayer
+        const isFirstPrayer = !state.prayerBonusAwarded;
+        if (isFirstPrayer && state.sessionId) {
+          const { error } = await supabase
             .from("game_sessions")
             .update({
               total_score: state.totalScore + PRAYER_BONUS_POINTS,
             })
             .eq("id", state.sessionId);
+
+          if (error) {
+            // DB update failed — don't claim bonus was awarded
+            dispatch({
+              type: "PRAYER_SUBMITTED",
+              bonusPoints: 0,
+            });
+            return;
+          }
         }
 
         dispatch({
@@ -227,16 +256,21 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
           bonusPoints: PRAYER_BONUS_POINTS,
         });
       } catch {
-        // Best effort — still advance to leaderboard
+        // Best effort — still advance back to results
         dispatch({
           type: "PRAYER_SUBMITTED",
-          bonusPoints: PRAYER_BONUS_POINTS,
+          bonusPoints: 0,
         });
       } finally {
         setPrayerSubmitting(false);
       }
     },
-    [game.devotional_id, state.sessionId, state.totalScore],
+    [
+      game.devotional_id,
+      state.sessionId,
+      state.totalScore,
+      state.prayerBonusAwarded,
+    ],
   );
 
   const handleNextRound = useCallback(() => {
@@ -342,9 +376,12 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
           <GameFinalResults
             rounds={state.rounds}
             totalScore={state.totalScore}
+            gameScore={gameScore}
             firstName={state.firstName}
             answerCount={answerCount}
-            prayerSubmitted={state.prayerSubmitted}
+            prayerBonusAwarded={state.prayerBonusAwarded}
+            prayerCount={state.prayerCount}
+            leaderContact={leaderContact}
             onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
             onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
           />
@@ -353,6 +390,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
         {state.screen === "prayer_bonus" && (
           <GamePrayerBonus
             firstName={state.firstName}
+            prayerBonusAwarded={state.prayerBonusAwarded}
             onSubmit={handleSubmitPrayer}
             onSkip={() => dispatch({ type: "SKIP_PRAYER" })}
             submitting={prayerSubmitting}

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, Loader2, ChevronRight, Sparkles } from "lucide-react";
+import { Heart, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 
 const PRAYER_BONUS_POINTS = 500;
 
 interface GamePrayerBonusProps {
   firstName: string;
+  prayerBonusAwarded: boolean;
   onSubmit: (prayer: string) => void;
   onSkip: () => void;
   submitting: boolean;
@@ -14,6 +15,7 @@ interface GamePrayerBonusProps {
 
 export function GamePrayerBonus({
   firstName,
+  prayerBonusAwarded,
   onSubmit,
   onSkip,
   submitting,
@@ -33,16 +35,26 @@ export function GamePrayerBonus({
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 text-purple-800">
           <Sparkles className="h-4 w-4" />
-          <span className="text-sm font-bold">Bonus Round</span>
+          <span className="text-sm font-bold">
+            {prayerBonusAwarded ? "Pray Again" : "Bonus Round"}
+          </span>
         </div>
         <h2 className="text-xl font-bold text-stone-900">
-          {firstName ? `${firstName}, one` : "One"} more thing...
+          {prayerBonusAwarded
+            ? `${firstName ? `${firstName}, share` : "Share"} another prayer`
+            : `${firstName ? `${firstName}, one` : "One"} more thing...`}
         </h2>
         <p className="text-sm text-stone-500">
-          Share a prayer request and earn{" "}
-          <span className="font-bold text-purple-700">
-            +{PRAYER_BONUS_POINTS} bonus points
-          </span>
+          {prayerBonusAwarded ? (
+            "Your leaders will see this and pray for you"
+          ) : (
+            <>
+              Share a prayer request and earn{" "}
+              <span className="font-bold text-purple-700">
+                +{PRAYER_BONUS_POINTS} bonus points
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -77,21 +89,23 @@ export function GamePrayerBonus({
             ) : (
               <>
                 <Heart className="h-5 w-5" />
-                Submit Prayer (+{PRAYER_BONUS_POINTS} pts)
+                {prayerBonusAwarded
+                  ? "Submit Prayer"
+                  : `Submit Prayer (+${PRAYER_BONUS_POINTS} pts)`}
               </>
             )}
           </button>
         </form>
       </div>
 
-      {/* Skip option */}
+      {/* Back to results */}
       <button
         onClick={onSkip}
         disabled={submitting}
         className="w-full py-3 text-sm text-stone-400 hover:text-stone-600 transition-colors flex items-center justify-center gap-1"
       >
-        Skip and see leaderboard
-        <ChevronRight className="h-4 w-4" />
+        <ArrowLeft className="h-4 w-4" />
+        Back to results
       </button>
     </div>
   );
