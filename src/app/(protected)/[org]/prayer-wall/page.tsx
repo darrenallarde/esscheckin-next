@@ -68,24 +68,33 @@ export default function PrayerWallPage() {
   const audioUrlRef = useRef<string | null>(null);
   const audioBlobRef = useRef<Blob | null>(null);
 
-  // Pray action — sends encouraging SMS
+  // Pray action — sends encouraging SMS with prayer response link
   const handlePrayForThem = async (request: PrayerRequest) => {
     if (!request.phone_number || !organizationId) return;
     const leaderName = profile?.display_name?.split(" ")[0] || "Your leader";
 
     // Record the prayer response
-    await respondMutation.mutateAsync({
+    const result = await respondMutation.mutateAsync({
       engagementId: request.engagement_id,
       responseType: "pray",
       message: `Prayed for ${request.first_name}`,
     });
 
-    // Send encouraging SMS
+    // Build prayer response link
+    const responseUrl = result.response_id
+      ? `${window.location.origin}/d/prayer/${result.response_id}`
+      : null;
+
+    // Send encouraging SMS with link
     const supabase = createClient();
+    const smsBody = responseUrl
+      ? `Hey ${request.first_name}, ${leaderName} just prayed for you. Tap to see: ${responseUrl}`
+      : `Hey ${request.first_name}, ${leaderName} just prayed for your request. You are not alone. We're with you.`;
+
     await supabase.functions.invoke("send-sms", {
       body: {
         to: request.phone_number,
-        body: `Hey ${request.first_name}, ${leaderName} just prayed for your request. You are not alone. We're with you.`,
+        body: smsBody,
         profileId: request.profile_id,
         organizationId,
         senderDisplayName: profile?.display_name,
@@ -153,19 +162,23 @@ export default function PrayerWallPage() {
     const voiceUrl = publicUrl.publicUrl;
 
     // Record response
-    await respondMutation.mutateAsync({
+    const result = await respondMutation.mutateAsync({
       engagementId: request.engagement_id,
       responseType: "voice",
       voiceUrl,
     });
 
-    // Send SMS with link
+    // Send SMS with prayer response link (not raw voice URL)
     if (request.phone_number) {
       const leaderName = profile?.display_name?.split(" ")[0] || "Your leader";
+      const responseUrl = result.response_id
+        ? `${window.location.origin}/d/prayer/${result.response_id}`
+        : voiceUrl;
+
       await supabase.functions.invoke("send-sms", {
         body: {
           to: request.phone_number,
-          body: `${leaderName} recorded a prayer for you: ${voiceUrl}`,
+          body: `${leaderName} recorded a prayer for you. Tap to listen: ${responseUrl}`,
           profileId: request.profile_id,
           organizationId,
           senderDisplayName: profile?.display_name,

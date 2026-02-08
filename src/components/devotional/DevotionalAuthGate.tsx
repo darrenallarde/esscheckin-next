@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookHeart, PenLine, Phone, Mail, UserCircle, Loader2 } from "lucide-react";
+import { BookHeart, Phone, Mail, UserCircle, Loader2 } from "lucide-react";
 import { useDevotionalAuth } from "@/hooks/queries/use-devotional-auth";
 import { PhoneOtpForm } from "./PhoneOtpForm";
 import { EmailOtpForm } from "./EmailOtpForm";
@@ -16,7 +16,11 @@ interface DevotionalAuthGateProps {
   orgSlug: string;
 }
 
-export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalAuthGateProps) {
+export function DevotionalAuthGate({
+  devotionalId,
+  orgId,
+  orgSlug,
+}: DevotionalAuthGateProps) {
   const auth = useDevotionalAuth();
   const [screen, setScreen] = useState<AuthScreen>("gate");
   const [authenticated, setAuthenticated] = useState(false);
@@ -92,7 +96,10 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
         <PhoneOtpForm
           auth={auth}
           onSuccess={handleAuthSuccess}
-          onBack={() => { setScreen("gate"); auth.clearError(); }}
+          onBack={() => {
+            setScreen("gate");
+            auth.clearError();
+          }}
         />
       </section>
     );
@@ -104,7 +111,10 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
         <EmailOtpForm
           auth={auth}
           onSuccess={handleAuthSuccess}
-          onBack={() => { setScreen("gate"); auth.clearError(); }}
+          onBack={() => {
+            setScreen("gate");
+            auth.clearError();
+          }}
         />
       </section>
     );
@@ -118,7 +128,10 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
           orgId={orgId}
           orgSlug={orgSlug}
           onSuccess={handleAuthSuccess}
-          onBack={() => { setScreen("gate"); auth.clearError(); }}
+          onBack={() => {
+            setScreen("gate");
+            auth.clearError();
+          }}
         />
       </section>
     );
@@ -129,20 +142,14 @@ export function DevotionalAuthGate({ devotionalId, orgId, orgSlug }: DevotionalA
     <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm animate-fade-in-up">
       <div className="text-center space-y-4">
         <p className="text-sm font-semibold uppercase tracking-wider text-stone-500">
-          Want to engage deeper?
+          Share what&apos;s on your heart
         </p>
-        <div className="flex items-center justify-center gap-6 text-muted-foreground">
+        <div className="flex items-center justify-center text-muted-foreground">
           <div className="flex flex-col items-center gap-1.5">
-            <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-              <PenLine className="h-5 w-5 text-amber-600" />
+            <div className="h-12 w-12 rounded-full bg-rose-100 flex items-center justify-center">
+              <BookHeart className="h-6 w-6 text-rose-600" />
             </div>
-            <span className="text-xs">Journal</span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center">
-              <BookHeart className="h-5 w-5 text-rose-600" />
-            </div>
-            <span className="text-xs">Pray</span>
+            <span className="text-xs">Prayer Request</span>
           </div>
         </div>
 
