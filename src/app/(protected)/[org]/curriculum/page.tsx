@@ -39,6 +39,7 @@ import { GenerationProgressModal } from "@/components/curriculum/GenerationProgr
 import { EditDevotionalModal } from "@/components/curriculum/EditDevotionalModal";
 import { GameGenerationModal } from "@/components/curriculum/GameGenerationModal";
 import { useCreateGame } from "@/hooks/mutations/use-create-game";
+import { useDevotionalGames } from "@/hooks/queries/use-devotional-games";
 
 export default function CurriculumPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
@@ -90,6 +91,8 @@ export default function CurriculumPage() {
 
   // Get devotionals for active series
   const { data: activeDevotionals } = useDevotionals(activeSeries?.id || null);
+  const { data: gamesByDevotionalId, refetch: refetchGames } =
+    useDevotionalGames(organizationId);
 
   const handleSermonChange = (content: string, title?: string) => {
     setSermonContent(content);
@@ -325,6 +328,7 @@ export default function CurriculumPage() {
 
       setGameUrl(result.gameUrl);
       setGameComplete(true);
+      refetchGames();
 
       toast({
         title: "Hi-Lo Game created!",
@@ -471,6 +475,7 @@ export default function CurriculumPage() {
               onArchive={() => handleArchive(activeSeries)}
               onEditDevotional={setEditingDevotional}
               onCreateGame={handleCreateGame}
+              gamesByDevotionalId={gamesByDevotionalId}
             />
           ) : (
             <Card>

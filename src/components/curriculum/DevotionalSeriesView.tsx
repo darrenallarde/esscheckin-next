@@ -22,9 +22,16 @@ import {
   MessageCircle,
   Link2,
   Check,
+  Copy,
   Gamepad2,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import type { DevotionalGame } from "@/hooks/queries/use-devotional-games";
 import {
   DevotionalSeries,
   Devotional,
@@ -53,6 +60,7 @@ interface DevotionalSeriesViewProps {
   onDelete?: () => void;
   onEditDevotional?: (devotional: Devotional) => void;
   onCreateGame?: (devotionalId: string) => void;
+  gamesByDevotionalId?: Record<string, DevotionalGame>;
   isActivating?: boolean;
 }
 
@@ -124,15 +132,60 @@ function DevotionalSection({
   );
 }
 
+function GameLinkPopover({ gameId }: { gameId: string }) {
+  const [copied, setCopied] = useState(false);
+  const gameUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/g/${gameId}`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(gameUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" title="View Hi-Lo Game link">
+          <Gamepad2 className="h-3 w-3 text-green-600" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Hi-Lo Game Link</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <code className="flex-1 min-w-0 px-2 py-1 bg-muted rounded text-xs break-all">
+              {gameUrl}
+            </code>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-green-600" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DevotionalCard({
   devotional,
   onEdit,
   onCreateGame,
+  existingGame,
   showCopyLink,
 }: {
   devotional: Devotional;
   onEdit?: () => void;
   onCreateGame?: (devotionalId: string) => void;
+  existingGame?: DevotionalGame;
   showCopyLink?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -163,7 +216,10 @@ function DevotionalCard({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {showCopyLink && onCreateGame && (
+            {showCopyLink && existingGame && (
+              <GameLinkPopover gameId={existingGame.id} />
+            )}
+            {showCopyLink && !existingGame && onCreateGame && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -247,6 +303,7 @@ export function DevotionalSeriesView({
   onDelete,
   onEditDevotional,
   onCreateGame,
+  gamesByDevotionalId,
   isActivating,
 }: DevotionalSeriesViewProps) {
   // Group devotionals by date
@@ -413,6 +470,7 @@ export function DevotionalSeriesView({
                         devotional={devotional}
                         showCopyLink={series.status === "active"}
                         onCreateGame={onCreateGame}
+                        existingGame={gamesByDevotionalId?.[devotional.id]}
                         onEdit={
                           onEditDevotional
                             ? () => onEditDevotional(devotional)
