@@ -34,6 +34,7 @@ interface GamePageProps {
     opens_at: string | null;
     closes_at: string | null;
     created_at: string;
+    answer_count?: number;
   };
   organization: {
     id: string;
@@ -52,6 +53,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
   const theme = getTheme(organization.theme_id);
   const themeStyles = getThemeCSSOverrides(theme);
   const orgName = organization.display_name || organization.name;
+  const answerCount = game.answer_count || 400;
 
   // Check game status and restore auth on mount
   useEffect(() => {
@@ -331,6 +333,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             round={state.rounds[state.rounds.length - 1]}
             currentRound={state.currentRound}
             totalScore={state.totalScore}
+            answerCount={answerCount}
             onNext={handleNextRound}
           />
         )}
@@ -340,6 +343,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             rounds={state.rounds}
             totalScore={state.totalScore}
             firstName={state.firstName}
+            answerCount={answerCount}
             onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
             onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
           />

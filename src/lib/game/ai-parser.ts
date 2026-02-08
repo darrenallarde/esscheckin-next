@@ -96,13 +96,14 @@ export function parseGameAIResponse(raw: string): ParseResult {
 }
 
 /**
- * Validate the 400-answer list for completeness and uniqueness.
+ * Validate the answer list for completeness and uniqueness.
+ * Accepts 80-200 answers with ranks 1-500 (room for AI-judged placements).
  */
 export function validateGameAnswers(answers: GameAnswer[]): ValidationResult {
-  if (answers.length < 350 || answers.length > 400) {
+  if (answers.length < 80 || answers.length > 200) {
     return {
       valid: false,
-      error: `Expected 350-400 answers, got ${answers.length}`,
+      error: `Expected 80-200 answers, got ${answers.length}`,
     };
   }
 
@@ -114,10 +115,10 @@ export function validateGameAnswers(answers: GameAnswer[]): ValidationResult {
       return { valid: false, error: "Answer contains empty string" };
     }
 
-    if (typeof a.rank !== "number" || a.rank < 1 || a.rank > 400) {
+    if (typeof a.rank !== "number" || a.rank < 1 || a.rank > 500) {
       return {
         valid: false,
-        error: `Invalid rank ${a.rank}: must be 1-400`,
+        error: `Invalid rank ${a.rank}: must be 1-500`,
       };
     }
 

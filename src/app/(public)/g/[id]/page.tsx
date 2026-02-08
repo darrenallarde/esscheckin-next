@@ -20,6 +20,7 @@ interface PublicGameData {
     opens_at: string | null;
     closes_at: string | null;
     created_at: string;
+    answer_count?: number;
   };
   organization: {
     id: string;

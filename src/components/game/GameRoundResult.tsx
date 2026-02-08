@@ -10,14 +10,14 @@ import {
 } from "lucide-react";
 import { GameAnswerGrid } from "./GameAnswerGrid";
 import { GameScoreBar } from "./GameScoreBar";
+import { getRoundMaxScore } from "@/lib/game/scoring";
 import type { RoundData } from "@/lib/game/state-machine";
-
-const ROUND_MAX = { 1: 400, 2: 800, 3: 1200, 4: 1600 } as const;
 
 interface GameRoundResultProps {
   round: RoundData;
   currentRound: number;
   totalScore: number;
+  answerCount: number;
   onNext: () => void;
 }
 
@@ -25,10 +25,11 @@ export function GameRoundResult({
   round,
   currentRound,
   totalScore,
+  answerCount,
   onNext,
 }: GameRoundResultProps) {
   const isHigh = round.direction === "high";
-  const maxRoundScore = ROUND_MAX[round.roundNumber as keyof typeof ROUND_MAX];
+  const maxRoundScore = getRoundMaxScore(round.roundNumber, answerCount);
   const isLastRound = currentRound >= 4;
 
   return (
