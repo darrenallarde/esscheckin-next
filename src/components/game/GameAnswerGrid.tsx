@@ -5,22 +5,27 @@ import { normalizeAnswer } from "@/lib/game/utils";
 interface GameAnswerGridProps {
   answers: { answer: string; rank: number }[];
   playerAnswer?: string;
-  mode: "condensed" | "full";
   playerRank?: number | null;
+  mode: "condensed" | "full";
+  hideWords?: boolean;
 }
 
 export function GameAnswerGrid({
   answers,
   playerAnswer,
-  mode,
   playerRank,
+  mode,
+  hideWords = false,
 }: GameAnswerGridProps) {
   const sorted = [...answers].sort((a, b) => a.rank - b.rank);
   const normalizedPlayer = playerAnswer ? normalizeAnswer(playerAnswer) : null;
 
-  // Condensed: top 5 + player neighborhood + bottom 5
   const visible =
     mode === "full" ? sorted : getCondensedAnswers(sorted, playerRank);
+
+  if (hideWords) {
+    return <RankPillGrid visible={visible} playerRank={playerRank ?? null} />;
+  }
 
   return (
     <div className="space-y-1">
@@ -64,6 +69,47 @@ export function GameAnswerGrid({
               </>
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Compact number-only grid — shows rank pills, highlights the player's rank */
+function RankPillGrid({
+  visible,
+  playerRank,
+}: {
+  visible: VisibleItem[];
+  playerRank: number | null;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5 items-center">
+      {visible.map((item, i) => {
+        if ("gap" in item) {
+          return (
+            <span
+              key={`gap-${i}`}
+              className="text-stone-300 text-xs px-1 select-none"
+            >
+              &middot;&middot;&middot;
+            </span>
+          );
+        }
+
+        const isPlayer = playerRank === item.rank;
+
+        return (
+          <span
+            key={item.rank}
+            className={`inline-flex items-center justify-center rounded-md text-xs font-medium transition-colors ${
+              isPlayer
+                ? "h-8 min-w-[2rem] px-1.5 bg-emerald-600 text-white font-bold shadow-sm ring-2 ring-emerald-300"
+                : "h-6 min-w-[1.5rem] px-1 bg-stone-100 text-stone-400"
+            }`}
+          >
+            {item.rank}
+          </span>
         );
       })}
     </div>

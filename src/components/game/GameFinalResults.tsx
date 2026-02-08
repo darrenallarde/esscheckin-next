@@ -1,6 +1,16 @@
 "use client";
 
-import { Trophy, ArrowUp, ArrowDown, BarChart3, Heart } from "lucide-react";
+import { useState } from "react";
+import {
+  Trophy,
+  ArrowUp,
+  ArrowDown,
+  BarChart3,
+  Heart,
+  ChevronDown,
+  List,
+} from "lucide-react";
+import { GameAnswerGrid } from "./GameAnswerGrid";
 import { GameScoreBar } from "./GameScoreBar";
 import { getMaxScore, getRoundMaxScore } from "@/lib/game/scoring";
 import type { RoundData } from "@/lib/game/state-machine";
@@ -22,9 +32,18 @@ export function GameFinalResults({
   onGoToPrayer,
   onViewLeaderboard,
 }: GameFinalResultsProps) {
+  const [showAnswers, setShowAnswers] = useState(false);
   const maxTotal = getMaxScore(answerCount);
   const pct = Math.round((totalScore / maxTotal) * 100);
   const greeting = firstName ? `Great game, ${firstName}!` : "Great game!";
+
+  // All rounds share the same answer list
+  const allAnswers = rounds[0]?.allAnswers ?? [];
+
+  // Collect all player answers across rounds for highlighting
+  const playerAnswers = rounds
+    .filter((r) => r.onList && r.rank)
+    .map((r) => r.submittedAnswer);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -106,6 +125,36 @@ export function GameFinalResults({
           })}
         </div>
       </div>
+
+      {/* Full answer reveal */}
+      {allAnswers.length > 0 && (
+        <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowAnswers(!showAnswers)}
+            className="w-full px-5 py-3 flex items-center gap-2 hover:bg-stone-50 transition-colors"
+          >
+            <List className="h-4 w-4 text-stone-500" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+              All Answers
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-stone-400 ml-auto transition-transform ${showAnswers ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showAnswers && (
+            <div className="px-4 pb-4">
+              <div className="max-h-96 overflow-y-auto rounded-lg border border-stone-100 bg-stone-50/50 p-3">
+                <GameAnswerGrid
+                  answers={allAnswers}
+                  playerAnswer={playerAnswers[0]}
+                  playerRank={null}
+                  mode="full"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Prayer bonus CTA */}
       <button

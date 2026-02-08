@@ -32,6 +32,15 @@ export function GameRoundResult({
   const maxRoundScore = getRoundMaxScore(round.roundNumber, answerCount);
   const isLastRound = currentRound >= 4;
 
+  // Find the seed answer at the matched rank
+  const matchedSeed =
+    round.onList && round.rank
+      ? round.allAnswers.find((a) => a.rank === round.rank)
+      : null;
+  const isExactMatch =
+    matchedSeed &&
+    matchedSeed.answer.toLowerCase() === round.submittedAnswer.toLowerCase();
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Result header */}
@@ -69,13 +78,29 @@ export function GameRoundResult({
           )}
         </div>
 
-        {/* Player's answer */}
-        <p className="text-sm text-stone-500">
-          You answered:{" "}
-          <span className="font-semibold text-stone-700">
+        {/* Player's answer + matched seed */}
+        <div className="space-y-1">
+          <p className="text-lg font-bold text-stone-900">
             &quot;{round.submittedAnswer}&quot;
-          </span>
-        </p>
+          </p>
+          {matchedSeed && (
+            <p className="text-sm text-stone-500">
+              Matched{" "}
+              <span className="font-semibold text-emerald-700">
+                #{matchedSeed.rank}
+              </span>
+              {!isExactMatch && (
+                <>
+                  {" "}
+                  &mdash;{" "}
+                  <span className="text-stone-600">
+                    &quot;{matchedSeed.answer}&quot;
+                  </span>
+                </>
+              )}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Score */}
@@ -103,18 +128,19 @@ export function GameRoundResult({
         </div>
       </div>
 
-      {/* Answer grid */}
+      {/* Rank grid — numbers only, no words */}
       {round.allAnswers.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-            Answers
+            Where you ranked
           </p>
-          <div className="max-h-80 overflow-y-auto rounded-xl border border-stone-200 bg-stone-50/50 p-3">
+          <div className="rounded-xl border border-stone-200 bg-stone-50/50 p-3">
             <GameAnswerGrid
               answers={round.allAnswers}
               playerAnswer={round.submittedAnswer}
               playerRank={round.rank}
               mode="condensed"
+              hideWords
             />
           </div>
         </div>
