@@ -2,15 +2,14 @@
 
 import { Trophy, ArrowUp, ArrowDown, BarChart3, Heart } from "lucide-react";
 import { GameScoreBar } from "./GameScoreBar";
+import { getMaxScore, getRoundMaxScore } from "@/lib/game/scoring";
 import type { RoundData } from "@/lib/game/state-machine";
-
-const ROUND_MAX = { 1: 400, 2: 800, 3: 1200, 4: 1600 } as const;
-const MAX_TOTAL = 4000;
 
 interface GameFinalResultsProps {
   rounds: RoundData[];
   totalScore: number;
   firstName: string;
+  answerCount: number;
   onGoToPrayer: () => void;
   onViewLeaderboard: () => void;
 }
@@ -19,10 +18,12 @@ export function GameFinalResults({
   rounds,
   totalScore,
   firstName,
+  answerCount,
   onGoToPrayer,
   onViewLeaderboard,
 }: GameFinalResultsProps) {
-  const pct = Math.round((totalScore / MAX_TOTAL) * 100);
+  const maxTotal = getMaxScore(answerCount);
+  const pct = Math.round((totalScore / maxTotal) * 100);
   const greeting = firstName ? `Great game, ${firstName}!` : "Great game!";
 
   return (
@@ -40,7 +41,7 @@ export function GameFinalResults({
             {totalScore.toLocaleString()}
           </p>
           <p className="text-sm text-stone-500">
-            out of {MAX_TOTAL.toLocaleString()} possible points ({pct}%)
+            out of {maxTotal.toLocaleString()} possible points ({pct}%)
           </p>
         </div>
       </div>
@@ -49,7 +50,7 @@ export function GameFinalResults({
       <div className="bg-white rounded-xl p-5 border border-stone-200 shadow-sm">
         <GameScoreBar
           score={totalScore}
-          maxScore={MAX_TOTAL}
+          maxScore={maxTotal}
           label="Total Score"
           color="bg-amber-500"
         />
@@ -66,8 +67,7 @@ export function GameFinalResults({
         <div className="divide-y divide-stone-100">
           {rounds.map((round) => {
             const isHigh = round.direction === "high";
-            const maxScore =
-              ROUND_MAX[round.roundNumber as keyof typeof ROUND_MAX];
+            const maxScore = getRoundMaxScore(round.roundNumber, answerCount);
             return (
               <div
                 key={round.roundNumber}

@@ -51,34 +51,58 @@ Three surprising or entertaining facts from the same era. These should make teen
 - Comparisons to modern life
 
 ### 4. core_question
+
+**QUESTION GUARDRAILS — READ CAREFULLY:**
+The question MUST be framed to elicit POSITIVE, UPLIFTING, or NEUTRAL answers. Think about what words will fill the answer grid — they should be words a youth pastor is comfortable projecting on a screen.
+
+GOOD question patterns:
+- "What one word describes God's love?"
+- "What gift would you bring to someone in need?"
+- "What makes a good friend?"
+- "What one word describes what Jesus did for us?"
+
+BAD question patterns (NEVER use these):
+- "What's the scariest thing?" → elicits fear/horror words
+- "What's the worst sin?" → elicits dark/inappropriate words
+- "What does evil look like?" → elicits demonic/violent words
+- "What would make you angry?" → elicits negative words
+
+If the devotional theme is dark (crucifixion, suffering, sin), REFRAME toward hope/redemption:
+- Instead of "What word describes the crucifixion?" → "What word describes what Jesus did for us?"
+- Instead of "What is the worst suffering?" → "What gives you hope during hard times?"
+
+The #1 ranked answer should NEVER be a negative or dark word.
+
 A single question that can be answered in ONE WORD. The question must be:
 - Grounded in the scripture/devotional context
 - Answerable by teenagers (not too obscure)
 - Open-ended enough that many different words are valid answers
 - Could range from theological to cultural to practical
 
-Examples of good questions:
-- "What one word describes what the disciples felt when they saw the empty tomb?"
-- "What type of food do you think was most commonly eaten in this story?"
-- "What one word would you use to describe God's response?"
+### 5. answers (100-150 ranked answers)
+100-150 single-word answers ranked from 1 (most popular — what most teenagers would say) to N (least popular — what almost no one would think of).
 
-### 5. answers (exactly 400)
-400 single-word answers ranked from 1 (most popular — what most teenagers would say) to 400 (least popular — what almost no one would think of).
+Imagine you surveyed 100,000 random teenagers with this question. Rank the answers by how many people would give each response.
 
-Imagine you surveyed 100,000 random people with this question. Rank the answers by how many people would give each response.
+**ANSWER CONTENT GUARDRAILS:**
+- NO profanity, slurs, or crude humor
+- NO sexual or suggestive content
+- NO demonic/occult words (satan, demon, hell-as-swear, witchcraft, curse, etc.)
+- NO violent words (kill, murder, stab, etc.) unless clearly in biblical context (e.g., "sacrifice")
+- ALL answers should be words a youth pastor would be comfortable seeing on screen in front of parents
+- Use everyday teen vocabulary — verbs, adjectives, nouns mix
 
 Rules for the answer list:
+- Rank 1 MUST be the devotional's actual answer/theme word (the most obvious response)
 - Each answer is a single word (or at most two words for compound concepts like "olive oil")
 - All answers must be legitimate responses to the question
 - Include a MIX of word types: nouns, verbs, adjectives, and adverbs — not just nouns
 - Use everyday, accessible words teenagers actually know — avoid SAT words or overly academic vocabulary
-- Rank 1-20: The obvious, first-thing-you'd-think-of answers
-- Rank 21-80: Common but slightly less obvious
-- Rank 81-200: Reasonable but require some thought — good variety of verbs and adjectives here
-- Rank 201-300: Creative, less common answers
-- Rank 301-400: Obscure but still valid answers
+- Rank 1-15: The obvious, first-thing-you'd-think-of answers
+- Rank 16-50: Common but slightly less obvious
+- Rank 51-100: Reasonable but require some thought — good variety of verbs and adjectives here
+- Rank 101-150: Creative, less common but still valid answers
 - NO duplicate words
-- NO offensive or inappropriate words
 - Think about what a room of 100 teenagers would actually shout out
 
 ## OUTPUT FORMAT
@@ -100,7 +124,7 @@ Return ONLY a JSON object (no other text):
     { "answer": "word1", "rank": 1 },
     { "answer": "word2", "rank": 2 },
     ...
-    { "answer": "word400", "rank": 400 }
+    { "answer": "wordN", "rank": N }
   ]
 }`;
 }
@@ -201,7 +225,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 32768, // 400 answers needs more tokens
+        max_tokens: 16384,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -246,12 +270,12 @@ serve(async (req) => {
       throw new Error("Failed to parse AI response as JSON");
     }
 
-    // 4. Validate the response
+    // 4. Validate the response (80-200 answers)
     if (
       !parsed.core_question ||
       !parsed.scripture_verses ||
       !Array.isArray(parsed.answers) ||
-      parsed.answers.length < 350
+      parsed.answers.length < 80
     ) {
       console.error("Invalid AI response structure");
       await supabase
@@ -259,7 +283,7 @@ serve(async (req) => {
         .update({ status: "ready" })
         .eq("id", game_id);
       throw new Error(
-        `Invalid AI response: expected ~400 answers, got ${parsed.answers?.length || 0}`,
+        `Invalid AI response: expected 80-200 answers, got ${parsed.answers?.length || 0}`,
       );
     }
 
@@ -308,6 +332,16 @@ serve(async (req) => {
     if (answerError) {
       console.error("Failed to insert answers:", answerError);
       throw new Error(`Failed to insert answers: ${answerError.message}`);
+    }
+
+    // 7. Store answer_count on the game
+    const { error: countError } = await supabase
+      .from("games")
+      .update({ answer_count: answerRecords.length })
+      .eq("id", game_id);
+
+    if (countError) {
+      console.warn("Failed to update answer_count:", countError.message);
     }
 
     console.log(

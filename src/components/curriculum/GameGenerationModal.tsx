@@ -92,9 +92,9 @@ export function GameGenerationModal({
             </p>
           )}
           <p className="text-sm text-muted-foreground mt-4 text-center px-4">
-            Creating 200 ranked answers and game content.
+            Creating 100+ ranked answers and game content.
             <br />
-            This usually takes 30-60 seconds.
+            This usually takes 20-40 seconds.
           </p>
           <div className="mt-6 w-full max-w-xs">
             <div className="h-2 w-full overflow-hidden rounded-full bg-secondary relative">

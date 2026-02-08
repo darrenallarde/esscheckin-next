@@ -25,16 +25,38 @@ async function submitAnswer(
   input: SubmitAnswerInput,
 ): Promise<SubmitAnswerResult> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("submit_game_answer", {
-    p_game_id: input.gameId,
-    p_round_number: input.roundNumber,
-    p_answer: input.answer,
-  });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (error) throw error;
-  if (!data) throw new Error("No result returned");
+  if (!session?.access_token) {
+    throw new Error("Not authenticated");
+  }
 
-  return data as unknown as SubmitAnswerResult;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const response = await fetch(
+    `${supabaseUrl}/functions/v1/judge-game-answer`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        game_id: input.gameId,
+        round_number: input.roundNumber,
+        answer: input.answer,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data as SubmitAnswerResult;
 }
 
 export function useSubmitAnswer() {
