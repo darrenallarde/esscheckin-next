@@ -38,6 +38,7 @@ export interface GameState {
   sessionId: string | null;
   submitting: boolean;
   error: string | null;
+  lastMiss: string | null;
 }
 
 export type GameAction =
@@ -85,6 +86,7 @@ export function initialState(): GameState {
     sessionId: null,
     submitting: false,
     error: null,
+    lastMiss: null,
   };
 }
 
@@ -125,11 +127,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "SUBMIT_ANSWER": {
-      return { ...state, submitting: true, error: null };
+      return { ...state, submitting: true, error: null, lastMiss: null };
     }
 
     case "ANSWER_RESULT": {
       const { result } = action;
+
+      // Miss: stay on round_play, show feedback, let them try again
+      if (!result.onList) {
+        return {
+          ...state,
+          submitting: false,
+          lastMiss: result.submittedAnswer,
+        };
+      }
+
+      // Hit: record the round and show result
       const roundData: RoundData = {
         roundNumber: result.roundNumber,
         submittedAnswer: result.submittedAnswer,
@@ -143,6 +156,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         screen: "round_result",
         submitting: false,
+        lastMiss: null,
         rounds: [...state.rounds, roundData],
         totalScore: result.totalScore,
         sessionId: result.sessionId,

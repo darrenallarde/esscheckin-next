@@ -256,6 +256,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             question={game.core_question}
             submitting={state.submitting}
             error={state.error}
+            lastMiss={state.lastMiss}
             onSubmit={handleSubmitAnswer}
             onClearError={() => dispatch({ type: "CLEAR_ERROR" })}
           />

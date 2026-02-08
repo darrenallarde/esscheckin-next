@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowUp, ArrowDown, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowUp, ArrowDown, Loader2, AlertCircle, X } from "lucide-react";
 import { getRoundDirection } from "@/lib/game/utils";
 
 interface GameRoundPlayProps {
@@ -9,6 +9,7 @@ interface GameRoundPlayProps {
   question: string;
   submitting: boolean;
   error: string | null;
+  lastMiss: string | null;
   onSubmit: (answer: string) => void;
   onClearError: () => void;
 }
@@ -20,12 +21,20 @@ export function GameRoundPlay({
   question,
   submitting,
   error,
+  lastMiss,
   onSubmit,
   onClearError,
 }: GameRoundPlayProps) {
   const [answer, setAnswer] = useState("");
   const direction = getRoundDirection(round);
   const isHigh = direction === "high";
+
+  // Clear input after a miss so the player can type a new answer
+  useEffect(() => {
+    if (lastMiss) {
+      setAnswer("");
+    }
+  }, [lastMiss]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +102,17 @@ export function GameRoundPlay({
             className="w-full px-4 py-3.5 rounded-xl border border-stone-200 bg-white text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-400 disabled:opacity-50 transition-all"
           />
         </div>
+
+        {/* Miss feedback */}
+        {lastMiss && (
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 animate-shake">
+            <X className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>
+              <span className="font-semibold">&quot;{lastMiss}&quot;</span> is
+              not on the list — try again!
+            </span>
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

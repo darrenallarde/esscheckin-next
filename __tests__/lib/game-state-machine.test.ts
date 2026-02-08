@@ -233,6 +233,67 @@ describe("gameReducer", () => {
       const next = gameReducer(state, { type: "ANSWER_RESULT", result });
       expect(next.rounds[0].allAnswers).toEqual(result.allAnswers);
     });
+
+    it("stays on round_play when answer is NOT on list", () => {
+      const state = stateAt("round_play", {
+        currentRound: 1,
+        submitting: true,
+      });
+      const result = fakeSubmitResult(1, {
+        onList: false,
+        rank: null,
+        roundScore: 0,
+        totalScore: 0,
+      });
+      const next = gameReducer(state, { type: "ANSWER_RESULT", result });
+      expect(next.screen).toBe("round_play");
+      expect(next.submitting).toBe(false);
+      expect(next.rounds).toHaveLength(0);
+      expect(next.lastMiss).toBe("love");
+    });
+
+    it("clears lastMiss when answer IS on list", () => {
+      const state = stateAt("round_play", {
+        currentRound: 1,
+        submitting: true,
+        lastMiss: "previous miss",
+      });
+      const result = fakeSubmitResult(1);
+      const next = gameReducer(state, { type: "ANSWER_RESULT", result });
+      expect(next.screen).toBe("round_result");
+      expect(next.lastMiss).toBeNull();
+    });
+
+    it("allows retry after miss — same round, no round data stored", () => {
+      let state = stateAt("round_play", {
+        currentRound: 1,
+        submitting: false,
+      });
+
+      // First attempt: miss
+      state = gameReducer(state, { type: "SUBMIT_ANSWER", answer: "banana" });
+      const missResult = fakeSubmitResult(1, {
+        submittedAnswer: "banana",
+        onList: false,
+        rank: null,
+        roundScore: 0,
+        totalScore: 0,
+      });
+      state = gameReducer(state, { type: "ANSWER_RESULT", result: missResult });
+      expect(state.screen).toBe("round_play");
+      expect(state.currentRound).toBe(1);
+      expect(state.rounds).toHaveLength(0);
+      expect(state.lastMiss).toBe("banana");
+
+      // Second attempt: hit
+      state = gameReducer(state, { type: "SUBMIT_ANSWER", answer: "love" });
+      expect(state.lastMiss).toBeNull();
+      const hitResult = fakeSubmitResult(1);
+      state = gameReducer(state, { type: "ANSWER_RESULT", result: hitResult });
+      expect(state.screen).toBe("round_result");
+      expect(state.rounds).toHaveLength(1);
+      expect(state.rounds[0].onList).toBe(true);
+    });
   });
 
   // ============================================================
