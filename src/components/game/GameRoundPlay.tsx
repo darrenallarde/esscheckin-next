@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { ArrowUp, ArrowDown, Loader2, AlertCircle, X } from "lucide-react";
 import { getRoundDirection } from "@/lib/game/utils";
+import { tapScale } from "@/lib/game/timing";
+import type { RevealPhase } from "@/hooks/game/use-reveal-sequence";
 
 interface GameRoundPlayProps {
   round: number;
@@ -10,6 +13,7 @@ interface GameRoundPlayProps {
   submitting: boolean;
   error: string | null;
   lastMiss: string | null;
+  revealPhase?: RevealPhase;
   onSubmit: (answer: string) => void;
   onClearError: () => void;
 }
@@ -22,14 +26,15 @@ export function GameRoundPlay({
   submitting,
   error,
   lastMiss,
+  revealPhase = "idle",
   onSubmit,
   onClearError,
 }: GameRoundPlayProps) {
   const [answer, setAnswer] = useState("");
   const direction = getRoundDirection(round);
   const isHigh = direction === "high";
+  const lockedIn = revealPhase === "lock_in" || revealPhase === "buildup";
 
-  // Clear input after a miss so the player can type a new answer
   useEffect(() => {
     if (lastMiss) {
       setAnswer("");
@@ -44,26 +49,40 @@ export function GameRoundPlay({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       {/* Round indicator */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm font-semibold uppercase tracking-wider text-stone-400">
+          <span
+            className="text-sm font-semibold uppercase tracking-wider"
+            style={{ color: "var(--game-muted)" }}
+          >
             Round {round} of 4
           </span>
-          <span className="text-xs text-stone-400">&middot;</span>
-          <span className="text-sm font-medium text-stone-500">
+          <span style={{ color: "var(--game-muted)" }}>&middot;</span>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--game-muted)" }}
+          >
             Up to {ROUND_MAX[round as keyof typeof ROUND_MAX]} pts
           </span>
         </div>
 
         {/* Direction badge */}
-        <div
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold ${
-            isHigh
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-orange-100 text-orange-800"
-          }`}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold"
+          style={{
+            background: isHigh
+              ? "hsla(142, 71%, 45%, 0.15)"
+              : "hsla(25, 95%, 53%, 0.15)",
+            color: isHigh ? "var(--game-correct)" : "#f97316",
+            boxShadow: isHigh
+              ? "0 0 16px hsla(142, 71%, 45%, 0.2)"
+              : "0 0 16px hsla(25, 95%, 53%, 0.2)",
+          }}
         >
           {isHigh ? (
             <ArrowUp className="h-4 w-4" />
@@ -71,15 +90,22 @@ export function GameRoundPlay({
             <ArrowDown className="h-4 w-4" />
           )}
           {isHigh ? "HIGH — Most Popular" : "LOW — Least Popular"}
-        </div>
+        </motion.div>
       </div>
 
       {/* Question */}
-      <div className="bg-white rounded-xl p-5 border border-stone-200 shadow-sm">
-        <p className="text-lg font-semibold text-stone-900 text-center">
-          {question}
-        </p>
-        <p className="text-sm text-stone-500 text-center mt-2">
+      <div
+        className="rounded-xl p-5 border"
+        style={{
+          background: "var(--game-surface)",
+          borderColor: "var(--game-border)",
+        }}
+      >
+        <p className="text-lg font-semibold text-center">{question}</p>
+        <p
+          className="text-sm text-center mt-2"
+          style={{ color: "var(--game-muted)" }}
+        >
           {isHigh
             ? "Name the answer you think MOST people would say"
             : "Name an answer you think FEWEST people would say"}
@@ -97,37 +123,76 @@ export function GameRoundPlay({
               if (error) onClearError();
             }}
             placeholder="Type your answer..."
-            disabled={submitting}
+            disabled={submitting || lockedIn}
             autoFocus
-            className="w-full px-4 py-3.5 rounded-xl border border-stone-200 bg-white text-base text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-400 disabled:opacity-50 transition-all"
+            className="w-full px-4 py-3.5 rounded-xl border text-base placeholder:text-white/30 focus:outline-none focus:ring-2 disabled:opacity-50 transition-all"
+            style={{
+              background: "var(--game-surface)",
+              borderColor: "var(--game-border)",
+              color: "var(--game-text)",
+              // @ts-expect-error CSS custom properties
+              "--tw-ring-color": "var(--game-accent)",
+            }}
           />
         </div>
 
         {/* Miss feedback */}
         {lastMiss && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 animate-shake">
-            <X className="h-4 w-4 shrink-0 text-amber-500" />
+          <motion.div
+            initial={{ x: -8, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm border"
+            style={{
+              background: "hsla(0, 84%, 60%, 0.1)",
+              borderColor: "hsla(0, 84%, 60%, 0.3)",
+              color: "#fca5a5",
+            }}
+          >
+            <X className="h-4 w-4 shrink-0 text-red-400" />
             <span>
               <span className="font-semibold">&quot;{lastMiss}&quot;</span> is
               not on the list — try again!
             </span>
-          </div>
+          </motion.div>
         )}
 
         {/* Error message */}
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 animate-shake">
+          <div className="flex items-center gap-2 text-sm text-red-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <button
+        <motion.button
           type="submit"
-          disabled={!answer.trim() || submitting}
-          className="w-full py-3.5 px-6 rounded-xl bg-stone-900 text-white text-base font-semibold hover:bg-stone-800 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2"
+          disabled={!answer.trim() || submitting || lockedIn}
+          whileTap={
+            !answer.trim() || submitting || lockedIn ? undefined : tapScale
+          }
+          animate={
+            lockedIn
+              ? { scale: [1, 1.05, 1], transition: { duration: 0.2 } }
+              : {}
+          }
+          className="w-full py-3.5 px-6 rounded-xl text-base font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          style={{
+            background: lockedIn
+              ? "var(--game-accent)"
+              : !answer.trim() || submitting
+                ? "var(--game-surface-light)"
+                : "var(--game-accent)",
+            color: lockedIn
+              ? "#fff"
+              : !answer.trim() || submitting
+                ? "var(--game-muted)"
+                : "#fff",
+            opacity: lockedIn ? 0.8 : undefined,
+          }}
         >
-          {submitting ? (
+          {lockedIn ? (
+            "Locked in!"
+          ) : submitting ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
               Checking...
@@ -135,7 +200,7 @@ export function GameRoundPlay({
           ) : (
             "Submit Answer"
           )}
-        </button>
+        </motion.button>
       </form>
     </div>
   );

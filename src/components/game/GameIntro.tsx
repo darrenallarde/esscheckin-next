@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import {
   BookOpen,
   Lightbulb,
@@ -8,6 +9,7 @@ import {
   ArrowDown,
   Users,
 } from "lucide-react";
+import { staggerContainer, staggerItem, tapScale } from "@/lib/game/timing";
 
 interface GameIntroProps {
   game: {
@@ -21,6 +23,9 @@ interface GameIntroProps {
   onStart: () => void;
 }
 
+const card = "rounded-xl p-5 border";
+const cardDark = `${card} bg-white/5 border-white/10`;
+
 export function GameIntro({
   game,
   orgName,
@@ -28,105 +33,126 @@ export function GameIntro({
   onStart,
 }: GameIntroProps) {
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
       {/* Title */}
-      <div className="text-center space-y-2 opacity-0 animate-[fade-in-up_0.4s_ease-out_0s_forwards]">
-        <h1 className="text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">
+      <motion.div variants={staggerItem} className="text-center space-y-2">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
           Hi-Lo Game
         </h1>
-        <p className="text-sm text-stone-500">
+        <p className="text-sm" style={{ color: "var(--game-muted)" }}>
           Can you guess the most &mdash; and least &mdash; popular answers?
         </p>
-      </div>
+      </motion.div>
 
       {/* Scripture */}
-      <section className="bg-blue-50/80 rounded-xl p-5 border border-blue-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.1s_forwards]">
+      <motion.section variants={staggerItem} className={cardDark}>
         <div className="flex items-center gap-2 mb-3">
-          <BookOpen className="h-4 w-4 text-blue-600" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+          <BookOpen className="h-4 w-4 text-blue-400" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
             Scripture
           </span>
         </div>
-        <blockquote className="text-base italic text-blue-900 leading-relaxed border-l-3 border-blue-300 pl-4">
+        <blockquote className="text-base italic leading-relaxed border-l-3 border-blue-500/40 pl-4 text-blue-100">
           {game.scripture_verses}
         </blockquote>
-      </section>
+      </motion.section>
 
       {/* Fun Facts */}
-      <section className="bg-amber-50/80 rounded-xl p-5 border border-amber-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.2s_forwards]">
+      <motion.section variants={staggerItem} className={cardDark}>
         <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="h-4 w-4 text-amber-600" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+          <Lightbulb className="h-4 w-4 text-amber-400" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">
             Did you know?
           </span>
         </div>
-        <ul className="space-y-2 text-sm text-stone-700">
+        <ul className="space-y-2 text-sm" style={{ color: "var(--game-text)" }}>
           {game.fun_facts.map((f, i) => (
             <li key={i} className="flex gap-2">
-              <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <Sparkles className="h-4 w-4 text-amber-400/60 shrink-0 mt-0.5" />
               <span>{f.fact}</span>
             </li>
           ))}
         </ul>
-      </section>
+      </motion.section>
 
       {/* The Question */}
-      <section className="bg-violet-50/80 rounded-xl p-5 border border-violet-100 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.3s_forwards]">
+      <motion.section variants={staggerItem} className={cardDark}>
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-4 w-4 text-violet-600" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-violet-600">
+          <Sparkles
+            className="h-4 w-4"
+            style={{ color: "var(--game-accent)" }}
+          />
+          <span
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--game-accent)" }}
+          >
             The Question
           </span>
         </div>
-        <p className="text-lg font-semibold text-stone-900">
-          {game.core_question}
-        </p>
-      </section>
+        <p className="text-lg font-semibold">{game.core_question}</p>
+      </motion.section>
 
       {/* How to play */}
-      <section className="bg-stone-50 rounded-xl p-5 border border-stone-200 opacity-0 animate-[fade-in-up_0.4s_ease-out_0.4s_forwards]">
-        <p className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
+      <motion.section variants={staggerItem} className={cardDark}>
+        <p
+          className="text-xs font-semibold uppercase tracking-wider mb-3"
+          style={{ color: "var(--game-muted)" }}
+        >
           How to play
         </p>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-stone-100">
-            <ArrowUp className="h-5 w-5 text-emerald-500" />
+          <div className="flex items-center gap-2 rounded-lg p-3 bg-white/5 border border-white/10">
+            <ArrowUp className="h-5 w-5 text-emerald-400" />
             <div>
-              <p className="font-medium text-stone-800">Rounds 1-2: HIGH</p>
-              <p className="text-xs text-stone-500">
+              <p className="font-medium">Rounds 1-2: HIGH</p>
+              <p className="text-xs" style={{ color: "var(--game-muted)" }}>
                 Guess the most popular answer
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-stone-100">
-            <ArrowDown className="h-5 w-5 text-orange-500" />
+          <div className="flex items-center gap-2 rounded-lg p-3 bg-white/5 border border-white/10">
+            <ArrowDown className="h-5 w-5 text-orange-400" />
             <div>
-              <p className="font-medium text-stone-800">Rounds 3-4: LOW</p>
-              <p className="text-xs text-stone-500">
+              <p className="font-medium">Rounds 3-4: LOW</p>
+              <p className="text-xs" style={{ color: "var(--game-muted)" }}>
                 Guess the least popular answer
               </p>
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Player count + CTA */}
-      <div className="opacity-0 animate-[fade-in-up_0.4s_ease-out_0.5s_forwards] space-y-3">
+      <motion.div variants={staggerItem} className="space-y-3">
         {playerCount > 0 && (
-          <div className="flex items-center justify-center gap-1.5 text-sm text-stone-500">
+          <div
+            className="flex items-center justify-center gap-1.5 text-sm"
+            style={{ color: "var(--game-muted)" }}
+          >
             <Users className="h-4 w-4" />
             <span>
               {playerCount} player{playerCount !== 1 ? "s" : ""} so far
             </span>
           </div>
         )}
-        <button
+        <motion.button
           onClick={onStart}
-          className="w-full py-3.5 px-6 rounded-xl bg-stone-900 text-white text-base font-semibold hover:bg-stone-800 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all"
+          whileTap={tapScale}
+          className="w-full py-3.5 px-6 rounded-xl text-base font-semibold transition-all"
+          style={{
+            background: "var(--game-correct)",
+            color: "#000",
+            boxShadow: "0 0 20px hsla(142, 71%, 45%, 0.3)",
+          }}
         >
           Play Now
-        </button>
-      </div>
-    </div>
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 }

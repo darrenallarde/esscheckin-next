@@ -193,6 +193,25 @@
 }
 
 /* =========================================
+   Hi-Lo Game Dark Theme
+   Scoped via data-game-theme="dark" attribute on game root.
+   Does NOT use Tailwind dark: (global). Game-only.
+   ========================================= */
+
+[data-game-theme="dark"] {
+  --game-bg: #0a0a1a;
+  --game-surface: hsl(220, 15%, 15%);
+  --game-surface-light: hsl(220, 12%, 22%);
+  --game-border: hsl(220, 10%, 25%);
+  --game-text: #f5f5f5;
+  --game-muted: hsl(220, 10%, 60%);
+  --game-correct: #22c55e;
+  --game-wrong: #ef4444;
+  --game-gold: #f59e0b;
+  --game-accent: #8b5cf6;
+}
+
+/* =========================================
    JRPG Fantasy Theme for Check-in Page
    Theme-aware: colors come from CSS custom properties
    set via getJRPGCSSOverrides() in themes.ts
