@@ -4,7 +4,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Plus, Sparkles, History, Loader2 } from "lucide-react";
+import {
+  BookOpen,
+  Plus,
+  Sparkles,
+  History,
+  Loader2,
+  Gamepad2,
+} from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SermonUpload } from "@/components/curriculum/SermonUpload";
 import { ScheduleConfig } from "@/components/curriculum/ScheduleConfig";
@@ -30,6 +37,8 @@ import { EVENTS } from "@/lib/amplitude/events";
 import { createClient } from "@/lib/supabase/client";
 import { GenerationProgressModal } from "@/components/curriculum/GenerationProgressModal";
 import { EditDevotionalModal } from "@/components/curriculum/EditDevotionalModal";
+import { GameGenerationModal } from "@/components/curriculum/GameGenerationModal";
+import { useCreateGame } from "@/hooks/mutations/use-create-game";
 
 export default function CurriculumPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
@@ -51,12 +60,18 @@ export default function CurriculumPage() {
   // View state
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"create" | "active" | "history">(
-    "create"
+    "create",
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingDevotional, setEditingDevotional] = useState<Devotional | null>(
-    null
+    null,
   );
+  const [isGeneratingGame, setIsGeneratingGame] = useState(false);
+  const [gameComplete, setGameComplete] = useState(false);
+  const [gameUrl, setGameUrl] = useState<string | undefined>();
+  const [gameDevotionalTitle, setGameDevotionalTitle] = useState<
+    string | undefined
+  >();
 
   // Queries
   const { data: allSeries, isLoading: seriesLoading } =
@@ -71,6 +86,7 @@ export default function CurriculumPage() {
   const updateSeries = useUpdateDevotionalSeries();
   const deleteSeries = useDeleteDevotionalSeries();
   const updateDevotional = useUpdateDevotional();
+  const createGame = useCreateGame();
 
   // Get devotionals for active series
   const { data: activeDevotionals } = useDevotionals(activeSeries?.id || null);
@@ -291,6 +307,42 @@ export default function CurriculumPage() {
     }
   };
 
+  const handleCreateGame = async (devotionalId: string) => {
+    if (!organizationId) return;
+
+    // Find the devotional title for the modal
+    const devotional = activeDevotionals?.find((d) => d.id === devotionalId);
+    setGameDevotionalTitle(devotional?.title);
+    setGameComplete(false);
+    setGameUrl(undefined);
+    setIsGeneratingGame(true);
+
+    try {
+      const result = await createGame.mutateAsync({
+        organizationId,
+        devotionalId,
+      });
+
+      setGameUrl(result.gameUrl);
+      setGameComplete(true);
+
+      toast({
+        title: "Hi-Lo Game created!",
+        description: `Game is live with ${result.answersCreated} answers.`,
+      });
+    } catch (error) {
+      console.error("Failed to create game:", error);
+      setIsGeneratingGame(false);
+
+      toast({
+        title: "Game creation failed",
+        description:
+          error instanceof Error ? error.message : "Something went wrong.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const pastSeries = allSeries?.filter((s) => s.status !== "active") || [];
 
   const handleEditDevotional = async (updates: Partial<Devotional>) => {
@@ -397,9 +449,7 @@ export default function CurriculumPage() {
               <Button
                 onClick={handleGenerate}
                 disabled={
-                  !sermonContent.trim() ||
-                  isGenerating ||
-                  !organizationId
+                  !sermonContent.trim() || isGenerating || !organizationId
                 }
                 size="lg"
                 className="w-full gap-2"
@@ -420,6 +470,7 @@ export default function CurriculumPage() {
               isLoading={orgLoading}
               onArchive={() => handleArchive(activeSeries)}
               onEditDevotional={setEditingDevotional}
+              onCreateGame={handleCreateGame}
             />
           ) : (
             <Card>
@@ -500,12 +551,12 @@ export default function CurriculumPage() {
                       isLoading={devotionalsLoading}
                       onActivate={() =>
                         handleActivate(
-                          pastSeries.find((s) => s.id === selectedSeriesId)!
+                          pastSeries.find((s) => s.id === selectedSeriesId)!,
                         )
                       }
                       onDelete={() =>
                         handleDelete(
-                          pastSeries.find((s) => s.id === selectedSeriesId)!
+                          pastSeries.find((s) => s.id === selectedSeriesId)!,
                         )
                       }
                       onEditDevotional={setEditingDevotional}
@@ -532,6 +583,20 @@ export default function CurriculumPage() {
         onClose={() => setEditingDevotional(null)}
         onSave={handleEditDevotional}
         isSaving={updateDevotional.isPending}
+      />
+
+      {/* Game Generation Modal */}
+      <GameGenerationModal
+        isOpen={isGeneratingGame}
+        isComplete={gameComplete}
+        gameUrl={gameUrl}
+        devotionalTitle={gameDevotionalTitle}
+        onClose={() => {
+          setIsGeneratingGame(false);
+          setGameComplete(false);
+          setGameUrl(undefined);
+          setGameDevotionalTitle(undefined);
+        }}
       />
     </div>
   );

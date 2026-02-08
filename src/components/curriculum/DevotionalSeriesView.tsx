@@ -22,6 +22,7 @@ import {
   MessageCircle,
   Link2,
   Check,
+  Gamepad2,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -51,6 +52,7 @@ interface DevotionalSeriesViewProps {
   onArchive?: () => void;
   onDelete?: () => void;
   onEditDevotional?: (devotional: Devotional) => void;
+  onCreateGame?: (devotionalId: string) => void;
   isActivating?: boolean;
 }
 
@@ -105,9 +107,7 @@ function DevotionalSection({
   const Icon = style.icon;
 
   return (
-    <div
-      className={`p-3 rounded-lg ${style.bg} border-l-4 ${style.border}`}
-    >
+    <div className={`p-3 rounded-lg ${style.bg} border-l-4 ${style.border}`}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className={`h-4 w-4 ${style.iconColor}`} />
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -127,10 +127,12 @@ function DevotionalSection({
 function DevotionalCard({
   devotional,
   onEdit,
+  onCreateGame,
   showCopyLink,
 }: {
   devotional: Devotional;
   onEdit?: () => void;
+  onCreateGame?: (devotionalId: string) => void;
   showCopyLink?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -161,6 +163,16 @@ function DevotionalCard({
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {showCopyLink && onCreateGame && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCreateGame(devotional.id)}
+                title="Create Hi-Lo Game"
+              >
+                <Gamepad2 className="h-3 w-3" />
+              </Button>
+            )}
             {showCopyLink && (
               <Button
                 variant="ghost"
@@ -234,17 +246,21 @@ export function DevotionalSeriesView({
   onArchive,
   onDelete,
   onEditDevotional,
+  onCreateGame,
   isActivating,
 }: DevotionalSeriesViewProps) {
   // Group devotionals by date
-  const devotionalsByDate = devotionals.reduce((acc, d) => {
-    const date = d.scheduled_date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(d);
-    return acc;
-  }, {} as Record<string, Devotional[]>);
+  const devotionalsByDate = devotionals.reduce(
+    (acc, d) => {
+      const date = d.scheduled_date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(d);
+      return acc;
+    },
+    {} as Record<string, Devotional[]>,
+  );
 
   const sortedDates = Object.keys(devotionalsByDate).sort();
 
@@ -396,6 +412,7 @@ export function DevotionalSeriesView({
                         key={devotional.id}
                         devotional={devotional}
                         showCopyLink={series.status === "active"}
+                        onCreateGame={onCreateGame}
                         onEdit={
                           onEditDevotional
                             ? () => onEditDevotional(devotional)

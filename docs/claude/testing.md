@@ -1,101 +1,135 @@
-# Testing Conventions
+# Testing Strategy
 
 ## Tools
 
-| Tool | Purpose | Command |
-|------|---------|---------|
-| Vitest | Unit & component tests | `npm run test:run` (CI) / `npm test` (watch) |
-| Playwright | E2E browser tests | `npm run test:e2e` |
-| Testing Library | DOM queries for React | Used inside Vitest tests |
+| Tool       | Purpose                    | Command                                      |
+| ---------- | -------------------------- | -------------------------------------------- |
+| Vitest     | Unit & pure function tests | `npm run test:run` (CI) / `npm test` (watch) |
+| Playwright | E2E browser tests          | `npm run test:e2e`                           |
+
+## Testing Decision Matrix
+
+| Code Type                         | Test Strategy         | Why                                                  |
+| --------------------------------- | --------------------- | ---------------------------------------------------- |
+| Pure functions                    | Vitest TDD (always)   | Deterministic, fast, high ROI                        |
+| State machines / reducers         | Vitest TDD (always)   | Core logic with complex branching — must be airtight |
+| Validators / parsers              | Vitest TDD (always)   | Boundary values, error cases, security-critical      |
+| React Query hooks (thin wrappers) | Skip unit test        | Just Supabase calls — mock soup gives false safety   |
+| UI components (rendering only)    | Skip, cover via E2E   | Testing DOM output is fragile and low-value          |
+| UI components with complex logic  | Vitest component test | Extract logic to pure function first if possible     |
+| Server Components (page.tsx)      | Playwright E2E only   | jsdom can't handle async Server Components           |
+| RLS policies                      | SQL scripts or manual | Need real database connection                        |
+| Edge functions                    | Manual + integration  | Depend on Supabase runtime, external APIs            |
+
+**Rule of thumb:** If it's pure logic, TDD it. If it touches the network or DOM, E2E it or skip it.
+
+## TDD Workflow
+
+Every pure function and state machine follows Red → Green → Refactor:
+
+### 1. Red — Write a failing test first
+
+```ts
+it("calculates score as (201 - rank) * multiplier for high rounds", () => {
+  expect(calculateScore({ rank: 5, direction: "high", multiplier: 2 })).toBe(
+    392,
+  );
+});
+```
+
+Run `npm run test:run` — it should fail (function doesn't exist yet).
+
+### 2. Green — Write the minimum code to pass
+
+```ts
+export function calculateScore({ rank, direction, multiplier }) {
+  if (direction === "high") return (201 - rank) * multiplier;
+  return rank * multiplier;
+}
+```
+
+Run again — test passes.
+
+### 3. Refactor — Clean up while tests stay green
+
+Add edge cases, rename for clarity, optimize. Tests catch regressions.
+
+### Real example from this codebase
+
+The Hi-Lo game state machine (`src/lib/game/state-machine.ts`) was built entirely via TDD:
+
+- Tests written first for every screen transition
+- Invalid transitions verified as no-ops
+- Resume from partial state tested before implementation
+- 30+ tests covering every action × every valid screen
+
+## What Makes a Good Unit Test
+
+Lessons from the state machine test suite:
+
+1. **Test every action × every valid source screen** — `GAME_LOADED` from `loading`, `START_GAME` from `intro`, etc.
+2. **Test invalid transitions are no-ops** — `START_GAME` from `round_play` returns same state
+3. **Test boundary values** — rank 1, rank 200, rank null (not on list), round 4 (final)
+4. **Test resume from partial state** — 0 rounds, 2 rounds, all 4 rounds
+5. **Test accumulation** — scores adding up, rounds array growing
+6. **Descriptive test names** — `"transitions from round_result to final_results after round 4"`
+7. **Use helpers for readable setup** — `stateAt("round_play", { currentRound: 2 })` not raw object literals
 
 ## File Structure
 
 ```
 __tests__/
-  setup.ts              # RTL cleanup, global mocks
+  setup.ts              # Global test setup
   smoke.test.ts         # Vitest smoke test
-  lib/                  # Pure function tests
-  hooks/                # Hook tests (renderHook)
-  components/           # Component tests (render + fireEvent)
+  lib/                  # Pure function & state machine tests
+  hooks/                # Hook tests (if needed — usually skip)
+  components/           # Component tests (if complex logic)
 e2e/
-  smoke.spec.ts         # Playwright smoke spec
-  checkin.spec.ts       # Check-in flow E2E
-  auth.spec.ts          # Login/OTP flow E2E
+  *.spec.ts             # Playwright E2E specs
 ```
 
-## What to Test
+Test files mirror source structure: `src/lib/game/state-machine.ts` → `__tests__/lib/game-state-machine.test.ts`
 
-### Vitest (unit/component)
-- Pure utility functions (formatters, validators, parsers)
-- React hooks with `renderHook` (custom query hooks, mutation hooks)
-- Component rendering and user interactions via Testing Library
-- Form validation logic
-- Data transformation functions
+## Playwright E2E Patterns
 
-### Playwright (E2E)
-- Critical user flows: check-in, login, devotional engagement
-- Page loads and navigation
-- Async Server Components (cannot be tested with Vitest/jsdom)
-
-### Do NOT test
-- Supabase RLS policies (test via SQL or manual)
-- Third-party library internals
-- Styling/layout (use visual regression tools if needed)
-
-## TDD Workflow (/qa command)
-
-1. Write a failing test that describes the expected behavior
-2. Show the test to the user for approval
-3. Implement the minimum code to make the test pass
-4. Refactor if needed, keeping tests green
-
-## Writing Vitest Tests
+### File location & structure
 
 ```ts
-import { describe, expect, it } from "vitest";
-import { myFunction } from "@/lib/my-module";
-
-describe("myFunction", () => {
-  it("returns expected output for valid input", () => {
-    expect(myFunction("input")).toBe("output");
-  });
-});
-```
-
-### Component tests
-
-```tsx
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { MyComponent } from "@/components/my-component";
-
-describe("MyComponent", () => {
-  it("renders the title", () => {
-    render(<MyComponent title="Hello" />);
-    expect(screen.getByText("Hello")).toBeInTheDocument();
-  });
-});
-```
-
-## Writing Playwright Tests
-
-```ts
+// e2e/game.spec.ts
 import { expect, test } from "@playwright/test";
 
-test("check-in flow works", async ({ page }) => {
-  await page.goto("/checkin/ess");
-  await page.getByPlaceholder("Search").fill("John");
-  await expect(page.getByText("John Doe")).toBeVisible();
+test.describe("Hi-Lo Game", () => {
+  test("intro screen loads", async ({ page }) => {
+    await page.goto("/g/test-game-id");
+    await expect(page.getByText("Play Now")).toBeVisible();
+  });
 });
 ```
 
-## Mocking Supabase
+### Environment gating
 
-For unit tests that call Supabase, mock the client:
+For tests that need real data (games with 200 answers, etc.):
 
 ```ts
-import { vi } from "vitest";
+test.skip(!process.env.PLAYWRIGHT_GAME_ID, "No test game configured");
+```
 
+### Selectors
+
+- Prefer `data-testid` for test-specific selectors
+- Use `page.getByText()` and `page.getByRole()` for user-visible content
+- Avoid CSS class selectors (fragile)
+
+### Auth in E2E
+
+If a flow requires authentication, use the devotional auth pattern or pre-seed a session cookie.
+
+## Anti-Patterns — Do NOT Do These
+
+### 1. Don't mock Supabase to test hooks
+
+```ts
+// BAD — mock soup that tests nothing real
 vi.mock("@/lib/supabase/browser", () => ({
   createBrowserClient: () => ({
     from: vi.fn().mockReturnValue({
@@ -107,18 +141,46 @@ vi.mock("@/lib/supabase/browser", () => ({
 }));
 ```
 
-For E2E tests, use a real Supabase staging instance — no mocking.
+This tests your mocks, not your code. If the hook is a thin Supabase wrapper, skip the unit test. Cover it via E2E with a real database.
+
+### 2. Don't test rendering of simple components
+
+```ts
+// BAD — low value, breaks on every style change
+it("renders a button with correct className", () => {
+  render(<MyButton />);
+  expect(screen.getByRole("button")).toHaveClass("bg-primary");
+});
+```
+
+### 3. Don't test third-party library behavior
+
+```ts
+// BAD — testing React Query, not your code
+it("returns isLoading true initially", () => {
+  const { result } = renderHook(() => useMyQuery());
+  expect(result.current.isLoading).toBe(true);
+});
+```
+
+### 4. Don't write integration tests disguised as unit tests
+
+If your test needs 5+ mocks to run, it's an integration test. Use Playwright instead.
+
+## Testing Checklist
+
+Before shipping any feature:
+
+- [ ] Pure logic has Vitest TDD tests (state machines, validators, scoring functions)
+- [ ] Critical user flow has E2E test or documented reason why manual-only
+- [ ] `npm run test:run` passes
+- [ ] `npx tsc --noEmit` clean
+- [ ] `npm run build` clean
 
 ## Environment
 
 - Vitest uses `jsdom` environment (configured in `vitest.config.mts`)
 - Path aliases (`@/`) resolve via `vite-tsconfig-paths`
-- RTL `cleanup` runs after each test (configured in `__tests__/setup.ts`)
 - Playwright auto-starts the dev server unless `PLAYWRIGHT_BASE_URL` is set
-
-## CI Notes
-
-- `npm run test:run` — non-interactive, exits with code 0/1
-- `npm run test:e2e` — requires Chromium (installed via `npx playwright install chromium`)
 - Screenshots on failure saved to `test-results/`
 - Trace files saved on first retry to `test-results/`

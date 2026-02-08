@@ -57,11 +57,12 @@ supabase/functions/       # Edge functions (send-sms, send-otp-sms, chms-sync...
 
 ## Testing
 
+- **Testing strategy:** `docs/claude/testing.md` — Decision matrix, TDD workflow, anti-patterns. READ BEFORE writing tests.
+- **TDD required for:** Pure functions, state machines, reducers, validators. Hooks/components: E2E or skip.
 - Unit tests: `npm run test:run` (Vitest). Always write tests BEFORE implementation.
 - E2E tests: `npm run test:e2e` (Playwright). Cover critical user flows.
 - Async Server Components: test via Playwright E2E, NOT Vitest.
 - Manual: test on dev server, test session restore separately, test mobile/iPad.
-- Reference: `docs/claude/testing.md`
 
 ## Git & Deploy
 
