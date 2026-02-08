@@ -247,3 +247,210 @@ export function getTheme(themeId: string | null | undefined): Theme {
  * All available themes as an array for the theme picker
  */
 export const THEME_LIST = Object.values(THEMES);
+
+/**
+ * JRPG color palette per theme.
+ * Each theme gets a unique fantasy color flavor for the gamified check-in.
+ */
+export interface JRPGColors {
+  /** Sky/background gradient: 3 stops */
+  bgGradient: [string, string, string];
+  /** Text box background gradient: 2 stops */
+  textboxBg: [string, string];
+  /** Text box border */
+  textboxBorder: string;
+  /** Text box inner shadow + bottom shadow */
+  textboxInnerAccent: string;
+  textboxShadow: string;
+  /** Button gradient: 2 stops */
+  buttonBg: [string, string];
+  buttonHoverBg: [string, string];
+  /** Button border (gold/metallic accent) */
+  buttonBorder: string;
+  /** Button text color */
+  buttonText: string;
+  /** Button bottom shadow */
+  buttonShadow: string;
+  /** Input background, border, text */
+  inputBg: string;
+  inputBorder: string;
+  inputText: string;
+  /** Focus ring color */
+  focusColor: string;
+  /** Heading text color */
+  headingColor: string;
+  /** Corner decorations */
+  cornerColor: string;
+  /** Selector arrow + gold text */
+  goldColor: string;
+  /** Stat bar fill gradient */
+  statFill: [string, string];
+}
+
+const JRPG_COLORS: Record<string, JRPGColors> = {
+  default: {
+    bgGradient: ["#87CEEB", "#98D8C8", "#90EE90"],
+    textboxBg: ["#E8EEF6", "#D4DEEC"],
+    textboxBorder: "#2E5090",
+    textboxInnerAccent: "#228B22",
+    textboxShadow: "#2F4F2F",
+    buttonBg: ["#228B22", "#006400"],
+    buttonHoverBg: ["#32CD32", "#228B22"],
+    buttonBorder: "#FFD700",
+    buttonText: "#FFFACD",
+    buttonShadow: "#2F4F2F",
+    inputBg: "#F0F4FA",
+    inputBorder: "#2E5090",
+    inputText: "#2F4F2F",
+    focusColor: "#228B22",
+    headingColor: "#2F4F2F",
+    cornerColor: "#D4AF37",
+    goldColor: "#FFD700",
+    statFill: ["#4CAF50", "#2E7D32"],
+  },
+  ocean: {
+    bgGradient: ["#4FC3F7", "#039BE5", "#01579B"],
+    textboxBg: ["#E1F5FE", "#B3E5FC"],
+    textboxBorder: "#0277BD",
+    textboxInnerAccent: "#0288D1",
+    textboxShadow: "#01579B",
+    buttonBg: ["#0288D1", "#01579B"],
+    buttonHoverBg: ["#039BE5", "#0288D1"],
+    buttonBorder: "#B3E5FC",
+    buttonText: "#E1F5FE",
+    buttonShadow: "#01579B",
+    inputBg: "#E1F5FE",
+    inputBorder: "#0277BD",
+    inputText: "#01579B",
+    focusColor: "#0288D1",
+    headingColor: "#01579B",
+    cornerColor: "#4FC3F7",
+    goldColor: "#B3E5FC",
+    statFill: ["#29B6F6", "#0277BD"],
+  },
+  forest: {
+    bgGradient: ["#81C784", "#388E3C", "#1B5E20"],
+    textboxBg: ["#E8F5E9", "#C8E6C9"],
+    textboxBorder: "#2E7D32",
+    textboxInnerAccent: "#388E3C",
+    textboxShadow: "#1B5E20",
+    buttonBg: ["#388E3C", "#1B5E20"],
+    buttonHoverBg: ["#43A047", "#388E3C"],
+    buttonBorder: "#A5D6A7",
+    buttonText: "#E8F5E9",
+    buttonShadow: "#1B5E20",
+    inputBg: "#E8F5E9",
+    inputBorder: "#2E7D32",
+    inputText: "#1B5E20",
+    focusColor: "#388E3C",
+    headingColor: "#1B5E20",
+    cornerColor: "#66BB6A",
+    goldColor: "#A5D6A7",
+    statFill: ["#66BB6A", "#2E7D32"],
+  },
+  sunset: {
+    bgGradient: ["#FFCC80", "#FF8A65", "#BF360C"],
+    textboxBg: ["#FFF3E0", "#FFE0B2"],
+    textboxBorder: "#E65100",
+    textboxInnerAccent: "#F4511E",
+    textboxShadow: "#BF360C",
+    buttonBg: ["#F4511E", "#BF360C"],
+    buttonHoverBg: ["#FF5722", "#F4511E"],
+    buttonBorder: "#FFCC80",
+    buttonText: "#FFF3E0",
+    buttonShadow: "#BF360C",
+    inputBg: "#FFF3E0",
+    inputBorder: "#E65100",
+    inputText: "#BF360C",
+    focusColor: "#F4511E",
+    headingColor: "#BF360C",
+    cornerColor: "#FFB74D",
+    goldColor: "#FFCC80",
+    statFill: ["#FF7043", "#E65100"],
+  },
+  berry: {
+    bgGradient: ["#F48FB1", "#AD1457", "#880E4F"],
+    textboxBg: ["#FCE4EC", "#F8BBD0"],
+    textboxBorder: "#AD1457",
+    textboxInnerAccent: "#C2185B",
+    textboxShadow: "#880E4F",
+    buttonBg: ["#C2185B", "#880E4F"],
+    buttonHoverBg: ["#D81B60", "#C2185B"],
+    buttonBorder: "#F48FB1",
+    buttonText: "#FCE4EC",
+    buttonShadow: "#880E4F",
+    inputBg: "#FCE4EC",
+    inputBorder: "#AD1457",
+    inputText: "#880E4F",
+    focusColor: "#C2185B",
+    headingColor: "#880E4F",
+    cornerColor: "#EC407A",
+    goldColor: "#F48FB1",
+    statFill: ["#EC407A", "#AD1457"],
+  },
+  midnight: {
+    bgGradient: ["#9FA8DA", "#3949AB", "#1A237E"],
+    textboxBg: ["#E8EAF6", "#C5CAE9"],
+    textboxBorder: "#283593",
+    textboxInnerAccent: "#3949AB",
+    textboxShadow: "#1A237E",
+    buttonBg: ["#3949AB", "#1A237E"],
+    buttonHoverBg: ["#3F51B5", "#3949AB"],
+    buttonBorder: "#9FA8DA",
+    buttonText: "#E8EAF6",
+    buttonShadow: "#1A237E",
+    inputBg: "#E8EAF6",
+    inputBorder: "#283593",
+    inputText: "#1A237E",
+    focusColor: "#3949AB",
+    headingColor: "#1A237E",
+    cornerColor: "#7986CB",
+    goldColor: "#9FA8DA",
+    statFill: ["#5C6BC0", "#283593"],
+  },
+};
+
+/**
+ * Get JRPG color palette for a theme
+ */
+export function getJRPGColors(themeId: string | null | undefined): JRPGColors {
+  if (!themeId || !(themeId in JRPG_COLORS)) {
+    return JRPG_COLORS.default;
+  }
+  return JRPG_COLORS[themeId];
+}
+
+/**
+ * Get CSS custom properties for JRPG theming.
+ * These are injected as inline styles on the check-in page wrapper.
+ */
+export function getJRPGCSSOverrides(
+  colors: JRPGColors,
+): Record<string, string> {
+  return {
+    "--jrpg-bg-1": colors.bgGradient[0],
+    "--jrpg-bg-2": colors.bgGradient[1],
+    "--jrpg-bg-3": colors.bgGradient[2],
+    "--jrpg-textbox-bg-1": colors.textboxBg[0],
+    "--jrpg-textbox-bg-2": colors.textboxBg[1],
+    "--jrpg-textbox-border": colors.textboxBorder,
+    "--jrpg-textbox-inner": colors.textboxInnerAccent,
+    "--jrpg-textbox-shadow": colors.textboxShadow,
+    "--jrpg-btn-bg-1": colors.buttonBg[0],
+    "--jrpg-btn-bg-2": colors.buttonBg[1],
+    "--jrpg-btn-hover-1": colors.buttonHoverBg[0],
+    "--jrpg-btn-hover-2": colors.buttonHoverBg[1],
+    "--jrpg-btn-border": colors.buttonBorder,
+    "--jrpg-btn-text": colors.buttonText,
+    "--jrpg-btn-shadow": colors.buttonShadow,
+    "--jrpg-input-bg": colors.inputBg,
+    "--jrpg-input-border": colors.inputBorder,
+    "--jrpg-input-text": colors.inputText,
+    "--jrpg-focus": colors.focusColor,
+    "--jrpg-heading": colors.headingColor,
+    "--jrpg-corner": colors.cornerColor,
+    "--jrpg-gold": colors.goldColor,
+    "--jrpg-stat-1": colors.statFill[0],
+    "--jrpg-stat-2": colors.statFill[1],
+  };
+}

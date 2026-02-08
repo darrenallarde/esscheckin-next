@@ -5,7 +5,12 @@ import { useParams, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PublicCheckInForm from "@/components/checkin/PublicCheckInForm";
 import DeviceSetupModal from "@/components/checkin/DeviceSetupModal";
-import { getTheme, getThemeCSSOverrides } from "@/lib/themes";
+import {
+  getTheme,
+  getThemeCSSOverrides,
+  getJRPGColors,
+  getJRPGCSSOverrides,
+} from "@/lib/themes";
 import { PLATFORM_NAME } from "@/lib/copy";
 import { Loader2, Sprout, Tablet } from "lucide-react";
 import { AmplitudeProvider } from "@/lib/amplitude/context";
@@ -18,7 +23,7 @@ function CheckInPageTracker({
   deviceId,
   deviceName,
 }: {
-  checkinStyle: "gamified" | "standard";
+  checkinStyle: "gamified" | "standard" | "minimal";
   deviceId?: string | null;
   deviceName?: string | null;
 }) {
@@ -193,6 +198,10 @@ export default function OrgCheckInPage() {
   const checkinStyle = orgInfo.checkinStyle || "gamified";
   const displayName = orgInfo.displayName || orgInfo.name;
 
+  // For gamified style, compute themed JRPG colors
+  const jrpgColors = getJRPGColors(orgInfo.themeId);
+  const jrpgStyles = getJRPGCSSOverrides(jrpgColors);
+
   // For gamified style, use the JRPG theme
   if (checkinStyle === "gamified") {
     return (
@@ -208,7 +217,7 @@ export default function OrgCheckInPage() {
         />
         <div
           className="jrpg-background min-h-screen relative"
-          style={themeStyles as React.CSSProperties}
+          style={{ ...themeStyles, ...jrpgStyles } as React.CSSProperties}
         >
           {/* Device Setup Modal */}
           <DeviceSetupModal
@@ -245,7 +254,7 @@ export default function OrgCheckInPage() {
             <div className="text-center mb-12">
               <h1
                 className="jrpg-font text-3xl md:text-5xl mb-8 drop-shadow-lg jrpg-float"
-                style={{ color: "#2F4F2F" }}
+                style={{ color: "var(--jrpg-heading)" }}
               >
                 CHECK IN
               </h1>
@@ -296,7 +305,81 @@ export default function OrgCheckInPage() {
     );
   }
 
-  // Standard style - clean, minimal
+  // Minimal style - bare essentials, no verse, no decorations
+  if (checkinStyle === "minimal") {
+    return (
+      <AmplitudeProvider
+        orgSlug={orgInfo.slug}
+        orgId={orgInfo.id}
+        isPublicSession={true}
+      >
+        <CheckInPageTracker
+          checkinStyle="minimal"
+          deviceId={deviceId}
+          deviceName={deviceName}
+        />
+        <div
+          className="min-h-screen bg-background"
+          style={themeStyles as React.CSSProperties}
+        >
+          <DeviceSetupModal
+            open={showDeviceSetup}
+            organizationId={orgInfo.id}
+            onDeviceCreated={handleDeviceCreated}
+          />
+
+          {process.env.NEXT_PUBLIC_APP_ENV === "staging" && (
+            <div className="fixed top-0 left-0 right-0 bg-amber-500 text-black text-center py-1 text-sm font-bold z-50">
+              STAGING ENVIRONMENT - NOT PRODUCTION DATA
+            </div>
+          )}
+
+          <div
+            className={`container mx-auto px-4 py-16 ${process.env.NEXT_PUBLIC_APP_ENV === "staging" ? "pt-20" : ""}`}
+          >
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-semibold text-foreground mb-1">
+                {displayName}
+              </h1>
+              <p className="text-sm text-muted-foreground">Check In</p>
+            </div>
+
+            <PublicCheckInForm
+              onCheckInComplete={nextVerse}
+              orgSlug={orgInfo.slug}
+              deviceId={deviceId}
+              checkinStyle={checkinStyle}
+            />
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm py-2 border-t z-40">
+            <div className="flex items-center justify-between px-4 max-w-4xl mx-auto">
+              {deviceName && (
+                <button
+                  onClick={() => setShowDeviceSetup(true)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Tablet className="h-3 w-3" />
+                  {deviceName}
+                </button>
+              )}
+              <a
+                href="https://seedlinginsights.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+              >
+                <Sprout className="h-3 w-3" />
+                Powered by {PLATFORM_NAME}
+              </a>
+            </div>
+          </div>
+        </div>
+      </AmplitudeProvider>
+    );
+  }
+
+  // Standard style - polished and clean
   return (
     <AmplitudeProvider
       orgSlug={orgInfo.slug}

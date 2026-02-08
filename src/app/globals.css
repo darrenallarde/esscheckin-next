@@ -1,5 +1,5 @@
 /* Google Fonts - Poppins, Nunito Sans, and Press Start 2P (JRPG pixel font) */
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Press+Start+2P&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Press+Start+2P&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -14,62 +14,74 @@
 @layer base {
   :root {
     /* Base colors - warm earth tones */
-    --background: 38 29% 88%;           /* #e9e2d6 - warm cream */
-    --foreground: 12 6% 15%;            /* #292524 - dark brown */
+    --background: 38 29% 88%; /* #e9e2d6 - warm cream */
+    --foreground: 12 6% 15%; /* #292524 - dark brown */
 
-    --card: 0 0% 100%;                  /* white */
-    --card-foreground: 12 6% 15%;       /* dark brown */
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 12 6% 15%; /* dark brown */
 
     --popover: 0 0% 100%;
     --popover-foreground: 12 6% 15%;
 
     /* Primary - bold chartreuse */
-    --primary: 84 81% 44%;              /* #84cc16 - chartreuse */
-    --primary-foreground: 12 6% 15%;    /* dark text on bright green */
+    --primary: 84 81% 44%; /* #84cc16 - chartreuse */
+    --primary-foreground: 12 6% 15%; /* dark text on bright green */
 
     /* Secondary - forest green */
-    --secondary: 149 64% 24%;           /* #166534 - forest green */
-    --secondary-foreground: 0 0% 100%;  /* white text */
+    --secondary: 149 64% 24%; /* #166534 - forest green */
+    --secondary-foreground: 0 0% 100%; /* white text */
 
     /* Muted - light stone */
-    --muted: 20 6% 90%;                 /* #e7e5e4 - light stone */
-    --muted-foreground: 25 5% 33%;      /* #57534e - warm gray */
+    --muted: 20 6% 90%; /* #e7e5e4 - light stone */
+    --muted-foreground: 25 5% 33%; /* #57534e - warm gray */
 
     /* Accent - brighter lime for highlights */
-    --accent: 82 78% 55%;               /* #a3e635 - bright lime */
-    --accent-foreground: 12 6% 15%;     /* dark text */
+    --accent: 82 78% 55%; /* #a3e635 - bright lime */
+    --accent-foreground: 12 6% 15%; /* dark text */
 
     /* Destructive - keep functional red */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 30 10% 80%;               /* warm border */
+    --border: 30 10% 80%; /* warm border */
     --input: 30 10% 80%;
-    --ring: 84 81% 44%;                 /* chartreuse ring */
+    --ring: 84 81% 44%; /* chartreuse ring */
 
     /* Seedling design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(84 81% 44%), hsl(82 78% 55%));
-    --gradient-accent: linear-gradient(135deg, hsl(149 64% 24%), hsl(149 50% 35%));
-    --gradient-background: linear-gradient(180deg, hsl(38 29% 88%), hsl(38 25% 92%));
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(84 81% 44%),
+      hsl(82 78% 55%)
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(149 64% 24%),
+      hsl(149 50% 35%)
+    );
+    --gradient-background: linear-gradient(
+      180deg,
+      hsl(38 29% 88%),
+      hsl(38 25% 92%)
+    );
     --shadow-card: 0 4px 6px -1px hsl(12 6% 15% / 0.08);
     --shadow-input: 0 1px 2px 0 hsl(12 6% 15% / 0.05);
 
     --radius: 0.5rem;
 
     /* Sidebar - dark forest green (Seedling style) */
-    --sidebar-background: 149 64% 18%;      /* dark forest green */
-    --sidebar-foreground: 0 0% 95%;         /* near white */
-    --sidebar-primary: 84 81% 44%;          /* chartreuse */
+    --sidebar-background: 149 64% 18%; /* dark forest green */
+    --sidebar-foreground: 0 0% 95%; /* near white */
+    --sidebar-primary: 84 81% 44%; /* chartreuse */
     --sidebar-primary-foreground: 12 6% 15%;
-    --sidebar-accent: 149 50% 25%;          /* lighter forest green */
+    --sidebar-accent: 149 50% 25%; /* lighter forest green */
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 149 40% 25%;
     --sidebar-ring: 84 81% 44%;
 
     /* Typography */
-    --font-heading: 'Poppins', sans-serif;
-    --font-body: 'Nunito Sans', sans-serif;
+    --font-heading: "Poppins", sans-serif;
+    --font-body: "Nunito Sans", sans-serif;
   }
 
   .dark {
@@ -124,7 +136,12 @@
     line-height: 1.6;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-heading);
     font-weight: 600;
   }
@@ -177,18 +194,25 @@
 
 /* =========================================
    JRPG Fantasy Theme for Check-in Page
+   Theme-aware: colors come from CSS custom properties
+   set via getJRPGCSSOverrides() in themes.ts
    ========================================= */
 
 /* Pixel font class */
 .jrpg-font {
-  font-family: 'Press Start 2P', cursive;
+  font-family: "Press Start 2P", cursive;
   line-height: 1.6;
   letter-spacing: 0.05em;
 }
 
 /* Fantasy background with animated particles */
 .jrpg-background {
-  background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 50%, #90EE90 100%);
+  background: linear-gradient(
+    135deg,
+    var(--jrpg-bg-1, #87ceeb) 0%,
+    var(--jrpg-bg-2, #98d8c8) 50%,
+    var(--jrpg-bg-3, #90ee90) 100%
+  );
   position: relative;
   min-height: 100vh;
   overflow: hidden;
@@ -214,7 +238,8 @@
 }
 
 @keyframes float-sparkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: translateY(0) scale(1);
   }
@@ -226,28 +251,49 @@
 
 /* JRPG text box style */
 .jrpg-textbox {
-  background: linear-gradient(to bottom, #E8EEF6 0%, #D4DEEC 100%);
-  border: 4px solid #2E5090;
+  background: linear-gradient(
+    to bottom,
+    var(--jrpg-textbox-bg-1, #e8eef6) 0%,
+    var(--jrpg-textbox-bg-2, #d4deec) 100%
+  );
+  border: 4px solid var(--jrpg-textbox-border, #2e5090);
   border-radius: 0;
   box-shadow:
-    inset 0 0 0 2px #228B22,
-    0 8px 0 #2F4F2F,
-    0 8px 16px rgba(0,0,0,0.3);
+    inset 0 0 0 2px var(--jrpg-textbox-inner, #228b22),
+    0 8px 0 var(--jrpg-textbox-shadow, #2f4f2f),
+    0 8px 16px rgba(0, 0, 0, 0.3);
   position: relative;
   padding: 24px;
 }
 
 .jrpg-textbox::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -8px;
   left: -8px;
   right: -8px;
   bottom: -8px;
-  background: linear-gradient(45deg, #4A4A4A 25%, transparent 25%, transparent 75%, #4A4A4A 75%, #4A4A4A),
-              linear-gradient(45deg, #4A4A4A 25%, transparent 25%, transparent 75%, #4A4A4A 75%, #4A4A4A);
+  background:
+    linear-gradient(
+      45deg,
+      #4a4a4a 25%,
+      transparent 25%,
+      transparent 75%,
+      #4a4a4a 75%,
+      #4a4a4a
+    ),
+    linear-gradient(
+      45deg,
+      #4a4a4a 25%,
+      transparent 25%,
+      transparent 75%,
+      #4a4a4a 75%,
+      #4a4a4a
+    );
   background-size: 8px 8px;
-  background-position: 0 0, 4px 4px;
+  background-position:
+    0 0,
+    4px 4px;
   opacity: 0.1;
   pointer-events: none;
   z-index: -1;
@@ -255,88 +301,104 @@
 
 /* JRPG button style */
 .jrpg-button {
-  background: linear-gradient(to bottom, #228B22 0%, #006400 100%) !important;
-  border: 3px solid #FFD700 !important;
+  background: linear-gradient(
+    to bottom,
+    var(--jrpg-btn-bg-1, #228b22) 0%,
+    var(--jrpg-btn-bg-2, #006400) 100%
+  ) !important;
+  border: 3px solid var(--jrpg-btn-border, #ffd700) !important;
   border-radius: 0 !important;
-  color: #FFFACD !important;
-  font-family: 'Press Start 2P', cursive !important;
+  color: var(--jrpg-btn-text, #fffacd) !important;
+  font-family: "Press Start 2P", cursive !important;
   font-size: 12px !important;
   padding: 16px 32px !important;
   text-transform: uppercase;
   box-shadow:
     inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    0 4px 0 #2F4F2F,
-    0 6px 12px rgba(0,0,0,0.3) !important;
+    0 4px 0 var(--jrpg-btn-shadow, #2f4f2f),
+    0 6px 12px rgba(0, 0, 0, 0.3) !important;
   transition: all 0.1s;
   position: relative;
   height: auto !important;
 }
 
 .jrpg-button:hover {
-  background: linear-gradient(to bottom, #32CD32 0%, #228B22 100%) !important;
+  background: linear-gradient(
+    to bottom,
+    var(--jrpg-btn-hover-1, #32cd32) 0%,
+    var(--jrpg-btn-hover-2, #228b22) 100%
+  ) !important;
   transform: translateY(2px);
   box-shadow:
     inset 0 2px 0 rgba(255, 255, 255, 0.4),
-    0 2px 0 #2F4F2F,
-    0 4px 8px rgba(0,0,0,0.3) !important;
+    0 2px 0 var(--jrpg-btn-shadow, #2f4f2f),
+    0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 .jrpg-button:active {
   transform: translateY(4px);
   box-shadow:
     inset 0 2px 0 rgba(0, 0, 0, 0.2),
-    0 0 0 #2F4F2F !important;
+    0 0 0 var(--jrpg-btn-shadow, #2f4f2f) !important;
 }
 
 /* JRPG input field */
 .jrpg-input {
-  background: #F0F4FA !important;
-  border: 3px solid #2E5090 !important;
+  background: var(--jrpg-input-bg, #f0f4fa) !important;
+  border: 3px solid var(--jrpg-input-border, #2e5090) !important;
   border-radius: 0 !important;
-  color: #2F4F2F !important;
-  font-family: 'Press Start 2P', cursive !important;
+  color: var(--jrpg-input-text, #2f4f2f) !important;
+  font-family: "Press Start 2P", cursive !important;
   font-size: 16px !important;
   padding: 16px !important;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 .jrpg-input:focus {
-  border-color: #228B22 !important;
+  border-color: var(--jrpg-focus, #228b22) !important;
   outline: none !important;
   box-shadow:
-    inset 0 2px 4px rgba(0,0,0,0.2),
-    0 0 0 2px rgba(34, 139, 34, 0.3) !important;
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 2px color-mix(in srgb, var(--jrpg-focus, #228b22) 30%, transparent) !important;
 }
 
 .jrpg-input::placeholder {
-  color: #8B8B7A !important;
+  color: #8b8b7a !important;
   font-size: 14px !important;
 }
 
 /* HP/MP style bars */
 .jrpg-stat-bar {
   background: #1a1a2a;
-  border: 2px solid #4A4A6A;
+  border: 2px solid #4a4a6a;
   height: 24px;
   position: relative;
   overflow: hidden;
 }
 
 .jrpg-stat-fill {
-  background: linear-gradient(to bottom, #4CAF50 0%, #2E7D32 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--jrpg-stat-1, #4caf50) 0%,
+    var(--jrpg-stat-2, #2e7d32) 100%
+  );
   height: 100%;
   transition: width 0.5s ease;
   position: relative;
 }
 
 .jrpg-stat-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, transparent 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 100%
+  );
 }
 
 /* Pixelated corners */
@@ -346,11 +408,11 @@
 
 .jrpg-corners::before,
 .jrpg-corners::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 12px;
   height: 12px;
-  background: #D4AF37;
+  background: var(--jrpg-corner, #d4af37);
 }
 
 .jrpg-corners::before {
@@ -370,21 +432,23 @@
   display: inline-block;
   width: 8px;
   height: 16px;
-  background: #FFE4B5;
+  background: var(--jrpg-gold, #ffe4b5);
   animation: blink 1s steps(2) infinite;
   margin-left: 4px;
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Gold text effect */
 .jrpg-gold-text {
-  color: #FFD700;
+  color: var(--jrpg-gold, #ffd700);
   text-shadow:
-    2px 2px 0 #2E5090,
-    -1px -1px 0 #FFF8DC;
+    2px 2px 0 var(--jrpg-textbox-border, #2e5090),
+    -1px -1px 0 #fff8dc;
 }
 
 /* Floating animation for special elements */
@@ -393,8 +457,13 @@
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Menu selection indicator */
@@ -404,14 +473,21 @@
 }
 
 .jrpg-selector::before {
-  content: '\25B6';
+  content: "\25B6";
   position: absolute;
   left: 8px;
-  color: #FFD700;
+  color: var(--jrpg-gold, #ffd700);
   animation: pulse 1s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: translateX(0); }
-  50% { opacity: 0.7; transform: translateX(-4px); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateX(-4px);
+  }
 }
