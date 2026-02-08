@@ -137,7 +137,7 @@ export function GameRoundResult({
           <div className="rounded-xl border border-stone-200 bg-stone-50/50 p-3">
             <GameAnswerGrid
               answers={round.allAnswers}
-              playerAnswer={round.submittedAnswer}
+              playerAnswers={round.submittedAnswer}
               playerRank={round.rank}
               mode="condensed"
               hideWords

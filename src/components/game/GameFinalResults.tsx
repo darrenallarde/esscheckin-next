@@ -146,7 +146,7 @@ export function GameFinalResults({
               <div className="max-h-96 overflow-y-auto rounded-lg border border-stone-100 bg-stone-50/50 p-3">
                 <GameAnswerGrid
                   answers={allAnswers}
-                  playerAnswer={playerAnswers[0]}
+                  playerAnswers={playerAnswers}
                   playerRank={null}
                   mode="full"
                 />

@@ -4,16 +4,17 @@
  * Rounds 1-2: HIGH direction — guess the most popular answer
  * Rounds 3-4: LOW direction — guess the least popular answer
  *
- * Dynamic scoring based on answer_count (N):
+ * Balanced scoring: HIGH and LOW halves worth equal total points.
  *
- * | Round | Direction | Formula              | Max (N=120) |
- * |-------|-----------|----------------------|-------------|
- * | 1     | high      | (N + 1 - rank) * 1   | 120         |
- * | 2     | high      | (N + 1 - rank) * 2   | 240         |
- * | 3     | low       | rank * 3             | 360         |
- * | 4     | low       | rank * 4             | 480         |
+ * | Round | Direction | Formula                         | Max (N=150) |
+ * |-------|-----------|---------------------------------|-------------|
+ * | 1     | high      | (N + 1 - rank) * 2              | 300         |
+ * | 2     | high      | (N + 1 - rank) * 3              | 450         |
+ * | 3     | low       | min(rank, N) * 2                | 300         |
+ * | 4     | low       | min(rank, N) * 3                | 450         |
  *
  * Max possible: N * 10 points (perfect game)
+ * HIGH half: N * 5, LOW half: N * 5 — balanced
  */
 
 export interface RoundResult {
@@ -24,10 +25,10 @@ export interface RoundResult {
 }
 
 const ROUND_CONFIG = {
-  1: { direction: "high" as const, multiplier: 1 },
-  2: { direction: "high" as const, multiplier: 2 },
-  3: { direction: "low" as const, multiplier: 3 },
-  4: { direction: "low" as const, multiplier: 4 },
+  1: { direction: "high" as const, multiplier: 2 },
+  2: { direction: "high" as const, multiplier: 3 },
+  3: { direction: "low" as const, multiplier: 2 },
+  4: { direction: "low" as const, multiplier: 3 },
 } as const;
 
 /**
@@ -35,7 +36,7 @@ const ROUND_CONFIG = {
  * @param round - Round number (1-4)
  * @param rank - Answer rank (1-N+) or null if not on the list
  * @param answerCount - Number of seed answers in the game
- * @returns Score for the round (0 if not on list or negative result)
+ * @returns Score for the round (0 if not on list)
  */
 export function calculateRoundScore(
   round: number,
@@ -56,9 +57,10 @@ export function calculateRoundScore(
 
   if (config.direction === "high") {
     const score = (answerCount + 1 - rank) * config.multiplier;
-    return Math.max(0, score); // Clamp to 0 for AI-judged answers ranked beyond seed count
+    return Math.max(0, score);
   } else {
-    return rank * config.multiplier;
+    // Cap at answerCount so AI-judged answers beyond seed list don't score extra
+    return Math.min(rank, answerCount) * config.multiplier;
   }
 }
 
