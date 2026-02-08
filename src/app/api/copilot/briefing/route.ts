@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createHash } from "crypto";
 import {
-  buildCopilotBriefingPrompt,
-  parseCopilotBriefingResponse,
-  generateFallbackBriefing,
-  CopilotCandidate,
-  CopilotBriefingResponse,
-} from "@/utils/copilotPrompt";
+  buildCopilotBriefingPromptV3,
+  parseCopilotBriefingResponseV3,
+  generateFallbackBriefingV3,
+  CopilotCandidateV3,
+  CopilotBriefingResponseV3,
+} from "@/utils/copilotPromptV3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,14 +31,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1. Call V2 RPC — get raw candidate data (up to 20)
+    // 1. Call V3 RPC — get signal candidates + healthy roster
     const { data: candidates, error: rpcError } = await supabase.rpc(
-      "get_copilot_briefing_v2",
-      { p_org_id: organizationId, p_limit: 20 },
+      "get_copilot_briefing_v3",
+      { p_org_id: organizationId, p_signal_limit: 30, p_healthy_limit: 50 },
     );
 
     if (rpcError) {
-      console.error("Copilot V2 RPC error:", rpcError);
+      console.error("Copilot V3 RPC error:", rpcError);
       return NextResponse.json(
         { error: "Failed to fetch briefing data" },
         { status: 500 },
@@ -49,19 +49,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         briefing_summary: "No students need attention right now.",
         students: [],
-      } satisfies CopilotBriefingResponse);
+        ministry_insights: {
+          teaching_recommendation: "",
+          growth_opportunities: [],
+          strategic_assessment: "",
+        },
+      } satisfies CopilotBriefingResponseV3);
     }
 
-    const typedCandidates = candidates as CopilotCandidate[];
+    const typedCandidates = candidates as CopilotCandidateV3[];
 
-    // 2. Compute briefing hash for cache
+    // 2. Compute briefing hash for cache (include ministry_priorities in hash)
     const allHashes = typedCandidates.map((c) => c.signals_hash).join("|");
     const today = new Date().toISOString().split("T")[0]; // date-scoped cache
+
+    // 3. Fetch org data (name + ministry_priorities) in parallel with cache check
+    const orgResult = await supabase
+      .from("organizations")
+      .select("name, ministry_priorities")
+      .eq("id", organizationId)
+      .single();
+
+    const orgName = orgResult.data?.name || "Youth Ministry";
+    const ministryPriorities =
+      (orgResult.data?.ministry_priorities as string) || null;
+
     const briefingHash = createHash("md5")
-      .update(`${organizationId}|${today}|${allHashes}`)
+      .update(
+        `${organizationId}|${today}|${allHashes}|${ministryPriorities || ""}`,
+      )
       .digest("hex");
 
-    // 3. Check cache
+    // 4. Check cache
     const { data: cached } = await supabase
       .from("copilot_drafts")
       .select("briefing_json")
@@ -72,43 +91,38 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (cached?.briefing_json) {
-      return NextResponse.json(cached.briefing_json as CopilotBriefingResponse);
+      return NextResponse.json(
+        cached.briefing_json as CopilotBriefingResponseV3,
+      );
     }
 
-    // 4. Build prompt and call Claude
+    // 5. Build prompt and call Claude
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       console.warn("No ANTHROPIC_API_KEY — using fallback briefing");
-      const fallback = generateFallbackBriefing(typedCandidates);
-      return NextResponse.json(fallback);
+      const fallback = generateFallbackBriefingV3(typedCandidates);
+      return NextResponse.json(enrichBriefing(fallback, typedCandidates));
     }
 
-    // Fetch org name and curriculum context in parallel
-    const [orgResult, curriculumResult] = await Promise.all([
-      supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", organizationId)
-        .single(),
-      supabase
-        .from("curriculum_weeks")
-        .select("topic_title, main_scripture, application_challenge, big_idea")
-        .eq("organization_id", organizationId)
-        .eq("is_current", true)
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    // Fetch curriculum context
+    const curriculumResult = await supabase
+      .from("curriculum_weeks")
+      .select("topic_title, main_scripture, application_challenge, big_idea")
+      .eq("organization_id", organizationId)
+      .eq("is_current", true)
+      .limit(1)
+      .maybeSingle();
 
-    const orgName = orgResult.data?.name || "Youth Ministry";
     const curriculum = curriculumResult.data || null;
 
-    const prompt = buildCopilotBriefingPrompt(
+    const prompt = buildCopilotBriefingPromptV3(
       typedCandidates,
       { orgName, totalStudents: typedCandidates.length },
       curriculum,
+      ministryPriorities,
     );
 
-    let briefing: CopilotBriefingResponse;
+    let briefing: CopilotBriefingResponseV3;
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -119,7 +133,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 2048,
+          max_tokens: 4096,
           temperature: 0.6,
           messages: [{ role: "user", content: prompt }],
         }),
@@ -136,44 +150,21 @@ export async function POST(request: NextRequest) {
       if (!responseText) throw new Error("Empty Claude response");
 
       const validIds = new Set(typedCandidates.map((c) => c.profile_id));
-      briefing = parseCopilotBriefingResponse(responseText, validIds);
-
-      // Enrich the AI response with student data the frontend needs
-      briefing.students = briefing.students.map((s) => {
-        const candidate = typedCandidates.find(
-          (c) => c.profile_id === s.profile_id,
-        );
-        if (candidate) {
-          return {
-            ...s,
-            // These are passed through for the frontend
-            first_name: candidate.first_name,
-            last_name: candidate.last_name,
-            phone_number: candidate.phone_number,
-            email: candidate.email,
-            grade: candidate.grade,
-            gender: candidate.gender,
-            belonging_status: candidate.belonging_status,
-            days_since_last_seen: candidate.days_since_last_seen,
-            total_checkins_8weeks: candidate.total_checkins_8weeks,
-            is_declining: candidate.is_declining,
-            primary_parent_name: candidate.primary_parent_name,
-            primary_parent_phone: candidate.primary_parent_phone,
-            group_names: candidate.group_names,
-          } as typeof s & Record<string, unknown>;
-        }
-        return s;
-      });
+      briefing = parseCopilotBriefingResponseV3(responseText, validIds);
+      briefing = enrichBriefing(briefing, typedCandidates);
     } catch (aiError) {
       console.error("AI generation failed, using fallback:", aiError);
-      briefing = generateFallbackBriefing(typedCandidates);
+      briefing = enrichBriefing(
+        generateFallbackBriefingV3(typedCandidates),
+        typedCandidates,
+      );
     }
 
-    // 5. Cache the result
+    // 6. Cache the result
     try {
       await supabase.from("copilot_drafts").upsert(
         {
-          profile_id: typedCandidates[0].profile_id, // placeholder — keyed by signals_hash
+          profile_id: typedCandidates[0].profile_id,
           organization_id: organizationId,
           signals_hash: briefingHash,
           briefing_json: briefing,
@@ -183,7 +174,6 @@ export async function POST(request: NextRequest) {
         { onConflict: "profile_id,organization_id" },
       );
     } catch (cacheError) {
-      // Non-fatal — briefing still works without caching
       console.error("Failed to cache briefing:", cacheError);
     }
 
@@ -195,4 +185,37 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/** Enrich AI response with student data the frontend needs */
+function enrichBriefing(
+  briefing: CopilotBriefingResponseV3,
+  candidates: CopilotCandidateV3[],
+): CopilotBriefingResponseV3 {
+  return {
+    ...briefing,
+    students: briefing.students.map((s) => {
+      const candidate = candidates.find((c) => c.profile_id === s.profile_id);
+      if (candidate) {
+        return {
+          ...s,
+          first_name: candidate.first_name,
+          last_name: candidate.last_name,
+          phone_number: candidate.phone_number,
+          email: candidate.email,
+          grade: candidate.grade,
+          gender: candidate.gender,
+          belonging_status: candidate.belonging_status,
+          days_since_last_seen: candidate.days_since_last_seen,
+          last_seen_at: candidate.last_seen_at,
+          total_checkins_8weeks: candidate.total_checkins_8weeks,
+          is_declining: candidate.is_declining,
+          primary_parent_name: candidate.primary_parent_name,
+          primary_parent_phone: candidate.primary_parent_phone,
+          group_names: candidate.group_names,
+        } as typeof s & Record<string, unknown>;
+      }
+      return s;
+    }),
+  };
 }

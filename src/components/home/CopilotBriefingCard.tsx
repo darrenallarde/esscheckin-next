@@ -12,6 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -29,11 +34,18 @@ import {
   HandHeart,
   Users,
   PartyPopper,
+  Lightbulb,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  TrendingUp,
+  UserPlus,
 } from "lucide-react";
 import {
   CopilotStudent,
   ActionType,
   UrgencyLevel,
+  MinistryInsights,
 } from "@/hooks/queries/use-copilot-briefing";
 
 // Belonging status badge styles
@@ -64,7 +76,7 @@ const BELONGING_STYLES: Record<
   Missing: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
 };
 
-// Urgency badge styles
+// Urgency badge styles (V3: includes proactive)
 const URGENCY_STYLES: Record<
   UrgencyLevel,
   { bg: string; text: string; border: string; pulse?: boolean }
@@ -95,6 +107,11 @@ const URGENCY_STYLES: Record<
     text: "text-green-800",
     border: "border-green-300",
   },
+  proactive: {
+    bg: "bg-indigo-100",
+    text: "text-indigo-800",
+    border: "border-indigo-300",
+  },
 };
 
 function formatDaysSeen(days: number): string {
@@ -104,6 +121,12 @@ function formatDaysSeen(days: number): string {
   if (days < 7) return `${days}d ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
   return `${Math.floor(days / 30)}mo ago`;
+}
+
+function formatLastVisited(isoDate: string | null): string | null {
+  if (!isoDate) return null;
+  const d = new Date(isoDate);
+  return `Last visited ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
 
 function getActionButton(
@@ -203,9 +226,34 @@ function getActionButton(
   }
 }
 
+// ─── Expandable Situation Summary ────────────────────────────────────────────
+
+function SituationSummary({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 120;
+  const displayText = isLong && !expanded ? text.slice(0, 120) + "..." : text;
+
+  return (
+    <p className="text-sm text-muted-foreground mb-1.5 leading-snug">
+      {displayText}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-primary text-xs ml-1 hover:underline"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </p>
+  );
+}
+
+// ─── Student Card ────────────────────────────────────────────────────────────
+
 interface CopilotStudentCardProps {
   student: CopilotStudent;
   onSendText: (student: CopilotStudent) => void;
+  onSendParentText: (student: CopilotStudent) => void;
   onView: (student: CopilotStudent) => void;
   onDismiss: (student: CopilotStudent) => void;
   onAlreadyContacted: (student: CopilotStudent) => void;
@@ -216,6 +264,7 @@ interface CopilotStudentCardProps {
 function CopilotStudentCard({
   student,
   onSendText,
+  onSendParentText,
   onView,
   onDismiss,
   onAlreadyContacted,
@@ -227,9 +276,11 @@ function CopilotStudentCard({
   const urgencyStyles =
     URGENCY_STYLES[student.urgency] || URGENCY_STYLES.medium;
 
+  const lastVisited = formatLastVisited(student.last_seen_at);
+
   return (
     <div className="py-4 first:pt-0 last:pb-0">
-      {/* Header row: Name + Urgency + Belonging + Days */}
+      {/* Header row: Name + Urgency + Belonging + Last visited */}
       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
         <span className="font-medium text-sm">
           {student.first_name} {student.last_name?.charAt(0)}.
@@ -247,29 +298,66 @@ function CopilotStudentCard({
           {student.belonging_status}
         </Badge>
         <span className="text-xs text-muted-foreground ml-auto">
-          {formatDaysSeen(student.days_since_last_seen)}
+          {lastVisited && <span className="mr-1.5">{lastVisited}</span>}
+          <span className="text-muted-foreground/60">
+            ({formatDaysSeen(student.days_since_last_seen)})
+          </span>
         </span>
       </div>
 
-      {/* AI Insight */}
-      <p className="text-sm text-muted-foreground mb-1.5 leading-snug">
-        {student.why_insight}
-      </p>
+      {/* Situation Summary (expandable) */}
+      <SituationSummary
+        text={student.situation_summary || student.why_insight}
+      />
 
       {/* Recommended action instruction */}
       <p className="text-xs font-medium text-foreground/80 mb-2">
         {student.recommended_action}
       </p>
 
-      {/* Draft message preview (only when available) */}
-      {student.draft_message && (
-        <div className="flex items-start gap-2 mb-3 bg-purple-50 dark:bg-purple-950/30 rounded-md p-2">
-          <MessageSquare className="h-3.5 w-3.5 text-purple-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-purple-700 dark:text-purple-300 leading-snug line-clamp-2">
-            {student.draft_message}
-          </p>
-        </div>
-      )}
+      {/* Dual message previews */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        {/* Student text preview */}
+        {student.student_text && (
+          <div className="flex-1 flex items-start gap-2 bg-purple-50 dark:bg-purple-950/30 rounded-md p-2">
+            <MessageSquare className="h-3.5 w-3.5 text-purple-500 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-purple-700 dark:text-purple-300 leading-snug line-clamp-2">
+                {student.student_text}
+              </p>
+              <Button
+                size="sm"
+                variant="link"
+                className="h-5 px-0 text-[10px] text-purple-600"
+                onClick={() => onSendText(student)}
+                disabled={!student.phone_number}
+              >
+                Send to {student.first_name}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Parent text preview */}
+        {student.parent_text && student.primary_parent_phone && (
+          <div className="flex-1 flex items-start gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2">
+            <MessageSquare className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-blue-700 dark:text-blue-300 leading-snug line-clamp-2">
+                {student.parent_text}
+              </p>
+              <Button
+                size="sm"
+                variant="link"
+                className="h-5 px-0 text-[10px] text-blue-600"
+                onClick={() => onSendParentText(student)}
+              >
+                Send to Parent
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
@@ -327,28 +415,129 @@ function CopilotStudentCard({
   );
 }
 
+// ─── Ministry Insights Section ───────────────────────────────────────────────
+
+interface MinistryInsightsSectionProps {
+  insights: MinistryInsights;
+  onGrowthPersonClick: (profileId: string) => void;
+}
+
+function MinistryInsightsSection({
+  insights,
+  onGrowthPersonClick,
+}: MinistryInsightsSectionProps) {
+  const [open, setOpen] = useState(false);
+
+  const hasContent =
+    insights.teaching_recommendation ||
+    insights.growth_opportunities.length > 0 ||
+    insights.strategic_assessment;
+
+  if (!hasContent) return null;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center gap-2 w-full py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-t">
+        <Lightbulb className="h-4 w-4 text-amber-500" />
+        <span>Ministry Insights</span>
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5 ml-auto" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 ml-auto" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-4 pb-2">
+        {/* Teaching Recommendation */}
+        {insights.teaching_recommendation && (
+          <div className="flex items-start gap-2">
+            <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-foreground/80 mb-0.5">
+                Consider This
+              </p>
+              <p className="text-sm text-muted-foreground leading-snug">
+                {insights.teaching_recommendation}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Growth Opportunities */}
+        {insights.growth_opportunities.length > 0 && (
+          <div className="flex items-start gap-2">
+            <TrendingUp className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-foreground/80 mb-1">
+                Leadership Potential
+              </p>
+              <div className="space-y-1.5">
+                {insights.growth_opportunities.map((g) => (
+                  <div key={g.profile_id} className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => onGrowthPersonClick(g.profile_id)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {g.name}
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      — {g.opportunity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Strategic Assessment */}
+        {insights.strategic_assessment && (
+          <div className="flex items-start gap-2">
+            <UserPlus className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-foreground/80 mb-0.5">
+                Ministry Pulse
+              </p>
+              <p className="text-sm text-muted-foreground leading-snug">
+                {insights.strategic_assessment}
+              </p>
+            </div>
+          </div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ─── Main Card ───────────────────────────────────────────────────────────────
+
 interface CopilotBriefingCardProps {
   briefingSummary: string;
   students: CopilotStudent[];
   isLoading: boolean;
+  ministryInsights: MinistryInsights;
   onSendText: (student: CopilotStudent) => void;
+  onSendParentText: (student: CopilotStudent) => void;
   onView: (student: CopilotStudent) => void;
   onDismiss: (student: CopilotStudent) => void;
   onAlreadyContacted: (student: CopilotStudent) => void;
   onCallParent: (student: CopilotStudent) => void;
   onCallStudent: (student: CopilotStudent) => void;
+  onGrowthPersonClick: (profileId: string) => void;
 }
 
 export function CopilotBriefingCard({
   briefingSummary,
   students,
   isLoading,
+  ministryInsights,
   onSendText,
+  onSendParentText,
   onView,
   onDismiss,
   onAlreadyContacted,
   onCallParent,
   onCallStudent,
+  onGrowthPersonClick,
 }: CopilotBriefingCardProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -431,6 +620,7 @@ export function CopilotBriefingCard({
               key={student.profile_id}
               student={student}
               onSendText={onSendText}
+              onSendParentText={onSendParentText}
               onView={onView}
               onDismiss={handleDismiss}
               onAlreadyContacted={handleAlreadyContacted}
@@ -439,6 +629,12 @@ export function CopilotBriefingCard({
             />
           ))}
         </div>
+
+        {/* Ministry Insights (collapsible, below student cards) */}
+        <MinistryInsightsSection
+          insights={ministryInsights}
+          onGrowthPersonClick={onGrowthPersonClick}
+        />
       </CardContent>
     </Card>
   );
