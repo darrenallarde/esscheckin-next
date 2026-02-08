@@ -66,14 +66,14 @@ function generateDates(startDate: string, numDays: number): string[] {
 function buildPrompt(
   series: DevotionalSeries,
   dates: string[],
-  timeSlots: string[]
+  timeSlots: string[],
 ): string {
   const devotionalSlots: string[] = [];
 
   dates.forEach((date, dayIndex) => {
     timeSlots.forEach((slot) => {
       devotionalSlots.push(
-        `Day ${dayIndex + 1}, ${date}, ${slot.charAt(0).toUpperCase() + slot.slice(1)}`
+        `Day ${dayIndex + 1}, ${date}, ${slot.charAt(0).toUpperCase() + slot.slice(1)}`,
       );
     });
   });
@@ -138,7 +138,7 @@ serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -156,7 +156,7 @@ serve(async (req) => {
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -170,7 +170,7 @@ serve(async (req) => {
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -190,7 +190,7 @@ serve(async (req) => {
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -203,7 +203,7 @@ serve(async (req) => {
     const totalDevotionals = dates.length * timeSlots.length;
 
     console.log(
-      `📅 Generating ${totalDevotionals} devotionals (${numDays} days × ${timeSlots.length} slots)`
+      `📅 Generating ${totalDevotionals} devotionals (${numDays} days × ${timeSlots.length} slots)`,
     );
 
     // 3. Generate devotionals using Claude
@@ -238,7 +238,7 @@ serve(async (req) => {
       const errorData = await response.json();
       console.error("❌ Claude API Error:", JSON.stringify(errorData, null, 2));
       throw new Error(
-        `Claude API error: ${JSON.stringify(errorData.error || errorData)}`
+        `Claude API error: ${JSON.stringify(errorData.error || errorData)}`,
       );
     }
 
@@ -255,7 +255,9 @@ serve(async (req) => {
 
     const generatedDevotionals = JSON.parse(cleanText) as GeneratedDevotional[];
 
-    console.log(`✅ Claude generated ${generatedDevotionals.length} devotionals`);
+    console.log(
+      `✅ Claude generated ${generatedDevotionals.length} devotionals`,
+    );
 
     // 4. Validate and map to database format
     const devotionalRecords = generatedDevotionals.map((d, index) => {
@@ -301,7 +303,55 @@ serve(async (req) => {
       // Don't throw - devotionals were saved successfully
     }
 
-    console.log(`🎉 Generation complete! ${devotionalRecords.length} devotionals saved.`);
+    // 7. Auto-generate series title if none was provided
+    if (!series.sermon_title) {
+      try {
+        console.log("📝 Auto-generating series title...");
+        const excerpt = series.sermon_content.slice(0, 500);
+        const titleResponse = await fetch(
+          "https://api.anthropic.com/v1/messages",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": ANTHROPIC_API_KEY!,
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 30,
+              messages: [
+                {
+                  role: "user",
+                  content: `Given this sermon excerpt, generate a 3-6 word series title for a youth devotional. Return ONLY the title text, no quotes or punctuation.\n\n${excerpt}`,
+                },
+              ],
+            }),
+          },
+        );
+
+        if (titleResponse.ok) {
+          const titleData = await titleResponse.json();
+          const generatedTitle = titleData.content[0].text.trim();
+          console.log(`✅ Auto-generated title: "${generatedTitle}"`);
+
+          await supabase
+            .from("devotional_series")
+            .update({ sermon_title: generatedTitle })
+            .eq("id", series_id);
+        }
+      } catch (titleError) {
+        console.error(
+          "⚠️ Title auto-generation failed (non-fatal):",
+          titleError,
+        );
+        // Silently continue — no worse than today
+      }
+    }
+
+    console.log(
+      `🎉 Generation complete! ${devotionalRecords.length} devotionals saved.`,
+    );
 
     return new Response(
       JSON.stringify({
@@ -315,7 +365,7 @@ serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (error) {
     console.error("❌ Fatal error:", error);
@@ -327,7 +377,7 @@ serve(async (req) => {
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 });

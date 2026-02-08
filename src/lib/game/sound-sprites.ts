@@ -18,7 +18,8 @@ type SoundName =
   | "streak"
   | "whoosh"
   | "finale"
-  | "prayer";
+  | "prayer"
+  | "score_count";
 
 const SAMPLE_RATE = 44100;
 
@@ -240,6 +241,40 @@ function generatePrayer(): AudioBuffer {
   return buf;
 }
 
+/** Rapid ascending ticks for score counting */
+function generateScoreCount(): AudioBuffer {
+  const duration = 1.2;
+  const ctx = new OfflineAudioContext(
+    1,
+    Math.floor(SAMPLE_RATE * duration),
+    SAMPLE_RATE,
+  );
+  const buf = createBuffer(ctx, duration);
+  const data = buf.getChannelData(0);
+  // Rapid coin-drop ticks that accelerate and rise in pitch
+  const tickCount = 24;
+  for (let i = 0; i < data.length; i++) {
+    const t = i / SAMPLE_RATE;
+    let sample = 0;
+    for (let tick = 0; tick < tickCount; tick++) {
+      // Ticks accelerate: closer together as time goes on
+      const progress = tick / tickCount;
+      const tickTime = progress * progress * duration;
+      if (t >= tickTime) {
+        const tickT = t - tickTime;
+        if (tickT < 0.04) {
+          // Rising pitch from 600 to 1400 Hz across ticks
+          const freq = 600 + 800 * progress;
+          const env = Math.exp(-tickT * 120);
+          sample += env * Math.sin(2 * Math.PI * freq * tickT) * 0.15;
+        }
+      }
+    }
+    data[i] = sample;
+  }
+  return buf;
+}
+
 const generators: Record<SoundName, () => AudioBuffer> = {
   tap: generateTap,
   lock_in: generateLockIn,
@@ -250,6 +285,7 @@ const generators: Record<SoundName, () => AudioBuffer> = {
   whoosh: generateWhoosh,
   finale: generateFinale,
   prayer: generatePrayer,
+  score_count: generateScoreCount,
 };
 
 /**

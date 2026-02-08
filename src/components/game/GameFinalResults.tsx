@@ -61,6 +61,7 @@ interface GameFinalResultsProps {
     devotional_id: string;
     scripture_verses: string;
     fun_facts: { fact: string }[];
+    core_question: string;
   };
   onGoToPrayer: () => void;
   onViewLeaderboard: () => void;
@@ -301,27 +302,44 @@ export function GameFinalResults({
         </div>
       </div>
 
-      {/* Action buttons — 2x2 grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Pray */}
-        <motion.button
-          onClick={onGoToPrayer}
-          whileTap={tapScale}
-          className="py-3.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
-          style={{
-            background: prayerBonusAwarded
-              ? "var(--game-surface-light)"
-              : "var(--game-accent)",
-            color: prayerBonusAwarded ? "var(--game-text)" : "#fff",
-            boxShadow: prayerBonusAwarded
-              ? "none"
-              : "0 0 16px hsla(258, 90%, 66%, 0.3)",
-          }}
-        >
-          <Heart className="h-4 w-4" />
-          {prayerBonusAwarded ? "Pray Again" : "Pray +500"}
-        </motion.button>
+      {/* Primary CTA — Pray button (prominent, full-width) */}
+      <motion.button
+        onClick={onGoToPrayer}
+        whileTap={tapScale}
+        animate={
+          prayerBonusAwarded
+            ? {}
+            : {
+                scale: [1, 1.04, 1],
+                boxShadow: [
+                  "0 0 16px hsla(258, 90%, 66%, 0.3)",
+                  "0 0 28px hsla(258, 90%, 66%, 0.5)",
+                  "0 0 16px hsla(258, 90%, 66%, 0.3)",
+                ],
+              }
+        }
+        transition={
+          prayerBonusAwarded
+            ? {}
+            : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }
+        }
+        className="w-full py-5 px-6 rounded-2xl text-lg font-bold transition-all flex items-center justify-center gap-3"
+        style={{
+          background: prayerBonusAwarded
+            ? "var(--game-surface-light)"
+            : "var(--game-accent)",
+          color: prayerBonusAwarded ? "var(--game-text)" : "#fff",
+          boxShadow: prayerBonusAwarded
+            ? "none"
+            : "0 0 16px hsla(258, 90%, 66%, 0.3)",
+        }}
+      >
+        <Heart className="h-6 w-6" />
+        {prayerBonusAwarded ? "Pray Again" : "Pray for +500 pts"}
+      </motion.button>
 
+      {/* Secondary action buttons — row */}
+      <div className="grid grid-cols-2 gap-3">
         {/* Message Leader */}
         {leaderContact ? (
           <a
@@ -459,7 +477,29 @@ export function GameFinalResults({
         </a>
       </div>
 
-      {/* Full answer reveal */}
+      {/* Question + Full answer reveal */}
+      {allAnswers.length > 0 && showAnswers && (
+        <div
+          className="rounded-xl p-5 border text-center"
+          style={{
+            background: "hsla(258, 60%, 50%, 0.08)",
+            borderColor: "hsla(258, 60%, 50%, 0.2)",
+          }}
+        >
+          <p
+            className="text-xs font-semibold uppercase tracking-wider mb-2"
+            style={{ color: "hsla(258, 80%, 70%, 1)" }}
+          >
+            The Question
+          </p>
+          <p
+            className="text-lg font-bold"
+            style={{ color: "var(--game-text)" }}
+          >
+            {game.core_question}
+          </p>
+        </div>
+      )}
       {allAnswers.length > 0 && showAnswers && (
         <div
           ref={answersRef}

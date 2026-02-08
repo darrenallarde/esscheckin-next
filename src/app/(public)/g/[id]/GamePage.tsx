@@ -115,6 +115,19 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
 
   const { muted, toggleMute } = audio;
 
+  // Play score counting sound when final results screen appears
+  const prevScreenRef = useRef(state.screen);
+  useEffect(() => {
+    if (
+      state.screen === "final_results" &&
+      prevScreenRef.current !== "final_results"
+    ) {
+      // Small delay so the finale fanfare finishes first
+      setTimeout(() => audio.play("score_count"), 300);
+    }
+    prevScreenRef.current = state.screen;
+  }, [state.screen, audio]);
+
   // Check game status and restore auth on mount
   useEffect(() => {
     const init = async () => {
@@ -564,7 +577,11 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
                 leaderContact={leaderContact}
                 game={game}
                 onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
-                onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
+                onViewLeaderboard={() => {
+                  audio.play("correct");
+                  confettiEffects.fire("hit");
+                  dispatch({ type: "VIEW_LEADERBOARD" });
+                }}
               />
             </motion.div>
           )}

@@ -24,8 +24,10 @@ import {
   Check,
   Copy,
   Gamepad2,
+  Pencil,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -60,6 +62,7 @@ interface DevotionalSeriesViewProps {
   onDelete?: () => void;
   onEditDevotional?: (devotional: Devotional) => void;
   onCreateGame?: (devotionalId: string) => void;
+  onUpdateSeriesTitle?: (title: string) => void;
   gamesByDevotionalId?: Record<string, DevotionalGame>;
   isActivating?: boolean;
 }
@@ -303,9 +306,38 @@ export function DevotionalSeriesView({
   onDelete,
   onEditDevotional,
   onCreateGame,
+  onUpdateSeriesTitle,
   gamesByDevotionalId,
   isActivating,
 }: DevotionalSeriesViewProps) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
+  const handleStartEditTitle = () => {
+    setEditTitle(series.sermon_title || "");
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveTitle = () => {
+    const trimmed = editTitle.trim();
+    if (trimmed && trimmed !== series.sermon_title) {
+      onUpdateSeriesTitle?.(trimmed);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelTitle = () => {
+    setIsEditingTitle(false);
+  };
+
   // Group devotionals by date
   const devotionalsByDate = devotionals.reduce(
     (acc, d) => {
@@ -382,7 +414,33 @@ export function DevotionalSeriesView({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              {series.sermon_title || "Untitled Series"}
+              {isEditingTitle ? (
+                <Input
+                  ref={titleInputRef}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={handleSaveTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveTitle();
+                    if (e.key === "Escape") handleCancelTitle();
+                  }}
+                  className="h-7 text-base font-semibold w-64"
+                  placeholder="Series title..."
+                />
+              ) : (
+                <span className="group/title flex items-center gap-1.5">
+                  {series.sermon_title || "Untitled Series"}
+                  {onUpdateSeriesTitle && (
+                    <button
+                      onClick={handleStartEditTitle}
+                      className="opacity-0 group-hover/title:opacity-100 transition-opacity"
+                      title="Edit title"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                    </button>
+                  )}
+                </span>
+              )}
               {getStatusBadge()}
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">

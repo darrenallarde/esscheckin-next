@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BookOpen,
@@ -11,6 +12,7 @@ import {
   History,
   Loader2,
   Gamepad2,
+  Pencil,
 } from "lucide-react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { SermonUpload } from "@/components/curriculum/SermonUpload";
@@ -67,6 +69,19 @@ export default function CurriculumPage() {
   const [editingDevotional, setEditingDevotional] = useState<Devotional | null>(
     null,
   );
+  const [editingCardTitleId, setEditingCardTitleId] = useState<string | null>(
+    null,
+  );
+  const [editingCardTitle, setEditingCardTitle] = useState("");
+  const cardTitleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingCardTitleId && cardTitleInputRef.current) {
+      cardTitleInputRef.current.focus();
+      cardTitleInputRef.current.select();
+    }
+  }, [editingCardTitleId]);
+
   const [isGeneratingGame, setIsGeneratingGame] = useState(false);
   const [gameComplete, setGameComplete] = useState(false);
   const [gameUrl, setGameUrl] = useState<string | undefined>();
@@ -353,6 +368,27 @@ export default function CurriculumPage() {
 
   const pastSeries = allSeries?.filter((s) => s.status !== "active") || [];
 
+  const handleUpdateSeriesTitle = async (seriesId: string, title: string) => {
+    if (!organizationId) return;
+    try {
+      await updateSeries.mutateAsync({
+        seriesId,
+        organizationId,
+        sermonTitle: title,
+      });
+      toast({
+        title: "Title updated",
+        description: "Series title has been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Could not save the title. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleEditDevotional = async (updates: Partial<Devotional>) => {
     if (!editingDevotional) return;
 
@@ -479,6 +515,9 @@ export default function CurriculumPage() {
               onArchive={() => handleArchive(activeSeries)}
               onEditDevotional={setEditingDevotional}
               onCreateGame={handleCreateGame}
+              onUpdateSeriesTitle={(title) =>
+                handleUpdateSeriesTitle(activeSeries.id, title)
+              }
               gamesByDevotionalId={gamesByDevotionalId}
             />
           ) : (
@@ -533,9 +572,46 @@ export default function CurriculumPage() {
                     onClick={() => setSelectedSeriesId(series.id)}
                   >
                     <CardContent className="p-4">
-                      <h3 className="font-medium truncate">
-                        {series.sermon_title || "Untitled Series"}
-                      </h3>
+                      {editingCardTitleId === series.id ? (
+                        <Input
+                          ref={cardTitleInputRef}
+                          value={editingCardTitle}
+                          onChange={(e) => setEditingCardTitle(e.target.value)}
+                          onBlur={() => {
+                            const trimmed = editingCardTitle.trim();
+                            if (trimmed && trimmed !== series.sermon_title) {
+                              handleUpdateSeriesTitle(series.id, trimmed);
+                            }
+                            setEditingCardTitleId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                            if (e.key === "Escape") {
+                              setEditingCardTitleId(null);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-7 text-sm font-medium mb-1"
+                          placeholder="Series title..."
+                        />
+                      ) : (
+                        <h3 className="font-medium truncate group/card-title flex items-center gap-1.5">
+                          {series.sermon_title || "Untitled Series"}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCardTitle(series.sermon_title || "");
+                              setEditingCardTitleId(series.id);
+                            }}
+                            className="opacity-0 group-hover/card-title:opacity-100 transition-opacity shrink-0"
+                            title="Edit title"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </h3>
+                      )}
                       <p className="text-sm text-muted-foreground">
                         {new Date(series.start_date).toLocaleDateString()}
                       </p>
@@ -569,6 +645,9 @@ export default function CurriculumPage() {
                         )
                       }
                       onEditDevotional={setEditingDevotional}
+                      onUpdateSeriesTitle={(title) =>
+                        handleUpdateSeriesTitle(selectedSeriesId, title)
+                      }
                       isActivating={activateSeries.isPending}
                     />
                   )}

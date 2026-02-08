@@ -84,6 +84,16 @@ A single question that can be answered in ONE WORD. The question must be:
 
 Imagine you surveyed 100,000 random teenagers with this question. Rank the answers by how many people would give each response.
 
+**PERSONA BRAINSTORMING — DO THIS FIRST:**
+Before writing the answer list, mentally adopt each of these 4 teenager personas and brainstorm 15-20 answers EACH persona would give. This ensures the final list captures the full range of real teen responses:
+
+1. **The Church Kid** — grew up in youth group, knows the "right" answers (faith, prayer, Jesus, grace...)
+2. **The Pragmatist** — thinks practically and concretely about real life (money, food, family, sleep, health...)
+3. **The Athlete / Social Kid** — thinks about relationships, competition, status (friends, winning, teamwork, respect...)
+4. **The Quiet Thinker** — introspective, creative, sometimes unexpected (peace, silence, art, nature, purpose...)
+
+Merge all 4 lists together, remove duplicates, then rank by overall popularity across ALL 100,000 teens (not just one type). The church kid's answers should NOT dominate — remember most teens are a MIX of these personas. Practical/concrete answers like "money", "food", "family" are often MORE popular than theological answers.
+
 **ANSWER CONTENT GUARDRAILS:**
 - NO profanity, slurs, or crude humor
 - NO sexual or suggestive content
@@ -98,12 +108,12 @@ Rules for the answer list:
 - All answers must be legitimate responses to the question
 - Include a MIX of word types: nouns, verbs, adjectives, and adverbs — not just nouns
 - Use everyday, accessible words teenagers actually know — avoid SAT words or overly academic vocabulary
-- Rank 1-15: The obvious, first-thing-you'd-think-of answers
-- Rank 16-50: Common but slightly less obvious
+- Rank 1-15: The obvious, first-thing-you'd-think-of answers — MUST include at least 3-4 practical/concrete answers (not all theological)
+- Rank 16-50: Common but slightly less obvious — mix of spiritual AND everyday answers
 - Rank 51-100: Reasonable but require some thought — good variety of verbs and adjectives here
 - Rank 101-150: Creative, less common but still valid answers
 - NO duplicate words
-- Think about what a room of 100 teenagers would actually shout out
+- Think about what a room of 100 teenagers would actually shout out — not just the "Sunday school" answers
 
 ## OUTPUT FORMAT
 Return ONLY a JSON object (no other text):
