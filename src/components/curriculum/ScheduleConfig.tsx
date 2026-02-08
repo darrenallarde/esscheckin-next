@@ -92,7 +92,7 @@ export function ScheduleConfig({
             {(
               Object.entries(FREQUENCY_LABELS) as [
                 DevotionalFrequency,
-                string
+                string,
               ][]
             ).map(([value, label]) => (
               <div key={value}>
@@ -110,8 +110,8 @@ export function ScheduleConfig({
                     {value === "1x_week"
                       ? "1 day"
                       : value === "3x_week"
-                      ? "3 days"
-                      : "7 days"}
+                        ? "3 days"
+                        : "7 days"}
                   </span>
                 </Label>
               </div>
@@ -138,7 +138,7 @@ export function ScheduleConfig({
                   key={value}
                   className={`flex items-start space-x-3 rounded-md border p-4 ${
                     isChecked ? "border-primary bg-primary/5" : "border-muted"
-                  } ${isDisabled ? "opacity-50" : ""}`}
+                  }`}
                 >
                   <Checkbox
                     id={`slot-${value}`}
@@ -193,8 +193,8 @@ export function ScheduleConfig({
             {frequency === "1x_week"
               ? "1 day"
               : frequency === "3x_week"
-              ? "3 days"
-              : "7 days"}{" "}
+                ? "3 days"
+                : "7 days"}{" "}
             × {timeSlots.length} time slot{timeSlots.length > 1 ? "s" : ""} per
             day
           </p>
