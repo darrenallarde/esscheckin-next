@@ -1,28 +1,48 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, X } from "lucide-react";
 
 interface GenerationProgressModalProps {
   isOpen: boolean;
   sermonTitle?: string;
+  onCancel?: () => void;
 }
+
+const CANCEL_DELAY_MS = 15_000;
 
 export function GenerationProgressModal({
   isOpen,
   sermonTitle,
+  onCancel,
 }: GenerationProgressModalProps) {
+  const [showCancel, setShowCancel] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowCancel(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowCancel(true), CANCEL_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen}>
       <DialogContent
         className="sm:max-w-md [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (showCancel) onCancel?.();
+          else e.preventDefault();
+        }}
       >
         <DialogTitle className="sr-only">Generating Devotionals</DialogTitle>
         <DialogDescription className="sr-only">
@@ -55,6 +75,17 @@ export function GenerationProgressModal({
               />
             </div>
           </div>
+          {showCancel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-6 text-muted-foreground"
+              onClick={onCancel}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Taking too long? Close
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

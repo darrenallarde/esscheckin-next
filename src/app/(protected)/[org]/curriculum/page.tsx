@@ -164,6 +164,8 @@ export default function CurriculumPage() {
       if (session?.access_token) {
         const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-devotionals`;
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120_000);
         const genResponse = await fetch(edgeFunctionUrl, {
           method: "POST",
           headers: {
@@ -171,7 +173,9 @@ export default function CurriculumPage() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ series_id: series.id }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
 
         if (!genResponse.ok) {
           const errorData = await genResponse.json();
@@ -579,6 +583,7 @@ export default function CurriculumPage() {
       <GenerationProgressModal
         isOpen={isGenerating}
         sermonTitle={sermonTitle || undefined}
+        onCancel={() => setIsGenerating(false)}
       />
 
       {/* Edit Devotional Modal */}
