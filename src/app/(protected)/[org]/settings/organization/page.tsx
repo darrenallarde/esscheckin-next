@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Loader2,
@@ -22,6 +23,7 @@ import {
   Copy,
   CheckCircle2,
   MessageSquare,
+  Dog,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -49,6 +51,12 @@ export default function OrganizationSettingsPage() {
   const [isSavingShortCode, setIsSavingShortCode] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+  // Ministry priorities state
+  const [ministryPriorities, setMinistryPriorities] = useState("");
+  const [originalMinistryPriorities, setOriginalMinistryPriorities] =
+    useState("");
+  const [isSavingPriorities, setIsSavingPriorities] = useState(false);
+
   // Load current settings
   useEffect(() => {
     if (currentOrganization) {
@@ -62,6 +70,19 @@ export default function OrganizationSettingsPage() {
       const orgShortCode = currentOrganization.shortCode || "";
       setShortCode(orgShortCode);
       setOriginalShortCode(orgShortCode);
+
+      // Fetch ministry priorities (not in org context — fetch directly)
+      const supabase = createClient();
+      supabase
+        .from("organizations")
+        .select("ministry_priorities")
+        .eq("id", currentOrganization.id)
+        .single()
+        .then(({ data }) => {
+          const priorities = (data?.ministry_priorities as string) || "";
+          setMinistryPriorities(priorities);
+          setOriginalMinistryPriorities(priorities);
+        });
     }
   }, [currentOrganization]);
 
@@ -192,6 +213,40 @@ export default function OrganizationSettingsPage() {
     }
   };
 
+  const handleSavePriorities = async () => {
+    if (!currentOrganization) return;
+
+    setIsSavingPriorities(true);
+    const supabase = createClient();
+
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({ ministry_priorities: ministryPriorities.trim() || null })
+        .eq("id", currentOrganization.id);
+
+      if (error) throw error;
+
+      setOriginalMinistryPriorities(ministryPriorities.trim());
+
+      toast({
+        title: "Priorities saved",
+        description:
+          "Your AI co-pilot will factor these into its next briefing.",
+      });
+    } catch (error) {
+      console.error("Error saving priorities:", error);
+      toast({
+        title: "Error saving priorities",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingPriorities(false);
+    }
+  };
+
+  const prioritiesChanged = ministryPriorities !== originalMinistryPriorities;
   const shortCodeChanged = shortCode !== originalShortCode;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -399,6 +454,58 @@ export default function OrganizationSettingsPage() {
                 </span>
               </label>
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Co-Pilot Priorities */}
+        <Card className="lg:col-span-2 border-purple-200 bg-purple-50/30 dark:border-purple-900 dark:bg-purple-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Dog className="h-5 w-5 text-purple-600" />
+              Co-Pilot Priorities
+            </CardTitle>
+            <CardDescription>
+              Tell your AI co-pilot about upcoming events, ministry goals, or
+              things on your mind this week.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              value={ministryPriorities}
+              onChange={(e) => {
+                if (e.target.value.length <= 1000) {
+                  setMinistryPriorities(e.target.value);
+                }
+              }}
+              placeholder="e.g., Winter camp registration closes Friday. Focus on connecting new 6th graders. Jake needs a personal invite."
+              rows={4}
+              disabled={!canEdit}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {ministryPriorities.length}/1000 characters
+              </p>
+              {canEdit && prioritiesChanged && (
+                <Button
+                  onClick={handleSavePriorities}
+                  disabled={isSavingPriorities}
+                  size="sm"
+                >
+                  {isSavingPriorities ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3 w-3 mr-1" />
+                      Save Priorities
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

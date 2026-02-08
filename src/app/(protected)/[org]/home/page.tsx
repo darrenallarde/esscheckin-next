@@ -49,6 +49,7 @@ export default function HomePage() {
   const {
     briefingSummary,
     students: copilotStudents,
+    ministryInsights,
     isLoading: copilotLoading,
   } = useCopilotBriefing(organizationId);
 
@@ -174,13 +175,56 @@ export default function HomePage() {
 
   // Co-pilot actions
   const handleCopilotSendText = (student: CopilotStudent) => {
-    setAiSuggestion(student.draft_message || null);
+    setAiSuggestion(student.student_text || student.draft_message || null);
     setSelectedConversation({
       profileId: student.profile_id,
       phoneNumber: student.phone_number,
       personName: `${student.first_name} ${student.last_name}`,
     });
     setMessageDrawerOpen(true);
+  };
+
+  const handleCopilotSendParentText = (student: CopilotStudent) => {
+    setAiSuggestion(student.parent_text || null);
+    setSelectedConversation({
+      profileId: student.profile_id,
+      phoneNumber: student.primary_parent_phone,
+      personName:
+        student.primary_parent_name || `${student.first_name}'s parent`,
+    });
+    setMessageDrawerOpen(true);
+  };
+
+  const handleGrowthPersonClick = (profileId: string) => {
+    // Find the student in copilot data for their name
+    const student = copilotStudents.find((s) => s.profile_id === profileId);
+    if (student) {
+      setSelectedPerson({
+        profile_id: student.profile_id,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        phone_number: student.phone_number,
+        email: student.email,
+        grade: student.grade,
+        gender: student.gender,
+        high_school: null,
+        group_names: student.group_names,
+        days_since_last_check_in: student.days_since_last_seen,
+      });
+    } else {
+      // Fallback: just open with profile_id
+      setSelectedPerson({
+        profile_id: profileId,
+        first_name: "",
+        last_name: "",
+        phone_number: null,
+        email: null,
+        grade: null,
+        gender: null,
+        high_school: null,
+      });
+    }
+    setProfileDrawerOpen(true);
   };
 
   const handleCopilotView = (student: CopilotStudent) => {
@@ -244,12 +288,15 @@ export default function HomePage() {
         briefingSummary={briefingSummary}
         students={copilotStudents}
         isLoading={copilotLoading}
+        ministryInsights={ministryInsights}
         onSendText={handleCopilotSendText}
+        onSendParentText={handleCopilotSendParentText}
         onView={handleCopilotView}
         onDismiss={handleCopilotDismiss}
         onAlreadyContacted={handleCopilotAlreadyContacted}
         onCallParent={handleCopilotCallParent}
         onCallStudent={handleCopilotCallStudent}
+        onGrowthPersonClick={handleGrowthPersonClick}
       />
 
       {/* Belonging Spectrum */}
