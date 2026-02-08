@@ -33,6 +33,7 @@ import {
   Devotional,
   getTotalDevotionals,
 } from "@/hooks/queries/use-devotionals";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { safeTrack } from "@/lib/amplitude";
 import { EVENTS } from "@/lib/amplitude/events";
@@ -47,6 +48,7 @@ export default function CurriculumPage() {
   const { currentOrganization, isLoading: orgLoading } = useOrganization();
   const organizationId = currentOrganization?.id || null;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Form state
   const [sermonContent, setSermonContent] = useState("");
@@ -213,6 +215,14 @@ export default function CurriculumPage() {
           });
         }
       }
+
+      // Refetch series (status: generating → ready) and devotionals
+      await queryClient.invalidateQueries({
+        queryKey: ["devotional-series", organizationId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["devotionals", series.id],
+      });
 
       // Track generation complete
       safeTrack(EVENTS.DEVOTIONAL_GENERATION_COMPLETED, {
