@@ -1,11 +1,13 @@
+import { PublicProviders } from "./providers";
+
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
-      {children}
-    </div>
+    <PublicProviders>
+      <div className="min-h-screen">{children}</div>
+    </PublicProviders>
   );
 }
