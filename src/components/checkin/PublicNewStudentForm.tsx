@@ -5,8 +5,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,10 +41,25 @@ import * as Sentry from "@sentry/nextjs";
 import { useCheckInTracking } from "@/lib/amplitude/hooks";
 
 const newStudentSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
-  lastName: z.string().trim().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
-  phoneNumber: z.string().trim().min(10, "Phone number must be at least 10 digits"),
-  email: z.string().trim().email("Invalid email address").min(1, "Email is required"),
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "First name is required")
+    .max(50, "First name must be less than 50 characters"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last name is required")
+    .max(50, "Last name must be less than 50 characters"),
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(10, "Phone number must be at least 10 digits"),
+  email: z
+    .string()
+    .trim()
+    .email("Invalid email address")
+    .min(1, "Email is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female"], { message: "Please select your gender" }),
   instagramHandle: z.string().trim().optional().or(z.literal("")),
@@ -78,38 +106,53 @@ interface PublicNewStudentFormProps {
  */
 function parseRegistrationError(error: unknown): string {
   const errorStr = error instanceof Error ? error.message : String(error);
-  const errorObj = error as { code?: string; message?: string; details?: string };
+  const errorObj = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+  };
 
   // Check for unique constraint violations
-  if (errorObj.code === '23505' || errorStr.includes('duplicate key') || errorStr.includes('already exists')) {
-    if (errorStr.includes('phone') || errorStr.includes('phone_number')) {
-      return 'This phone number is already registered. Try searching for your name instead.';
+  if (
+    errorObj.code === "23505" ||
+    errorStr.includes("duplicate key") ||
+    errorStr.includes("already exists")
+  ) {
+    if (errorStr.includes("phone") || errorStr.includes("phone_number")) {
+      return "This phone number is already registered. Try searching for your name instead.";
     }
-    if (errorStr.includes('email')) {
-      return 'This email is already registered. Try searching for your name instead.';
+    if (errorStr.includes("email")) {
+      return "This email is already registered. Try searching for your name instead.";
     }
-    return 'An account with this information already exists. Try searching for your name instead.';
+    return "An account with this information already exists. Try searching for your name instead.";
   }
 
   // Check for validation errors
-  if (errorStr.includes('invalid') && errorStr.includes('email')) {
-    return 'Please enter a valid email address.';
+  if (errorStr.includes("invalid") && errorStr.includes("email")) {
+    return "Please enter a valid email address.";
   }
-  if (errorStr.includes('invalid') && errorStr.includes('phone')) {
-    return 'Please enter a valid phone number.';
+  if (errorStr.includes("invalid") && errorStr.includes("phone")) {
+    return "Please enter a valid phone number.";
   }
 
   // Check for RPC-returned error messages
-  if (errorObj.message && !errorObj.message.includes('duplicate key')) {
+  if (errorObj.message && !errorObj.message.includes("duplicate key")) {
     return errorObj.message;
   }
 
   // Default
-  return 'Registration failed. Please check your information and try again.';
+  return "Registration failed. Please check your information and try again.";
 }
 
-const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinStyle = 'gamified' }: PublicNewStudentFormProps) => {
-  const isGamified = checkinStyle === 'gamified';
+const PublicNewStudentForm = ({
+  onSuccess,
+  onBack,
+  orgSlug,
+  deviceId,
+  checkinStyle = "gamified",
+}: PublicNewStudentFormProps) => {
+  const isGamified = checkinStyle === "gamified";
+  const isMinimal = checkinStyle === "minimal";
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -118,7 +161,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
   const tracking = useCheckInTracking();
 
   // Security: Honeypot and timing
-  const [honeypot, setHoneypot] = useState('');
+  const [honeypot, setHoneypot] = useState("");
   const formLoadTime = useRef<number>(Date.now());
 
   const form = useForm<NewStudentFormData>({
@@ -154,7 +197,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
     const security = validateFormSubmission(
       honeypot,
       formLoadTime.current,
-      TIMING_THRESHOLDS.REGISTRATION_FORM
+      TIMING_THRESHOLDS.REGISTRATION_FORM,
     );
     if (!security.isValid) {
       setIsSubmitting(true);
@@ -167,8 +210,9 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
     const supabase = createClient();
     try {
       // Use profile-based RPC function with optional device tracking and gender
-      const { data: result, error } = await supabase
-        .rpc('register_profile_and_checkin', {
+      const { data: result, error } = await supabase.rpc(
+        "register_profile_and_checkin",
+        {
           p_org_slug: orgSlug,
           p_first_name: data.firstName,
           p_last_name: data.lastName,
@@ -188,11 +232,12 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
           p_father_phone: data.fatherPhone || null,
           p_device_id: deviceId || null,
           p_gender: data.gender,
-        });
+        },
+      );
 
       if (error) {
         Sentry.captureException(error, {
-          tags: { action: 'public_registration', org_slug: orgSlug },
+          tags: { action: "public_registration", org_slug: orgSlug },
         });
         throw error;
       }
@@ -201,7 +246,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
         // Track registration completed
         tracking.trackRegistrationCompleted({
           student_id: result[0].student_id,
-          student_grade: data.grade || '',
+          student_grade: data.grade || "",
           has_email: !!data.email,
           has_parent_info: !!(data.fatherPhone || data.motherPhone),
         });
@@ -213,7 +258,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             first_name: data.firstName,
             last_name: data.lastName,
             email: data.email || null,
-            user_type: 'student',
+            user_type: "student",
             grade: data.grade || null,
             high_school: data.highSchool || null,
           },
@@ -222,7 +267,7 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
         });
       } else {
         // RPC returned success: false with a message
-        const errorMessage = result?.[0]?.message || 'Registration failed';
+        const errorMessage = result?.[0]?.message || "Registration failed";
         throw new Error(errorMessage);
       }
     } catch (error) {
@@ -281,11 +326,21 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "FIRST NAME *" : "First Name *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "FIRST NAME *" : "First Name *"}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter first name" className={inputClass} {...field} />
+                    <Input
+                      placeholder="Enter first name"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -295,11 +350,21 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "LAST NAME *" : "Last Name *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "LAST NAME *" : "Last Name *"}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter last name" className={inputClass} {...field} />
+                    <Input
+                      placeholder="Enter last name"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -312,11 +377,22 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "PHONE *" : "Phone Number *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "PHONE *" : "Phone Number *"}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
+                    <Input
+                      placeholder="(555) 123-4567"
+                      type="tel"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -326,11 +402,22 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "EMAIL *" : "Email *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "EMAIL *" : "Email *"}
+                  </FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="your@email.com" className={inputClass} {...field} />
+                    <Input
+                      type="email"
+                      placeholder="your@email.com"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -343,11 +430,17 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="dateOfBirth"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "BIRTHDAY *" : "Date of Birth *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "BIRTHDAY *" : "Date of Birth *"}
+                  </FormLabel>
                   <FormControl>
                     <Input type="date" className={inputClass} {...field} />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -357,7 +450,9 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="gender"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "GENDER *" : "Gender *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "GENDER *" : "Gender *"}
+                  </FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -366,19 +461,37 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="male" id="male" />
-                        <label htmlFor="male" className={isGamified ? "jrpg-font text-xs cursor-pointer" : "text-sm cursor-pointer"}>
+                        <label
+                          htmlFor="male"
+                          className={
+                            isGamified
+                              ? "jrpg-font text-xs cursor-pointer"
+                              : "text-sm cursor-pointer"
+                          }
+                        >
                           {isGamified ? "MALE" : "Male"}
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="female" id="female" />
-                        <label htmlFor="female" className={isGamified ? "jrpg-font text-xs cursor-pointer" : "text-sm cursor-pointer"}>
+                        <label
+                          htmlFor="female"
+                          className={
+                            isGamified
+                              ? "jrpg-font text-xs cursor-pointer"
+                              : "text-sm cursor-pointer"
+                          }
+                        >
                           {isGamified ? "FEMALE" : "Female"}
                         </label>
                       </div>
                     </RadioGroup>
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -391,7 +504,9 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="grade"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "GRADE *" : "Grade *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "GRADE *" : "Grade *"}
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className={inputClass}>
@@ -408,7 +523,11 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                       <SelectItem value="12">12th Grade</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -418,11 +537,21 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="highSchool"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "SCHOOL *" : "School Name *"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "SCHOOL *" : "School Name *"}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your school" className={inputClass} {...field} />
+                    <Input
+                      placeholder="Enter your school"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage className={isGamified ? "jrpg-font text-xs text-red-600" : ""} />
+                  <FormMessage
+                    className={
+                      isGamified ? "jrpg-font text-xs text-red-600" : ""
+                    }
+                  />
                 </FormItem>
               )}
             />
@@ -430,7 +559,18 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
         </div>
 
         {/* OPTIONAL FIELDS */}
-        <div className={isGamified ? "space-y-4 pt-4 border-t-2 border-green-600/30" : "space-y-4 pt-4 border-t border-dashed"}>
+        <div
+          className={
+            isGamified
+              ? "space-y-4 pt-4 border-t-2"
+              : "space-y-4 pt-4 border-t border-dashed"
+          }
+          style={
+            isGamified
+              ? { borderColor: "var(--jrpg-textbox-border)" }
+              : undefined
+          }
+        >
           <h3 className={optionalHeaderClass}>
             {isGamified ? "OPTIONAL INFO" : "Optional Information"}
           </h3>
@@ -441,9 +581,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             name="instagramHandle"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>{isGamified ? "INSTAGRAM" : "Instagram Handle"}</FormLabel>
+                <FormLabel className={labelClass}>
+                  {isGamified ? "INSTAGRAM" : "Instagram Handle"}
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="@username" className={`${inputClass} w-full md:w-1/2`} {...field} />
+                  <Input
+                    placeholder="@username"
+                    className={`${inputClass} w-full md:w-1/2`}
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -452,7 +598,13 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
 
           {/* Address */}
           <div className="space-y-3">
-            <h4 className={isGamified ? "jrpg-font text-xs text-gray-600" : "text-sm font-medium text-muted-foreground"}>
+            <h4
+              className={
+                isGamified
+                  ? "jrpg-font text-xs text-gray-600"
+                  : "text-sm font-medium text-muted-foreground"
+              }
+            >
               {isGamified ? "ADDRESS" : "Address"}
             </h4>
 
@@ -461,9 +613,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className={labelClass}>{isGamified ? "STREET" : "Street Address"}</FormLabel>
+                  <FormLabel className={labelClass}>
+                    {isGamified ? "STREET" : "Street Address"}
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main Street" className={inputClass} {...field} />
+                    <Input
+                      placeholder="123 Main Street"
+                      className={inputClass}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -476,9 +634,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="city"
                 render={({ field }) => (
                   <FormItem className="col-span-2 md:col-span-2">
-                    <FormLabel className={labelClass}>{isGamified ? "CITY" : "City"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "CITY" : "City"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Los Angeles" className={inputClass} {...field} />
+                      <Input
+                        placeholder="Los Angeles"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -490,9 +654,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "STATE" : "State"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "STATE" : "State"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="CA" className={inputClass} {...field} />
+                      <Input
+                        placeholder="CA"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -504,9 +674,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="zip"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "ZIP" : "ZIP"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "ZIP" : "ZIP"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="90210" className={inputClass} {...field} />
+                      <Input
+                        placeholder="90210"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -517,7 +693,13 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
 
           {/* Parent Info */}
           <div className="space-y-4">
-            <h4 className={isGamified ? "jrpg-font text-xs text-gray-600" : "text-sm font-medium text-muted-foreground"}>
+            <h4
+              className={
+                isGamified
+                  ? "jrpg-font text-xs text-gray-600"
+                  : "text-sm font-medium text-muted-foreground"
+              }
+            >
               {isGamified ? "PARENT INFO" : "Parent/Guardian Information"}
             </h4>
 
@@ -528,9 +710,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="fatherFirstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "DAD FIRST" : "Father's First Name"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "DAD FIRST" : "Father's First Name"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="First name" className={inputClass} {...field} />
+                      <Input
+                        placeholder="First name"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -542,9 +730,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="fatherLastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "DAD LAST" : "Father's Last Name"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "DAD LAST" : "Father's Last Name"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Last name" className={inputClass} {...field} />
+                      <Input
+                        placeholder="Last name"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -556,9 +750,16 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="fatherPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "DAD PHONE" : "Father's Phone"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "DAD PHONE" : "Father's Phone"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
+                      <Input
+                        placeholder="(555) 123-4567"
+                        type="tel"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -573,9 +774,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="motherFirstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "MOM FIRST" : "Mother's First Name"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "MOM FIRST" : "Mother's First Name"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="First name" className={inputClass} {...field} />
+                      <Input
+                        placeholder="First name"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -587,9 +794,15 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="motherLastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "MOM LAST" : "Mother's Last Name"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "MOM LAST" : "Mother's Last Name"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Last name" className={inputClass} {...field} />
+                      <Input
+                        placeholder="Last name"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -601,9 +814,16 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
                 name="motherPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>{isGamified ? "MOM PHONE" : "Mother's Phone"}</FormLabel>
+                    <FormLabel className={labelClass}>
+                      {isGamified ? "MOM PHONE" : "Mother's Phone"}
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="(555) 123-4567" type="tel" className={inputClass} {...field} />
+                      <Input
+                        placeholder="(555) 123-4567"
+                        type="tel"
+                        className={inputClass}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -615,19 +835,23 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
 
         {/* Error Display */}
         {formError && (
-          <div className={isGamified
-            ? "p-4 bg-red-100 border-2 border-red-500 text-red-800 text-center"
-            : "p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-center"
-          }>
+          <div
+            className={
+              isGamified
+                ? "p-4 bg-red-100 border-2 border-red-500 text-red-800 text-center"
+                : "p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-center"
+            }
+          >
             <p className={isGamified ? "jrpg-font text-sm" : "font-medium"}>
               {formError}
             </p>
             <button
               type="button"
               onClick={() => setFormError(null)}
-              className={isGamified
-                ? "mt-2 text-xs text-red-600 underline"
-                : "mt-2 text-sm text-destructive/70 underline hover:text-destructive"
+              className={
+                isGamified
+                  ? "mt-2 text-xs text-red-600 underline"
+                  : "mt-2 text-sm text-destructive/70 underline hover:text-destructive"
               }
             >
               Dismiss
@@ -651,9 +875,12 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
             className={isGamified ? "jrpg-button flex-1" : "flex-1"}
           >
             {isSubmitting
-              ? (isGamified ? "LOADING..." : "Registering...")
-              : (isGamified ? "REGISTER" : "Register & Check In")
-            }
+              ? isGamified
+                ? "LOADING..."
+                : "Registering..."
+              : isGamified
+                ? "REGISTER"
+                : "Register & Check In"}
           </Button>
         </div>
       </form>
@@ -666,9 +893,29 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       <div className="w-full max-w-2xl mx-auto">
         <div className="jrpg-textbox jrpg-corners">
           <div className="text-center mb-6">
-            <h3 className="jrpg-font text-sm text-gray-700 mb-2">NEW ADVENTURER</h3>
-            <p className="text-xs text-gray-600">Join the party and check in!</p>
+            <h3 className="jrpg-font text-sm text-gray-700 mb-2">
+              NEW ADVENTURER
+            </h3>
+            <p className="text-xs text-gray-600">
+              Join the party and check in!
+            </p>
           </div>
+          {formContent}
+        </div>
+      </div>
+    );
+  }
+
+  if (isMinimal) {
+    return (
+      <div className="w-full max-w-2xl mx-auto">
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-1">
+            New Registration
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            Register and check in.
+          </p>
           {formContent}
         </div>
       </div>
@@ -680,12 +927,11 @@ const PublicNewStudentForm = ({ onSuccess, onBack, orgSlug, deviceId, checkinSty
       <CardHeader>
         <CardTitle>New Registration</CardTitle>
         <CardDescription>
-          Let&apos;s get you registered and checked in for today&apos;s ministry.
+          Let&apos;s get you registered and checked in for today&apos;s
+          ministry.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {formContent}
-      </CardContent>
+      <CardContent>{formContent}</CardContent>
     </Card>
   );
 };

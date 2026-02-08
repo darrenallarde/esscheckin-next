@@ -5,7 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +27,11 @@ import * as Sentry from "@sentry/nextjs";
 import { useCheckInTracking } from "@/lib/amplitude/hooks";
 
 const searchSchema = z.object({
-  searchTerm: z.string().trim().min(2, "Enter at least 2 characters").max(50, "Entry is too long"),
+  searchTerm: z
+    .string()
+    .trim()
+    .min(2, "Enter at least 2 characters")
+    .max(50, "Entry is too long"),
 });
 
 type SearchData = z.infer<typeof searchSchema>;
@@ -48,22 +58,32 @@ interface Student {
 }
 
 type ViewState =
-  | { type: 'search' }
-  | { type: 'confirm-student', student: Student }
-  | { type: 'select-student', students: Student[] }
-  | { type: 'new-student' }
-  | { type: 'success', student: Student, checkInId: string, profilePin?: string };
+  | { type: "search" }
+  | { type: "confirm-student"; student: Student }
+  | { type: "select-student"; students: Student[] }
+  | { type: "new-student" }
+  | {
+      type: "success";
+      student: Student;
+      checkInId: string;
+      profilePin?: string;
+    };
 
-const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle = 'gamified' }: PublicCheckInFormProps) => {
+const PublicCheckInForm = ({
+  onCheckInComplete,
+  orgSlug,
+  deviceId,
+  checkinStyle = "gamified",
+}: PublicCheckInFormProps) => {
   const { toast } = useToast();
-  const [viewState, setViewState] = useState<ViewState>({ type: 'search' });
+  const [viewState, setViewState] = useState<ViewState>({ type: "search" });
   const [isSearching, setIsSearching] = useState(false);
 
   // Amplitude tracking
   const tracking = useCheckInTracking();
 
   // Security: Honeypot and timing
-  const [honeypot, setHoneypot] = useState('');
+  const [honeypot, setHoneypot] = useState("");
   const formLoadTime = useRef<number>(Date.now());
 
   const form = useForm<SearchData>({
@@ -76,7 +96,7 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
     const security = validateFormSubmission(
       honeypot,
       formLoadTime.current,
-      TIMING_THRESHOLDS.SEARCH_FORM
+      TIMING_THRESHOLDS.SEARCH_FORM,
     );
     if (!security.isValid) {
       setIsSearching(true);
@@ -94,21 +114,23 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
       // Clean phone number if it looks like one
       if (/\d/.test(cleanedSearch)) {
         cleanedSearch = cleanedSearch
-          .replace(/[\s\-\.\(\)]/g, '')
-          .replace(/^\+?1/, '');
+          .replace(/[\s\-\.\(\)]/g, "")
+          .replace(/^\+?1/, "");
       }
 
       // Use public RPC function
-      const { data: results, error } = await supabase
-        .rpc('search_student_for_checkin_public', {
+      const { data: results, error } = await supabase.rpc(
+        "search_student_for_checkin_public",
+        {
           p_org_slug: orgSlug,
-          p_search_term: cleanedSearch
-        });
+          p_search_term: cleanedSearch,
+        },
+      );
 
       if (error) {
         Sentry.captureException(error, {
-          tags: { action: 'public_search', org_slug: orgSlug },
-          extra: { search_term_length: cleanedSearch.length }
+          tags: { action: "public_search", org_slug: orgSlug },
+          extra: { search_term_length: cleanedSearch.length },
         });
         throw error;
       }
@@ -120,34 +142,44 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
       });
 
       if (results && results.length > 0) {
-        const students: Student[] = results.map((r: { student_id: string; first_name: string; last_name: string; user_type: string; grade: string | null; high_school: string | null }) => ({
-          id: r.student_id,
-          first_name: r.first_name,
-          last_name: r.last_name,
-          user_type: r.user_type,
-          grade: r.grade,
-          high_school: r.high_school,
-          phone_number: null,
-          email: null,
-          parent_name: null,
-          parent_phone: null,
-          created_at: '',
-        }));
+        const students: Student[] = results.map(
+          (r: {
+            student_id: string;
+            first_name: string;
+            last_name: string;
+            user_type: string;
+            grade: string | null;
+            high_school: string | null;
+          }) => ({
+            id: r.student_id,
+            first_name: r.first_name,
+            last_name: r.last_name,
+            user_type: r.user_type,
+            grade: r.grade,
+            high_school: r.high_school,
+            phone_number: null,
+            email: null,
+            parent_name: null,
+            parent_phone: null,
+            created_at: "",
+          }),
+        );
 
         if (students.length === 1) {
           // Track student selected (single result auto-select)
           tracking.trackStudentSelected({
             student_id: students[0].id,
-            selection_method: 'single',
+            selection_method: "single",
           });
-          setViewState({ type: 'confirm-student', student: students[0] });
+          setViewState({ type: "confirm-student", student: students[0] });
         } else {
-          setViewState({ type: 'select-student', students });
+          setViewState({ type: "select-student", students });
         }
       } else {
         toast({
           title: "Student not found",
-          description: "No student found. Please try again or register as a new student.",
+          description:
+            "No student found. Please try again or register as a new student.",
         });
       }
     } catch (error) {
@@ -171,41 +203,49 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
 
     try {
       // Use public RPC function with optional device tracking
-      const { data: result, error } = await supabase
-        .rpc('checkin_student_public', {
+      const { data: result, error } = await supabase.rpc(
+        "checkin_student_public",
+        {
           p_org_slug: orgSlug,
           p_student_id: student.id,
-          p_device_id: deviceId || null
-        });
+          p_device_id: deviceId || null,
+        },
+      );
 
       if (error) {
         Sentry.captureException(error, {
-          tags: { action: 'public_checkin', org_slug: orgSlug },
+          tags: { action: "public_checkin", org_slug: orgSlug },
         });
         throw error;
       }
 
       if (result && result[0]?.success) {
-        const getUserTypeDisplay = (userType: string, grade?: string | null) => {
-          if (userType === 'student_leader') return 'Student Leader';
+        const getUserTypeDisplay = (
+          userType: string,
+          grade?: string | null,
+        ) => {
+          if (userType === "student_leader") return "Student Leader";
           if (grade) {
             const gradeNum = parseInt(grade);
-            if (gradeNum >= 6 && gradeNum <= 8) return 'Middle School Student';
-            if (gradeNum >= 9 && gradeNum <= 12) return 'High School Student';
+            if (gradeNum >= 6 && gradeNum <= 8) return "Middle School Student";
+            if (gradeNum >= 9 && gradeNum <= 12) return "High School Student";
           }
-          return 'Student';
+          return "Student";
         };
 
-        const isAlreadyCheckedIn = result[0].message === 'Already checked in today';
+        const isAlreadyCheckedIn =
+          result[0].message === "Already checked in today";
 
         toast({
-          title: isAlreadyCheckedIn ? "Already checked in!" : "Check-in successful!",
+          title: isAlreadyCheckedIn
+            ? "Already checked in!"
+            : "Check-in successful!",
           description: isAlreadyCheckedIn
             ? `${result[0].first_name}, you already checked in today!`
             : `Welcome back ${result[0].first_name}! Checked in as ${getUserTypeDisplay(result[0].user_type, student.grade)}.`,
         });
 
-        const checkInId = result[0].check_in_id || 'temp-checkin-id';
+        const checkInId = result[0].check_in_id || "temp-checkin-id";
         const profilePin = result[0].profile_pin;
 
         // Track check-in completed
@@ -216,9 +256,9 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
           student_grade: student.grade || undefined,
         });
 
-        setViewState({ type: 'success', student, checkInId, profilePin });
+        setViewState({ type: "success", student, checkInId, profilePin });
       } else {
-        throw new Error(result?.[0]?.message || 'Check-in failed');
+        throw new Error(result?.[0]?.message || "Check-in failed");
       }
     } catch (error) {
       console.error("Error checking in:", error);
@@ -233,23 +273,36 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
   };
 
   const resetToSearch = () => {
-    setViewState({ type: 'search' });
+    setViewState({ type: "search" });
     form.reset();
     onCheckInComplete?.();
   };
 
+  // Style helpers
+  const isGamified = checkinStyle === "gamified";
+  const isMinimal = checkinStyle === "minimal";
+
+  const containerClass = isGamified
+    ? "jrpg-textbox jrpg-corners"
+    : isMinimal
+      ? "rounded-lg border bg-card p-6"
+      : "bg-card rounded-2xl shadow-sm border border-border p-8";
+
   // Success view
-  if (viewState.type === 'success') {
-    return <GameCheckInSuccessDB
-      student={viewState.student}
-      checkInId={viewState.checkInId}
-      profilePin={viewState.profilePin}
-      onNewCheckIn={resetToSearch}
-    />;
+  if (viewState.type === "success") {
+    return (
+      <GameCheckInSuccessDB
+        student={viewState.student}
+        checkInId={viewState.checkInId}
+        profilePin={viewState.profilePin}
+        onNewCheckIn={resetToSearch}
+        checkinStyle={checkinStyle}
+      />
+    );
   }
 
   // New student form
-  if (viewState.type === 'new-student') {
+  if (viewState.type === "new-student") {
     return (
       <PublicNewStudentForm
         orgSlug={orgSlug}
@@ -257,7 +310,7 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
         checkinStyle={checkinStyle}
         onSuccess={(result) => {
           setViewState({
-            type: 'success',
+            type: "success",
             student: {
               id: result.student.id,
               first_name: result.student.first_name,
@@ -275,20 +328,36 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
             profilePin: result.profilePin,
           });
         }}
-        onBack={() => setViewState({ type: 'search' })}
+        onBack={() => setViewState({ type: "search" })}
       />
     );
   }
 
   // Multiple student selection view
-  if (viewState.type === 'select-student') {
+  if (viewState.type === "select-student") {
     const { students } = viewState;
     return (
       <div className="w-full max-w-lg mx-auto">
-        <div className="jrpg-textbox jrpg-corners">
+        <div className={containerClass}>
           <div className="text-center mb-6">
-            <h3 className="jrpg-font text-sm text-gray-700 mb-4">WHICH ONE IS YOU?</h3>
-            <p className="text-xs text-gray-600">We found multiple people with that name</p>
+            <h3
+              className={
+                isGamified
+                  ? "jrpg-font text-sm text-gray-700 mb-4"
+                  : "text-lg font-semibold text-foreground mb-3"
+              }
+            >
+              {isGamified ? "WHICH ONE IS YOU?" : "Select Your Name"}
+            </h3>
+            <p
+              className={
+                isGamified
+                  ? "text-xs text-gray-600"
+                  : "text-sm text-muted-foreground"
+              }
+            >
+              We found multiple people with that name
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -296,25 +365,44 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
               <button
                 key={student.id}
                 onClick={() => {
-                  // Track student selection from list
                   tracking.trackStudentSelected({
                     student_id: student.id,
-                    selection_method: 'from_list',
+                    selection_method: "from_list",
                   });
-                  setViewState({ type: 'confirm-student', student });
+                  setViewState({ type: "confirm-student", student });
                 }}
-                className="w-full p-4 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl hover:from-green-200 hover:to-emerald-200 transition-all text-left border-2 border-green-600/30"
+                className={
+                  isGamified
+                    ? "w-full p-4 bg-white/40 hover:bg-white/60 transition-all text-left border-2"
+                    : "w-full p-4 bg-primary/5 hover:bg-primary/10 rounded-xl transition-all text-left border border-border"
+                }
+                style={
+                  isGamified
+                    ? { borderColor: "var(--jrpg-textbox-border)" }
+                    : undefined
+                }
               >
-                <div className="font-bold text-gray-800">
+                <div
+                  className={
+                    isGamified
+                      ? "font-bold text-gray-800"
+                      : "font-medium text-foreground"
+                  }
+                >
                   {student.first_name} {student.last_name}
                 </div>
-                <div className="text-sm text-gray-600">
-                  {student.user_type === 'student_leader'
-                    ? 'Student Leader'
+                <div
+                  className={
+                    isGamified
+                      ? "text-sm text-gray-600"
+                      : "text-sm text-muted-foreground"
+                  }
+                >
+                  {student.user_type === "student_leader"
+                    ? "Student Leader"
                     : student.grade && student.high_school
                       ? `Grade ${student.grade} at ${student.high_school}`
-                      : 'Student'
-                  }
+                      : "Student"}
                 </div>
               </button>
             ))}
@@ -322,10 +410,13 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
 
           <div className="mt-6">
             <Button
-              onClick={() => setViewState({ type: 'search' })}
-              className="jrpg-button w-full"
+              onClick={() => setViewState({ type: "search" })}
+              className={
+                isGamified ? "jrpg-button w-full" : "w-full h-12 rounded-xl"
+              }
+              variant={isGamified ? "default" : "outline"}
             >
-              BACK TO SEARCH
+              {isGamified ? "BACK TO SEARCH" : "Back to Search"}
             </Button>
           </div>
         </div>
@@ -334,44 +425,93 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
   }
 
   // Student confirmation view
-  if (viewState.type === 'confirm-student') {
+  if (viewState.type === "confirm-student") {
     const { student } = viewState;
+    const studentDesc = isGamified
+      ? student.user_type === "student_leader"
+        ? "LEADER"
+        : student.grade && student.high_school
+          ? `LV ${student.grade} - ${student.high_school}`
+          : "ADVENTURER"
+      : student.user_type === "student_leader"
+        ? "Student Leader"
+        : student.grade && student.high_school
+          ? `Grade ${student.grade} at ${student.high_school}`
+          : "Student";
+
     return (
       <div className="w-full max-w-lg mx-auto">
-        <div className="jrpg-textbox jrpg-corners">
+        <div className={containerClass}>
           <div className="text-center mb-6">
-            <h3 className="jrpg-font text-sm text-gray-700 mb-4">CONFIRM IDENTITY</h3>
+            <h3
+              className={
+                isGamified
+                  ? "jrpg-font text-sm text-gray-700 mb-4"
+                  : "text-lg font-semibold text-foreground mb-3"
+              }
+            >
+              {isGamified ? "CONFIRM IDENTITY" : "Confirm Check-In"}
+            </h3>
           </div>
 
-          <div className="bg-green-100/50 border-2 border-green-600/50 p-6 mb-6">
-            <div className="jrpg-selector">
-              <h4 className="jrpg-font text-base text-gray-800 mb-2">
+          <div
+            className={
+              isGamified
+                ? "bg-white/30 border-2 p-6 mb-6"
+                : "bg-primary/5 border border-border rounded-xl p-6 mb-6"
+            }
+            style={
+              isGamified
+                ? { borderColor: "var(--jrpg-textbox-border)" }
+                : undefined
+            }
+          >
+            {isGamified ? (
+              <div className="jrpg-selector">
+                <h4 className="jrpg-font text-base text-gray-800 mb-2">
+                  {student.first_name} {student.last_name}
+                </h4>
+              </div>
+            ) : (
+              <h4 className="text-xl font-semibold text-foreground mb-1">
                 {student.first_name} {student.last_name}
               </h4>
-            </div>
-            <p className="jrpg-font text-xs text-gray-700 ml-8">
-              {student.user_type === 'student_leader'
-                ? 'LEADER'
-                : student.grade && student.high_school
-                  ? `LV ${student.grade} - ${student.high_school}`
-                  : 'ADVENTURER'
+            )}
+            <p
+              className={
+                isGamified
+                  ? "jrpg-font text-xs text-gray-700 ml-8"
+                  : "text-sm text-muted-foreground"
               }
+            >
+              {studentDesc}
             </p>
           </div>
 
           <div className="flex gap-3">
             <Button
-              onClick={() => setViewState({ type: 'search' })}
-              className="jrpg-button flex-1"
+              onClick={() => setViewState({ type: "search" })}
+              className={
+                isGamified ? "jrpg-button flex-1" : "flex-1 h-12 rounded-xl"
+              }
+              variant={isGamified ? "default" : "outline"}
             >
-              CANCEL
+              {isGamified ? "CANCEL" : "Cancel"}
             </Button>
             <Button
               onClick={() => confirmCheckIn(student)}
               disabled={isSearching}
-              className="jrpg-button flex-1"
+              className={
+                isGamified ? "jrpg-button flex-1" : "flex-1 h-12 rounded-xl"
+              }
             >
-              {isSearching ? "LOADING..." : "CONFIRM"}
+              {isSearching
+                ? isGamified
+                  ? "LOADING..."
+                  : "Checking in..."
+                : isGamified
+                  ? "CONFIRM"
+                  : "Check In"}
             </Button>
           </div>
         </div>
@@ -382,9 +522,12 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
   // Search view (default)
   return (
     <div className="w-full max-w-lg mx-auto">
-      <div className="jrpg-textbox jrpg-corners">
+      <div className={containerClass}>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(searchStudents)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(searchStudents)}
+            className="space-y-6"
+          >
             {/* Honeypot field - invisible to humans, bots will fill it */}
             <input
               type="text"
@@ -403,36 +546,68 @@ const PublicCheckInForm = ({ onCheckInComplete, orgSlug, deviceId, checkinStyle 
                 <FormItem>
                   <FormControl>
                     <Input
-                      placeholder="PHONE OR NAME"
+                      placeholder={
+                        isGamified
+                          ? "PHONE OR NAME"
+                          : "Enter your name or phone number"
+                      }
                       {...field}
                       autoFocus
-                      className="jrpg-input h-20 text-2xl text-center"
+                      className={
+                        isGamified
+                          ? "jrpg-input h-20 text-2xl text-center"
+                          : isMinimal
+                            ? "h-14 text-lg text-center"
+                            : "h-16 text-xl text-center rounded-xl"
+                      }
                     />
                   </FormControl>
-                  <FormMessage className="text-red-400 text-xs mt-2 jrpg-font" />
+                  <FormMessage
+                    className={
+                      isGamified
+                        ? "text-red-400 text-xs mt-2 jrpg-font"
+                        : "mt-2"
+                    }
+                  />
                 </FormItem>
               )}
             />
 
             <Button
               type="submit"
-              className="jrpg-button w-full"
+              className={
+                isGamified
+                  ? "jrpg-button w-full"
+                  : "w-full h-12 rounded-xl text-base font-medium"
+              }
               disabled={isSearching}
             >
-              {isSearching ? "SEARCHING..." : "SEARCH"}
+              {isSearching
+                ? isGamified
+                  ? "SEARCHING..."
+                  : "Searching..."
+                : isGamified
+                  ? "SEARCH"
+                  : "Search"}
             </Button>
 
             <div className="text-center pt-4">
               <button
                 type="button"
                 onClick={() => {
-                  // Track registration started
                   tracking.trackRegistrationStarted();
-                  setViewState({ type: 'new-student' });
+                  setViewState({ type: "new-student" });
                 }}
-                className="jrpg-font text-xs text-green-700 hover:text-green-900 underline"
+                className={
+                  isGamified
+                    ? "jrpg-font text-xs underline"
+                    : "text-sm text-primary hover:text-primary/80 underline"
+                }
+                style={
+                  isGamified ? { color: "var(--jrpg-heading)" } : undefined
+                }
               >
-                NEW STUDENT?
+                {isGamified ? "NEW STUDENT?" : "New here? Register"}
               </button>
             </div>
           </form>

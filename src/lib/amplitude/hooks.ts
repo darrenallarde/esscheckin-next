@@ -56,7 +56,7 @@ export function useTrack() {
         ...eventProps,
       });
     },
-    [orgSlug, orgId, adminUserId, pathname]
+    [orgSlug, orgId, adminUserId, pathname],
   );
 
   return track;
@@ -105,7 +105,7 @@ export function useCheckInTracking() {
 
   return {
     trackPageViewed: (props: {
-      checkin_style: "gamified" | "standard";
+      checkin_style: "gamified" | "standard" | "minimal";
       device_id?: string;
       device_name?: string;
     }) => track(EVENTS.CHECK_IN_PAGE_VIEWED, props),

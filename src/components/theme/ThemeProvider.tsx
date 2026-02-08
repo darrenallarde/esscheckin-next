@@ -1,16 +1,28 @@
 "use client";
 
+import { useEffect } from "react";
 import { useOrganization } from "@/hooks/useOrganization";
 import { getTheme, getThemeCSSOverrides } from "@/lib/themes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { currentOrganization } = useOrganization();
-  const theme = getTheme(currentOrganization?.themeId);
-  const overrides = getThemeCSSOverrides(theme);
 
-  return (
-    <div style={overrides as React.CSSProperties} className="contents">
-      {children}
-    </div>
-  );
+  useEffect(() => {
+    const theme = getTheme(currentOrganization?.themeId);
+    const overrides = getThemeCSSOverrides(theme);
+    const root = document.documentElement;
+
+    const entries = Object.entries(overrides);
+    entries.forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+
+    return () => {
+      entries.forEach(([key]) => {
+        root.style.removeProperty(key);
+      });
+    };
+  }, [currentOrganization?.themeId]);
+
+  return <>{children}</>;
 }

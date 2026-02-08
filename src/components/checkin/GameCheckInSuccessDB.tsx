@@ -29,9 +29,17 @@ interface GameCheckInSuccessDBProps {
   checkInId: string;
   profilePin?: string; // kept for backward compatibility, not displayed
   onNewCheckIn: () => void;
+  checkinStyle?: string;
 }
 
-const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInSuccessDBProps) => {
+const GameCheckInSuccessDB = ({
+  student,
+  checkInId,
+  onNewCheckIn,
+  checkinStyle = "gamified",
+}: GameCheckInSuccessDBProps) => {
+  const isGamified = checkinStyle === "gamified";
+  const isMinimal = checkinStyle === "minimal";
   const [reward, setReward] = useState<CheckinReward | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -48,7 +56,11 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
             current_rank: "Newcomer",
             achievements: [],
             is_first_time: false,
-            bible_verse: { text: "Taste and see that the Lord is good", reference: "Psalm 34:8", theme: "goodness" },
+            bible_verse: {
+              text: "Taste and see that the Lord is good",
+              reference: "Psalm 34:8",
+              theme: "goodness",
+            },
           });
           setIsLoading(false);
           return;
@@ -58,7 +70,11 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
         if (rewardData) {
           setReward(rewardData);
           setTimeout(() => setShowCelebration(true), 300);
-          if (rewardData.is_first_time || rewardData.achievements.length > 0 || rewardData.rank_changed) {
+          if (
+            rewardData.is_first_time ||
+            rewardData.achievements.length > 0 ||
+            rewardData.rank_changed
+          ) {
             navigator.vibrate?.(200);
           }
         } else {
@@ -69,7 +85,11 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
             current_rank: "Newcomer",
             achievements: [],
             is_first_time: false,
-            bible_verse: { text: "Give thanks to the Lord, for he is good", reference: "Psalm 107:1", theme: "goodness" },
+            bible_verse: {
+              text: "Give thanks to the Lord, for he is good",
+              reference: "Psalm 107:1",
+              theme: "goodness",
+            },
           });
         }
       } catch (error) {
@@ -81,7 +101,11 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
           current_rank: "Newcomer",
           achievements: [],
           is_first_time: false,
-          bible_verse: { text: "The Lord is good to all", reference: "Psalm 145:9", theme: "goodness" },
+          bible_verse: {
+            text: "The Lord is good to all",
+            reference: "Psalm 145:9",
+            theme: "goodness",
+          },
         });
       } finally {
         setIsLoading(false);
@@ -94,9 +118,23 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
   if (isLoading || !reward) {
     return (
       <div className="w-full max-w-lg mx-auto px-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-stone-300 border-t-stone-800 mx-auto mb-4" />
-          <p className="text-sm text-stone-500">Calculating your rewards...</p>
+        <div
+          className={
+            isGamified
+              ? "jrpg-textbox p-8 text-center"
+              : "bg-card rounded-2xl shadow-sm border p-8 text-center"
+          }
+        >
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-muted-foreground/30 border-t-foreground mx-auto mb-4" />
+          <p
+            className={
+              isGamified
+                ? "jrpg-font text-xs text-gray-600"
+                : "text-sm text-muted-foreground"
+            }
+          >
+            {isGamified ? "CALCULATING REWARDS..." : "Processing..."}
+          </p>
         </div>
       </div>
     );
@@ -122,50 +160,185 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
 
   const encouragingMessage = getEncouragingMessage(mockProfile);
 
+  // Minimal: simple confirmation only
+  if (isMinimal) {
+    return (
+      <div className="w-full max-w-lg mx-auto px-4">
+        <div className="rounded-lg border bg-card p-8 text-center">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-4">
+            <Check className="h-6 w-6 text-primary" strokeWidth={3} />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-1">
+            {reward.is_first_time ? "Welcome!" : "Checked in!"}
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            {student.first_name} {student.last_name}
+          </p>
+          <Button onClick={onNewCheckIn} className="w-full h-12 rounded-xl">
+            Check In Another Student
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Gamified: JRPG themed success
+  if (isGamified) {
+    return (
+      <div className="w-full max-w-lg mx-auto px-4">
+        <ConfettiEffect
+          active={
+            showCelebration &&
+            (reward.rank_changed || reward.achievements.length > 0)
+          }
+          duration={3000}
+        />
+
+        <div className="jrpg-textbox jrpg-corners">
+          <div className="text-center mb-6">
+            <h2
+              className="jrpg-font text-sm mb-2"
+              style={{ color: "var(--jrpg-heading)" }}
+            >
+              {reward.is_first_time
+                ? "NEW PARTY MEMBER!"
+                : "CHECK IN COMPLETE!"}
+            </h2>
+            <p className="jrpg-font text-xs text-gray-600">
+              {student.first_name} {student.last_name}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">{encouragingMessage}</p>
+          </div>
+
+          {/* Points/rank in JRPG style */}
+          <div
+            className="border-2 p-4 mb-4"
+            style={{
+              borderColor: "var(--jrpg-textbox-border)",
+              background: "var(--jrpg-input-bg)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="jrpg-font text-xs">
+                <span style={{ color: "var(--jrpg-gold)" }}>
+                  +{reward.points_awarded} XP
+                </span>
+                <span className="text-gray-500 ml-2">
+                  {reward.total_points} total
+                </span>
+              </div>
+              <div className="jrpg-font text-xs">
+                <span>{currentRank.emoji}</span>
+                <span style={{ color: currentRank.color }}>
+                  {" "}
+                  {currentRank.title}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {reward.rank_changed && (
+            <div
+              className="border-2 p-3 mb-4 text-center"
+              style={{
+                borderColor: "var(--jrpg-gold)",
+                background: "var(--jrpg-input-bg)",
+              }}
+            >
+              <p
+                className="jrpg-font text-xs"
+                style={{ color: "var(--jrpg-gold)" }}
+              >
+                RANK UP! {reward.current_rank}!
+              </p>
+            </div>
+          )}
+
+          {reward.achievements.length > 0 && (
+            <div className="mb-4">
+              <p className="jrpg-font text-xs text-gray-500 mb-2">
+                NEW ACHIEVEMENT
+              </p>
+              <GameAchievement
+                achievement={reward.achievements[0]}
+                isNew={true}
+              />
+            </div>
+          )}
+
+          {reward.bible_verse && (
+            <div className="text-center py-3 mb-4">
+              <p className="text-sm italic text-gray-600">
+                &ldquo;{reward.bible_verse.text}&rdquo;
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                &mdash; {reward.bible_verse.reference}
+              </p>
+            </div>
+          )}
+
+          <Button onClick={onNewCheckIn} className="jrpg-button w-full">
+            NEXT ADVENTURER
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard: clean themed success
   return (
     <div className="w-full max-w-lg mx-auto px-4">
       <ConfettiEffect
-        active={showCelebration && (reward.rank_changed || reward.achievements.length > 0)}
+        active={
+          showCelebration &&
+          (reward.rank_changed || reward.achievements.length > 0)
+        }
         duration={3000}
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+      <div className="bg-card rounded-2xl shadow-sm border overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-8 pb-6 text-center">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-emerald-100 mb-4">
-            <Check className="h-7 w-7 text-emerald-600" strokeWidth={3} />
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-primary/10 mb-4">
+            <Check className="h-7 w-7 text-primary" strokeWidth={3} />
           </div>
 
-          <h2 className="text-2xl font-semibold text-stone-900 mb-1">
+          <h2 className="text-2xl font-semibold text-foreground mb-1">
             {reward.is_first_time ? "Welcome!" : "You're checked in!"}
           </h2>
 
-          <p className="text-stone-500">
+          <p className="text-muted-foreground">
             {student.first_name} {student.last_name}
           </p>
 
-          <p className="text-sm text-stone-400 mt-1">
+          <p className="text-sm text-muted-foreground/70 mt-1">
             {encouragingMessage}
           </p>
         </div>
 
         {/* Stats row */}
         <div className="px-6 pb-5">
-          <div className="flex items-center justify-between bg-stone-50 rounded-xl px-5 py-3.5">
+          <div className="flex items-center justify-between bg-muted rounded-xl px-5 py-3.5">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-medium text-stone-700">+{reward.points_awarded}</span>
-              <span className="text-xs text-stone-400">{reward.total_points} total</span>
+              <span className="text-sm font-medium text-foreground">
+                +{reward.points_awarded}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {reward.total_points} total
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-base">{currentRank.emoji}</span>
-              <span className="text-sm font-medium" style={{ color: currentRank.color }}>
+              <span
+                className="text-sm font-medium"
+                style={{ color: currentRank.color }}
+              >
                 {currentRank.title}
               </span>
             </div>
           </div>
 
-          {/* Rank up notification */}
           {reward.rank_changed && (
             <div className="mt-3 flex items-center justify-center gap-2 bg-amber-50 rounded-xl px-4 py-2.5 border border-amber-200">
               <Trophy className="h-4 w-4 text-amber-600" />
@@ -176,10 +349,9 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
           )}
         </div>
 
-        {/* Achievement (show one at a time, clean) */}
         {reward.achievements.length > 0 && (
           <div className="px-6 pb-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               New Achievement
             </p>
             <GameAchievement
@@ -187,21 +359,21 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
               isNew={true}
             />
             {reward.achievements.length > 1 && (
-              <p className="text-xs text-stone-400 text-center mt-2">
-                +{reward.achievements.length - 1} more achievement{reward.achievements.length > 2 ? "s" : ""}
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                +{reward.achievements.length - 1} more achievement
+                {reward.achievements.length > 2 ? "s" : ""}
               </p>
             )}
           </div>
         )}
 
-        {/* Bible verse */}
         {reward.bible_verse && (
           <div className="px-6 pb-5">
             <div className="text-center py-4">
-              <p className="text-sm italic text-stone-600 leading-relaxed">
+              <p className="text-sm italic text-muted-foreground leading-relaxed">
                 &ldquo;{reward.bible_verse.text}&rdquo;
               </p>
-              <p className="text-xs font-medium text-stone-400 mt-2">
+              <p className="text-xs font-medium text-muted-foreground/70 mt-2">
                 &mdash; {reward.bible_verse.reference}
               </p>
             </div>
@@ -213,7 +385,7 @@ const GameCheckInSuccessDB = ({ student, checkInId, onNewCheckIn }: GameCheckInS
           <Button
             onClick={onNewCheckIn}
             size="lg"
-            className="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium rounded-xl h-12"
+            className="w-full rounded-xl h-12"
           >
             Check In Another Student
           </Button>
