@@ -344,6 +344,7 @@ export function GamePage({ game, organization, playerCount }: GamePageProps) {
             totalScore={state.totalScore}
             firstName={state.firstName}
             answerCount={answerCount}
+            prayerSubmitted={state.prayerSubmitted}
             onGoToPrayer={() => dispatch({ type: "GO_TO_PRAYER" })}
             onViewLeaderboard={() => dispatch({ type: "VIEW_LEADERBOARD" })}
           />

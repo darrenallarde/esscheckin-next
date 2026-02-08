@@ -20,6 +20,7 @@ interface GameFinalResultsProps {
   totalScore: number;
   firstName: string;
   answerCount: number;
+  prayerSubmitted: boolean;
   onGoToPrayer: () => void;
   onViewLeaderboard: () => void;
 }
@@ -29,6 +30,7 @@ export function GameFinalResults({
   totalScore,
   firstName,
   answerCount,
+  prayerSubmitted,
   onGoToPrayer,
   onViewLeaderboard,
 }: GameFinalResultsProps) {
@@ -156,22 +158,31 @@ export function GameFinalResults({
         </div>
       )}
 
-      {/* Prayer bonus CTA */}
-      <button
-        onClick={onGoToPrayer}
-        className="w-full py-3.5 px-6 rounded-xl bg-purple-600 text-white text-base font-semibold hover:bg-purple-700 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-      >
-        <Heart className="h-5 w-5" />
-        Bonus Round — Earn +500 pts
-      </button>
+      {/* Prayer bonus CTA or submitted state */}
+      {prayerSubmitted ? (
+        <div className="flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-purple-50 border border-purple-200 text-purple-700">
+          <Heart className="h-5 w-5 fill-purple-400" />
+          <span className="text-sm font-medium">
+            Prayer submitted — +500 bonus pts
+          </span>
+        </div>
+      ) : (
+        <button
+          onClick={onGoToPrayer}
+          className="w-full py-3.5 px-6 rounded-xl bg-purple-600 text-white text-base font-semibold hover:bg-purple-700 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          <Heart className="h-5 w-5" />
+          Bonus Round — Earn +500 pts
+        </button>
+      )}
 
-      {/* Skip to leaderboard */}
+      {/* Leaderboard */}
       <button
         onClick={onViewLeaderboard}
-        className="w-full py-3 text-sm text-stone-400 hover:text-stone-600 transition-colors flex items-center justify-center gap-1"
+        className="w-full py-3.5 px-6 rounded-xl bg-stone-900 text-white text-base font-semibold hover:bg-stone-800 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
       >
-        <Trophy className="h-4 w-4" />
-        Skip to Leaderboard
+        <Trophy className="h-5 w-5" />
+        View Leaderboard
       </button>
     </div>
   );

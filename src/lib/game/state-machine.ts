@@ -192,7 +192,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "GO_TO_PRAYER": {
-      if (state.screen !== "final_results") return state;
+      if (state.screen !== "final_results" || state.prayerSubmitted)
+        return state;
       return { ...state, screen: "prayer_bonus" };
     }
 

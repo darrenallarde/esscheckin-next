@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Loader2, UserCircle } from "lucide-react";
@@ -48,6 +48,19 @@ export function PhoneOtpForm({
     }
   };
 
+  // React state updates (setError) don't take effect until next render,
+  // so we watch auth.error via useEffect instead of checking it synchronously
+  useEffect(() => {
+    if (
+      auth.error?.toLowerCase().includes("no profile found") &&
+      orgId &&
+      !needsName
+    ) {
+      auth.clearError();
+      setNeedsName(true);
+    }
+  }, [auth.error, orgId, needsName, auth]);
+
   const handleVerify = async () => {
     if (code.length !== 6) return;
     auth.clearError();
@@ -55,13 +68,6 @@ export function PhoneOtpForm({
     const result = await auth.verifyPhoneOtp(rawPhone, code);
     if (result?.success && result.profile_id && result.first_name) {
       onSuccess(result.profile_id, result.first_name);
-    } else if (
-      auth.error?.toLowerCase().includes("no profile found") &&
-      orgId
-    ) {
-      // Phone verified but no profile exists — ask for name to create one
-      auth.clearError();
-      setNeedsName(true);
     }
   };
 
