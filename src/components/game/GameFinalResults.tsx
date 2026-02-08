@@ -115,6 +115,11 @@ export function GameFinalResults({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-stone-700 truncate">
                     &quot;{round.submittedAnswer}&quot;
+                    {round.rank && (
+                      <span className="text-xs text-stone-400 ml-1">
+                        #{round.rank} of {answerCount}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="text-right">
@@ -265,8 +270,17 @@ export function GameFinalResults({
         </ul>
       </section>
 
-      {/* Read the devotional link */}
-      <div className="text-center">
+      {/* Devotional actions */}
+      <div className="flex flex-col items-center gap-3">
+        {leaderContact && (
+          <a
+            href={`sms:${leaderContact.phone}?body=Hey ${leaderContact.name}! I have a question about today's devotional: `}
+            className="w-full py-3.5 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Text Pastor {leaderContact.name}
+          </a>
+        )}
         <a
           href={`/d/${game.devotional_id}`}
           className="text-sm font-medium text-primary hover:underline"
