@@ -58,7 +58,7 @@ BEGIN
   SELECT id, total_score INTO v_session_id, v_total_score
   FROM game_sessions
   WHERE game_id = p_game_id AND profile_id = v_profile_id
-  ORDER BY created_at DESC
+  ORDER BY started_at DESC
   LIMIT 1;
 
   IF v_session_id IS NULL THEN
