@@ -41,7 +41,7 @@ export function AttendanceTrendChart({
           <CardTitle>Attendance Trends</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[300px] w-full" />
+          <Skeleton className="h-[200px] md:h-[300px] w-full" />
         </CardContent>
       </Card>
     );
@@ -55,7 +55,9 @@ export function AttendanceTrendChart({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-semibold">Attendance Trends</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          Attendance Trends
+        </CardTitle>
         <div className="flex gap-2">
           {/* View Mode Toggle */}
           <div className="flex rounded-lg border p-1">
@@ -66,7 +68,7 @@ export function AttendanceTrendChart({
                 size="sm"
                 className={cn(
                   "h-7 px-2 text-xs capitalize",
-                  viewMode === mode && "bg-accent"
+                  viewMode === mode && "bg-accent",
                 )}
                 onClick={() => setViewMode(mode)}
               >
@@ -79,7 +81,10 @@ export function AttendanceTrendChart({
             <Button
               variant="ghost"
               size="sm"
-              className={cn("h-7 px-2 text-xs", chartType === "area" && "bg-accent")}
+              className={cn(
+                "h-7 px-2 text-xs",
+                chartType === "area" && "bg-accent",
+              )}
               onClick={() => setChartType("area")}
             >
               Area
@@ -87,7 +92,10 @@ export function AttendanceTrendChart({
             <Button
               variant="ghost"
               size="sm"
-              className={cn("h-7 px-2 text-xs", chartType === "bar" && "bg-accent")}
+              className={cn(
+                "h-7 px-2 text-xs",
+                chartType === "bar" && "bg-accent",
+              )}
               onClick={() => setChartType("bar")}
             >
               Bar
@@ -96,16 +104,25 @@ export function AttendanceTrendChart({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[200px] md:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             {chartType === "area" ? (
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="colorSunday" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorWednesday" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorWednesday"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                   </linearGradient>
@@ -121,7 +138,12 @@ export function AttendanceTrendChart({
                   tickLine={false}
                   axisLine={false}
                 />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={40} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
@@ -162,7 +184,10 @@ export function AttendanceTrendChart({
                 <Legend />
               </AreaChart>
             ) : (
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey="name"
@@ -170,7 +195,12 @@ export function AttendanceTrendChart({
                   tickLine={false}
                   axisLine={false}
                 />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={40} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
@@ -179,13 +209,28 @@ export function AttendanceTrendChart({
                   }}
                 />
                 {viewMode === "combined" && (
-                  <Bar dataKey="total" name="Total" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="total"
+                    name="Total"
+                    fill="#22c55e"
+                    radius={[4, 4, 0, 0]}
+                  />
                 )}
                 {(viewMode === "combined" || viewMode === "sunday") && (
-                  <Bar dataKey="sunday" name="Sunday" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="sunday"
+                    name="Sunday"
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
+                  />
                 )}
                 {(viewMode === "combined" || viewMode === "wednesday") && (
-                  <Bar dataKey="wednesday" name="Wednesday" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="wednesday"
+                    name="Wednesday"
+                    fill="#8b5cf6"
+                    radius={[4, 4, 0, 0]}
+                  />
                 )}
                 <Legend />
               </BarChart>

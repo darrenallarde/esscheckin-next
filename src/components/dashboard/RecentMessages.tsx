@@ -5,7 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, MessageSquare, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import {
+  ChevronRight,
+  MessageSquare,
+  ArrowDownLeft,
+  ArrowUpRight,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SmsConversation } from "@/hooks/queries/use-sms-inbox";
@@ -35,7 +40,10 @@ export function RecentMessages({
   // Defensive: ensure data is always an array
   const data = Array.isArray(rawData) ? rawData : [];
   // Calculate total unread across all conversations
-  const totalUnread = data.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+  const totalUnread = data.reduce(
+    (sum, conv) => sum + (conv.unreadCount || 0),
+    0,
+  );
 
   if (loading) {
     return (
@@ -67,7 +75,7 @@ export function RecentMessages({
             </Badge>
           )}
         </CardTitle>
-        <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+        <Button variant="ghost" size="sm" className="text-xs" asChild>
           <Link href={viewAllHref}>
             View All
             <ChevronRight className="ml-1 h-3 w-3" />
@@ -86,7 +94,7 @@ export function RecentMessages({
                 onClick={() => onConversationClick?.(conv)}
                 className={cn(
                   "w-full flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/50 text-left cursor-pointer",
-                  conv.unreadCount > 0 && "border-blue-500/30 bg-blue-500/5"
+                  conv.unreadCount > 0 && "border-blue-500/30 bg-blue-500/5",
                 )}
               >
                 {/* Direction Icon */}
@@ -94,7 +102,7 @@ export function RecentMessages({
                   <DirectionIcon
                     className={cn(
                       "h-4 w-4",
-                      isInbound ? "text-green-500" : "text-muted-foreground"
+                      isInbound ? "text-green-500" : "text-muted-foreground",
                     )}
                   />
                 </div>
@@ -106,7 +114,10 @@ export function RecentMessages({
                       {conv.studentName || formatPhoneNumber(conv.phoneNumber)}
                     </span>
                     {conv.unreadCount > 0 && (
-                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] h-5 px-1.5"
+                      >
                         {conv.unreadCount}
                       </Badge>
                     )}

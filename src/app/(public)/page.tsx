@@ -26,7 +26,8 @@ export default function LandingPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Amplitude tracking
-  const { trackLandingPageViewed, trackWaitlistFormSubmitted } = useMarketingTracking();
+  const { trackLandingPageViewed, trackWaitlistFormSubmitted } =
+    useMarketingTracking();
 
   // Track page view on mount
   useEffect(() => {
@@ -59,7 +60,10 @@ export default function LandingPage() {
 
       {/* Animated orbs */}
       <div className="absolute top-20 left-10 w-72 h-72 bg-lime-400/20 rounded-full blur-[128px] animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-fuchsia-500/25 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }} />
+      <div
+        className="absolute bottom-20 right-10 w-96 h-96 bg-fuchsia-500/25 rounded-full blur-[128px] animate-pulse"
+        style={{ animationDelay: "1s" }}
+      />
 
       {/* Grid */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
@@ -88,7 +92,6 @@ export default function LandingPage() {
         {/* Main - Hero + Form side by side */}
         <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center max-w-6xl mx-auto">
-
             {/* Left: Hero text */}
             <div className="text-center lg:text-left">
               {/* Exclusive badge */}
@@ -101,9 +104,7 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-[1.05] tracking-tight">
-                <span className="text-white">
-                  Know Your
-                </span>
+                <span className="text-white">Know Your</span>
                 <br />
                 <span className="bg-gradient-to-r from-lime-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
                   Flock
@@ -117,12 +118,21 @@ export default function LandingPage() {
               {/* Social proof */}
               <div className="flex items-center justify-center lg:justify-start gap-4 text-white/50">
                 <div className="flex -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-xs font-bold text-black">E</div>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white">G</div>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-xs font-bold text-white">C</div>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-xs font-bold text-black">
+                    E
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white">
+                    G
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-xs font-bold text-white">
+                    C
+                  </div>
                 </div>
                 <span className="text-sm">
-                  <span className="text-white font-semibold">230+ students</span> being shepherded
+                  <span className="text-white font-semibold">
+                    230+ students
+                  </span>{" "}
+                  being shepherded
                 </span>
               </div>
             </div>
@@ -153,26 +163,43 @@ export default function LandingPage() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label htmlFor="name" className="text-white/70 text-sm">Your Name</Label>
+                          <Label
+                            htmlFor="name"
+                            className="text-white/70 text-sm"
+                          >
+                            Your Name
+                          </Label>
                           <Input
                             id="name"
                             placeholder="John"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({ ...formData, name: e.target.value })
+                            }
                             required
                             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-lime-400/50 h-11"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="email" className="text-white/70 text-sm">Email</Label>
+                          <Label
+                            htmlFor="email"
+                            className="text-white/70 text-sm"
+                          >
+                            Email
+                          </Label>
                           <Input
                             id="email"
                             type="email"
                             placeholder="john@church.org"
                             value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-lime-400/50 h-11"
                           />
@@ -180,32 +207,66 @@ export default function LandingPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="ministry" className="text-white/70 text-sm">Ministry Name</Label>
+                        <Label
+                          htmlFor="ministry"
+                          className="text-white/70 text-sm"
+                        >
+                          Ministry Name
+                        </Label>
                         <Input
                           id="ministry"
                           placeholder="Grace Community Youth"
                           value={formData.ministry}
-                          onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              ministry: e.target.value,
+                            })
+                          }
                           required
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-lime-400/50 h-11"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="size" className="text-white/70 text-sm">Size</Label>
+                        <Label htmlFor="size" className="text-white/70 text-sm">
+                          Size
+                        </Label>
                         <Select
                           value={formData.size}
-                          onValueChange={(value) => setFormData({ ...formData, size: value })}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, size: value })
+                          }
                           required
                         >
                           <SelectTrigger className="bg-white/10 border-white/20 text-white focus:border-lime-400/50 [&>span]:text-white/50 h-11">
                             <SelectValue placeholder="How many students?" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a2f] border-white/20">
-                            <SelectItem value="small" className="text-white focus:bg-white/10">Under 50</SelectItem>
-                            <SelectItem value="medium" className="text-white focus:bg-white/10">50-150</SelectItem>
-                            <SelectItem value="large" className="text-white focus:bg-white/10">150-500</SelectItem>
-                            <SelectItem value="mega" className="text-white focus:bg-white/10">500+</SelectItem>
+                            <SelectItem
+                              value="small"
+                              className="text-white focus:bg-white/10"
+                            >
+                              Under 50
+                            </SelectItem>
+                            <SelectItem
+                              value="medium"
+                              className="text-white focus:bg-white/10"
+                            >
+                              50-150
+                            </SelectItem>
+                            <SelectItem
+                              value="large"
+                              className="text-white focus:bg-white/10"
+                            >
+                              150-500
+                            </SelectItem>
+                            <SelectItem
+                              value="mega"
+                              className="text-white focus:bg-white/10"
+                            >
+                              500+
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -242,15 +303,21 @@ export default function LandingPage() {
           <div className="mt-12 lg:mt-16 grid grid-cols-3 gap-4 max-w-2xl mx-auto text-center">
             <div className="p-4">
               <div className="text-2xl mb-2">👀</div>
-              <p className="text-white/70 text-sm font-medium">Spot the wanderers</p>
+              <p className="text-white/70 text-sm font-medium">
+                Spot the wanderers
+              </p>
             </div>
             <div className="p-4">
               <div className="text-2xl mb-2">💡</div>
-              <p className="text-white/70 text-sm font-medium">Insights, not data</p>
+              <p className="text-white/70 text-sm font-medium">
+                Insights, not data
+              </p>
             </div>
             <div className="p-4">
               <div className="text-2xl mb-2">🤖</div>
-              <p className="text-white/70 text-sm font-medium">AI-powered nudges</p>
+              <p className="text-white/70 text-sm font-medium">
+                AI-powered nudges
+              </p>
             </div>
           </div>
         </main>
