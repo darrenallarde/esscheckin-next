@@ -26,10 +26,13 @@ DECLARE
   v_normalized TEXT;
   v_existing_round RECORD;
 BEGIN
-  -- Get the authenticated user
-  v_profile_id := auth.uid();
+  -- Look up profile_id from auth.uid()
+  SELECT id INTO v_profile_id
+  FROM profiles
+  WHERE user_id = auth.uid();
+
   IF v_profile_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
+    RAISE EXCEPTION 'No profile found for authenticated user';
   END IF;
 
   -- Normalize the answer
