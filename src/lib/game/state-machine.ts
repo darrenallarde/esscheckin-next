@@ -2,7 +2,7 @@
  * Hi-Lo Game State Machine
  *
  * Pure reducer for the player-facing game flow.
- * Screens: loading → intro → auth → round_play → round_result (×4) → final_results → prayer_bonus → leaderboard
+ * Screens: loading → intro → auth → round_play → round_result (×4) → final_results ↔ prayer_bonus ↔ leaderboard
  *
  * Designed to be used with React's useReducer.
  */
@@ -40,7 +40,8 @@ export interface GameState {
   submitting: boolean;
   error: string | null;
   lastMiss: string | null;
-  prayerSubmitted: boolean;
+  prayerBonusAwarded: boolean;
+  prayerCount: number;
 }
 
 export type GameAction =
@@ -73,6 +74,7 @@ export type GameAction =
       sessionId: string;
       completedRounds: RoundData[];
       totalScore: number;
+      prayerBonusAwarded?: boolean;
     }
   | { type: "GO_TO_PRAYER" }
   | { type: "PRAYER_SUBMITTED"; bonusPoints: number }
@@ -92,7 +94,8 @@ export function initialState(): GameState {
     submitting: false,
     error: null,
     lastMiss: null,
-    prayerSubmitted: false,
+    prayerBonusAwarded: false,
+    prayerCount: 0,
   };
 }
 
@@ -192,24 +195,27 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "GO_TO_PRAYER": {
-      if (state.screen !== "final_results" || state.prayerSubmitted)
-        return state;
+      if (state.screen !== "final_results") return state;
       return { ...state, screen: "prayer_bonus" };
     }
 
     case "PRAYER_SUBMITTED": {
       if (state.screen !== "prayer_bonus") return state;
+      const isFirstPrayer = !state.prayerBonusAwarded;
       return {
         ...state,
-        screen: "leaderboard",
-        totalScore: state.totalScore + action.bonusPoints,
-        prayerSubmitted: true,
+        screen: "final_results",
+        totalScore: isFirstPrayer
+          ? state.totalScore + action.bonusPoints
+          : state.totalScore,
+        prayerBonusAwarded: true,
+        prayerCount: state.prayerCount + 1,
       };
     }
 
     case "SKIP_PRAYER": {
       if (state.screen !== "prayer_bonus") return state;
-      return { ...state, screen: "leaderboard" };
+      return { ...state, screen: "final_results" };
     }
 
     case "BACK_TO_RESULTS": {
@@ -235,6 +241,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         totalScore: action.totalScore,
         currentRound: allDone ? 4 : nextRound,
         screen: allDone ? "final_results" : "round_play",
+        prayerBonusAwarded: action.prayerBonusAwarded ?? false,
       };
     }
 

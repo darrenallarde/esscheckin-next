@@ -55,6 +55,8 @@ describe("gameReducer", () => {
       expect(state.firstName).toBe("");
       expect(state.sessionId).toBeNull();
       expect(state.error).toBeNull();
+      expect(state.prayerBonusAwarded).toBe(false);
+      expect(state.prayerCount).toBe(0);
     });
   });
 
@@ -472,6 +474,32 @@ describe("gameReducer", () => {
       expect(next.screen).toBe("round_play");
       expect(next.currentRound).toBe(1);
     });
+
+    it("resumes with prayerBonusAwarded flag when DB total > round sum", () => {
+      const state = stateAt("loading", {
+        authenticated: true,
+        profileId: "prof-1",
+      });
+      const rounds = [1, 2, 3, 4].map((r) => ({
+        roundNumber: r,
+        submittedAnswer: "answer",
+        onList: true,
+        rank: 1,
+        roundScore: 100,
+        direction: r <= 2 ? "high" : "low",
+        allAnswers: [],
+      }));
+      const next = gameReducer(state, {
+        type: "RESUME_SESSION",
+        sessionId: "sess-1",
+        completedRounds: rounds,
+        totalScore: 900, // 400 round + 500 prayer bonus
+        prayerBonusAwarded: true,
+      });
+      expect(next.screen).toBe("final_results");
+      expect(next.totalScore).toBe(900);
+      expect(next.prayerBonusAwarded).toBe(true);
+    });
   });
 
   // ============================================================
@@ -480,6 +508,12 @@ describe("gameReducer", () => {
   describe("GO_TO_PRAYER", () => {
     it("transitions from final_results to prayer_bonus", () => {
       const state = stateAt("final_results");
+      const next = gameReducer(state, { type: "GO_TO_PRAYER" });
+      expect(next.screen).toBe("prayer_bonus");
+    });
+
+    it("allows GO_TO_PRAYER even when prayerBonusAwarded is true", () => {
+      const state = stateAt("final_results", { prayerBonusAwarded: true });
       const next = gameReducer(state, { type: "GO_TO_PRAYER" });
       expect(next.screen).toBe("prayer_bonus");
     });
@@ -495,15 +529,32 @@ describe("gameReducer", () => {
   // PRAYER_SUBMITTED
   // ============================================================
   describe("PRAYER_SUBMITTED", () => {
-    it("transitions from prayer_bonus to leaderboard with bonus points", () => {
+    it("transitions from prayer_bonus to final_results with bonus points on first prayer", () => {
       const state = stateAt("prayer_bonus", { totalScore: 1000 });
       const next = gameReducer(state, {
         type: "PRAYER_SUBMITTED",
         bonusPoints: 500,
       });
-      expect(next.screen).toBe("leaderboard");
+      expect(next.screen).toBe("final_results");
       expect(next.totalScore).toBe(1500);
-      expect(next.prayerSubmitted).toBe(true);
+      expect(next.prayerBonusAwarded).toBe(true);
+      expect(next.prayerCount).toBe(1);
+    });
+
+    it("does NOT add bonus points on subsequent prayers", () => {
+      const state = stateAt("prayer_bonus", {
+        totalScore: 1500,
+        prayerBonusAwarded: true,
+        prayerCount: 1,
+      });
+      const next = gameReducer(state, {
+        type: "PRAYER_SUBMITTED",
+        bonusPoints: 500,
+      });
+      expect(next.screen).toBe("final_results");
+      expect(next.totalScore).toBe(1500); // unchanged
+      expect(next.prayerBonusAwarded).toBe(true);
+      expect(next.prayerCount).toBe(2);
     });
 
     it("ignores PRAYER_SUBMITTED from non-prayer_bonus screen", () => {
@@ -520,12 +571,12 @@ describe("gameReducer", () => {
   // SKIP_PRAYER
   // ============================================================
   describe("SKIP_PRAYER", () => {
-    it("transitions from prayer_bonus to leaderboard without bonus", () => {
+    it("transitions from prayer_bonus to final_results without bonus", () => {
       const state = stateAt("prayer_bonus", { totalScore: 1000 });
       const next = gameReducer(state, { type: "SKIP_PRAYER" });
-      expect(next.screen).toBe("leaderboard");
+      expect(next.screen).toBe("final_results");
       expect(next.totalScore).toBe(1000);
-      expect(next.prayerSubmitted).toBe(false);
+      expect(next.prayerBonusAwarded).toBe(false);
     });
 
     it("ignores SKIP_PRAYER from non-prayer_bonus screen", () => {
